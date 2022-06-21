@@ -1,0 +1,6 @@
+[submodule "external/rapidyaml"]
+	path = external/rapidyaml
+	url = https://github.com/biojppm/rapidyaml
+[submodule "external/eiquadprog"]
+	path = external/eiquadprog
+	url = https://github.com/ddebenedittis/eiquadprog
