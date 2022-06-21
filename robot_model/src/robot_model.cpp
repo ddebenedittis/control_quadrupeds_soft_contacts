@@ -1,0 +1,268 @@
+/* ========================================================================== */
+/*                                 DESCRIPTION                                */
+/* ========================================================================== */
+
+/*
+
+*/
+
+
+
+/* ========================================================================== */
+/*                              IMPORT LIBRARIES                              */
+/* ========================================================================== */
+
+#include "robot_model/robot_model.hpp"
+
+#include <ryml_std.hpp> // optional header. BUT when used, needs to be included BEFORE ryml.hpp
+#include <ryml.hpp>
+#include <c4/format.hpp>
+
+#include "pinocchio/parsers/urdf.hpp"
+#include "pinocchio/algorithm/kinematics.hpp"
+#include "pinocchio/algorithm/crba.hpp"
+#include "pinocchio/algorithm/rnea.hpp"
+#include "pinocchio/algorithm/frames.hpp"
+
+#include <Eigen/Core>
+
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <vector>
+
+
+
+/* ========================================================================== */
+/*                                    CODE                                    */
+/* ========================================================================== */
+
+namespace robot_wrapper {
+
+
+
+/* ========================================================================== */
+/*                           RYML-RELATED FUNCTIONS                           */
+/* ========================================================================== */
+
+// helper functions for sample_parse_file()
+template<class CharContainer> CharContainer file_get_contents(const char *filename);
+template<class CharContainer> size_t        file_get_contents(const char *filename, CharContainer *v);
+
+// helper functions for sample_parse_file()
+
+C4_SUPPRESS_WARNING_MSVC_WITH_PUSH(4996) // fopen: this function or variable may be unsafe
+/** load a file from disk and return a newly created CharContainer */
+template<class CharContainer>
+size_t file_get_contents(const char *filename, CharContainer *v) {
+    ::FILE *fp = ::fopen(filename, "rb");
+    C4_CHECK_MSG(fp != nullptr, "could not open file");
+    ::fseek(fp, 0, SEEK_END);
+    long sz = ::ftell(fp);
+    v->resize(static_cast<typename CharContainer::size_type>(sz));
+    if (sz) {
+        ::rewind(fp);
+        size_t ret = ::fread(&(*v)[0], 1, v->size(), fp);
+        C4_CHECK(ret == (size_t)sz);
+    }
+    ::fclose(fp);
+    return v->size();
+}
+
+/** load a file from disk into an existing CharContainer */
+template<class CharContainer>
+CharContainer file_get_contents(const char *filename) {
+    CharContainer cc;
+    file_get_contents(filename, &cc);
+    return cc;
+}
+
+
+
+/* ========================================================================== */
+/*                          ROBOTMODEL IMPLEMENTATION                         */
+/* ========================================================================== */
+
+/* ========================= RobotModel Constructor ========================= */
+
+RobotModel::RobotModel(std::string robot_name)
+: feet_names(4),
+  feet_displacement(3) {
+    // Location of the file containing some info on the robots
+    const char filename[] = "robots/all_robots.yaml";
+
+    // Parse the yaml file
+    std::string contents = file_get_contents<std::string>(filename);
+    ryml::Tree tree = ryml::parse_in_arena(ryml::to_csubstr(contents)); // immutable (csubstr) overload
+
+    ryml::NodeRef root = tree.rootref();
+    ryml::NodeRef root_robot;
+
+    // Find where the considered robot is in the file.
+    for(ryml::NodeRef n : root.children()) {
+        if (ryml::to_csubstr(robot_name) == n.key()) {
+            root_robot = n;
+            break;
+        }
+    }
+
+    ryml::from_chars(root_robot["urdf_path"].val(), &this->urdf_path);
+    this->urdf_path.insert(0, "robots/");
+
+    for (int i=0; i<4; i++) {
+        ryml::from_chars(root_robot["feet_names"][i].val(), &this->feet_names[i]);
+    }
+
+    {
+        std::string temp_string;
+
+        for(int i=0; i<3; i++) {
+            ryml::from_chars(root_robot["ankle_feet_displacement"][i].val(), &temp_string);
+            this->feet_displacement(i) = std::stof(temp_string);
+        }
+    }
+
+    // Load the urdf model
+    pinocchio::JointModelFreeFlyer root_joint;
+    pinocchio::urdf::buildModel(urdf_path, root_joint, model);
+
+    // Create the data required by the algorithms
+    pinocchio::Data data(model);
+    this->data = data;
+}
+
+
+/* =============================== compute_EOM ============================== */
+
+void RobotModel::compute_EOM(Eigen::VectorXd& q, Eigen::VectorXd& v) {
+    // Update the joint placements
+    pinocchio::forwardKinematics(model, data, q);
+
+    // Update the frame placements
+    pinocchio::updateFramePlacements(model, data);
+
+    // Compute the upper part of the joint space inertia matrix
+    pinocchio::crba(model, data, q);
+    data.M.triangularView<Eigen::StrictlyLower>() = data.M.transpose().triangularView<Eigen::StrictlyLower>();
+
+    // Compute the nonlinear effects vector (Coriolis, centrifugal and gravitational effects)
+    pinocchio::nonLinearEffects(model, data, q, v);
+}
+
+
+/* ========================= compute_second_order_FK ======================== */
+
+void RobotModel::compute_second_order_FK(Eigen::VectorXd& q, Eigen::VectorXd& v) {
+    // Update the joint accelerations
+    pinocchio::forwardKinematics(model, data, q, v, Eigen::VectorXd::Zero(model.nv));
+}
+
+
+/* =============================== compute_Jc =============================== */
+
+void RobotModel::get_Jc(Eigen::MatrixXd& Jc) {
+    // Compute the stack of the contact Jacobians
+    Eigen::MatrixXd J_temp(6, model.nv);
+
+    for (size_t i = 0; i < contact_feet_names.size(); i++) {
+        pinocchio::FrameIndex frame_id = model.getFrameId(contact_feet_names[i]);
+
+        J_temp.setZero();
+        
+        pinocchio::getFrameJacobian(model, data, frame_id, pinocchio::LOCAL_WORLD_ALIGNED, J_temp);
+
+        Jc.block(0, 3*i, model.nv, 3) = J_temp.block(0, 0, 3, model.nv);
+    }
+}
+
+
+/* =============================== compute_Jb =============================== */
+
+void RobotModel::get_Jb(Eigen::MatrixXd& Jb) {
+    pinocchio::FrameIndex base_id = 1;
+
+    pinocchio::getFrameJacobian(model, data, base_id, pinocchio::LOCAL_WORLD_ALIGNED, Jb);
+}
+
+
+/* =============================== compute_Js =============================== */
+
+void RobotModel::get_Js(Eigen::MatrixXd& Js) {
+    // Compute the stack of the contact Jacobians
+    Eigen::MatrixXd J_temp(6, model.nv);
+
+    for (size_t i = 0; i < swing_feet_names.size(); i++) {
+        pinocchio::FrameIndex frame_id = model.getFrameId(swing_feet_names[i]);
+
+        J_temp.setZero();
+        
+        pinocchio::getFrameJacobian(model, data, frame_id, pinocchio::LOCAL_WORLD_ALIGNED, J_temp);
+
+        Js.block(0, 3*i, model.nv, 3) = J_temp.block(0, 0, 3, model.nv);
+    }
+}
+
+
+/* ========================= compute_Jc_dot_times_v ========================= */
+
+void RobotModel::get_Jc_dot_times_v(Eigen::VectorXd& Jc_dot_times_v) {
+    for (size_t i = 0; i < contact_feet_names.size(); i++) {
+        pinocchio::FrameIndex frame_id = model.getFrameId(contact_feet_names[i]);
+
+        Jc_dot_times_v.segment(0+3*i, 3) = pinocchio::getFrameClassicalAcceleration(model, data, frame_id, pinocchio::LOCAL_WORLD_ALIGNED).linear();
+    }
+}
+
+
+/* ========================= compute_Jc_dot_times_v ========================= */
+
+void RobotModel::get_Jb_dot_times_v(Eigen::VectorXd& Jb_dot_times_v) {
+    pinocchio::FrameIndex base_id = 1;
+
+    Jb_dot_times_v = pinocchio::getClassicalAcceleration(model, data, base_id, pinocchio::LOCAL_WORLD_ALIGNED).toVector();
+}
+
+
+/* ========================= compute_Js_dot_times_v ========================= */
+
+void RobotModel::get_Js_dot_times_v(Eigen::VectorXd& Js_dot_times_v) {
+    for (size_t i = 0; i < swing_feet_names.size(); i++) {
+        pinocchio::FrameIndex frame_id = model.getFrameId(swing_feet_names[i]);
+
+        Js_dot_times_v.segment(0+3*i, 3) = pinocchio::getFrameClassicalAcceleration(model, data, frame_id, pinocchio::LOCAL_WORLD_ALIGNED).linear();
+    }
+}
+
+
+/* =============================== Compute_oRb ============================== */
+
+void RobotModel::get_oRb(Eigen::MatrixXd& oRb) {
+    pinocchio::FrameIndex base_id = 1;
+
+    oRb = data.oMi[base_id].rotation();
+}
+
+
+/* ================================= get_r_s ================================ */
+
+void RobotModel::get_r_s(Eigen::VectorXd& r_s) {
+    for (size_t i = 0; i < swing_feet_names.size(); i++) {
+        pinocchio::FrameIndex frame_id = model.getFrameId(swing_feet_names[i]);
+
+        r_s.segment(3*i, i) = data.oMf[frame_id].translation() + feet_displacement;
+    }
+}
+
+
+/* ======================== compute_swing_feet_names ======================== */
+
+void RobotModel::compute_swing_feet_names() {
+    for (size_t i = 0; i < 4; i++) {
+        if ( std::find(contact_feet_names.begin(), contact_feet_names.end(), feet_names[i]) == contact_feet_names.end() ) {
+            // The foot name is NOT a member of the contact_feet_names vector, hence it is a swing foot.
+            swing_feet_names.push_back(feet_names[i]);
+        }
+    }
+}
+
+} // robot_wrapper
