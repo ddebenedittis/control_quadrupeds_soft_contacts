@@ -48,12 +48,13 @@ target_include_directories(${LIBRARY_NAME} PUBLIC
 )
 
 target_link_libraries(${LIBRARY_NAME} PUBLIC ryml::ryml)
-ament_target_dependencies(${LIBRARY_NAME} PUBLIC Eigen3 pinocchio)
+ament_target_dependencies(${LIBRARY_NAME} PUBLIC Eigen3 pinocchio ryml)
 
 ament_export_targets(${LIBRARY_NAME}_targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(
     Eigen3
     pinocchio
+    ryml
 )
 
 install(

@@ -1,2 +1,5 @@
 .vscode/
 
+template_pkg/
+
+test_pkg/

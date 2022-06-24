@@ -1,41 +1,15 @@
-/* ========================================================================== */
-/*                                 DESCRIPTION                                */
-/* ========================================================================== */
-
-/*
-
-*/
-
-
-
-/* ========================================================================== */
-/*                              IMPORT LIBRARIES                              */
-/* ========================================================================== */
-
-#pragma once
-
 #include "hierarchical_optimization/hierarchical_qp.hpp"
 
 #include "eiquadprog/eiquadprog-fast.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/QR>
-#include <iostream>
-
-// #include "eiquadprog.hpp"
 
 
-
-
-
-/* ========================================================================== */
-/*                        HIERARCHICALQP IMPLEMENTATION                       */
-/* ========================================================================== */
 
 namespace hopt {
 
 using namespace Eigen;
-using namespace std;
 
 
 
@@ -82,48 +56,64 @@ HierarchicalQP::HierarchicalQP(int n_tasks)
 
     Given a set of tasks T1, ..., Tn, for the task Tp the QP problem becomes:
 
-    G = [ Zq^T Ap^T Ap Zq, 0
-                        0, I ]
-    g0 = [ Zq^T Ap^T (Ap xOpt - bp) 
-                                   0 ]
-    CI = [   0,      I
-           - CStack, [0; I] ]
+    G   = [ Zq^T Ap^T Ap Zq, 0
+                          0, I ]
+    g0  = [ Zq^T Ap^T (Ap x_opt - bp) 
+                                    0 ]
+    CI  = [   0,       I
+            - C_stack, [0; I] ]
     ci0 = [ 0       
-            d - C_stack_{p-1} xOpt + [wOptStack; 0] ]
+            d - C_stack x_opt + [w_opt_stack; 0] ]
 */
 
-bool HierarchicalQP::SolveQP(
-    MatrixXd& A,
-    VectorXd& b,
-    MatrixXd& C,
-    VectorXd& d,
-    VectorXd& we,
-    VectorXd& wi,
-    int priority
-) {
+void HierarchicalQP::solve_qp(
+    const MatrixXd& A,
+    const VectorXd& b,
+    const MatrixXd& C,
+    const VectorXd& d,
+    const VectorXd& we,
+    const VectorXd& wi,
+    int priority)
+{
     /* =================== Setup The Optimization Problem =================== */
 
     int A_cols = static_cast<int>(A.cols());    // Dimension of the optimization vector (not counting the slack variables)
     int C_rows = static_cast<int>(C.rows());    // Number of the inequality constraints of this optimization step
 
-    if (priority == 1) {
-        ResetQP(A_cols);
+    if (priority == 0) {
+        reset_qp(A_cols);
     }
+
+
+    /* ========================= Weighted A, b, C, d ======================== */
+
+    // Construct the matrices A, b, C, d weighted by we and wi.
+    // Each element of we and wi multiplies a whole row of A and C respectively (and an element of b and d). This is more easily implemented using Eigen arrays.
+
+    Eigen::MatrixXd A_w = A.array().colwise() * we.array();
+    Eigen::VectorXd b_w = b.array().colwise() * we.array();
+    Eigen::MatrixXd C_w = C.array().colwise() * wi.array();
+    Eigen::VectorXd d_w = d.array().colwise() * wi.array();
 
 
     /* ===================== Update C_stack_ And d_stack_ ===================== */
 
-    if (priority == 1) {
-        C_stack_ = C;
-        d_stack_ = d;
+    //           [ C1 ]               [ d1 ]
+    // C_stack = [ C2 ]     d_stack = [ d2 ]
+    //           [ .. ]               [ .. ]
+    //           [ Cp ]               [ d4 ]
+
+    if (priority == 0) {
+        C_stack_ = C_w;
+        d_stack_ = d_w;
     } else {
         int C_stack_rows = static_cast<int>(C_stack_.rows());
 
         C_stack_.conservativeResize(C_stack_rows + C.rows(), NoChange);
-        C_stack_.block(C_stack_rows, 0, C_rows, A_cols) = C;
+        C_stack_.bottomRows(C_rows) = C_w;
 
         d_stack_.conservativeResize(C_stack_rows + d.rows(), NoChange);
-        d_stack_.block(C_stack_rows, 0, C_rows,      1) = d;
+        d_stack_.tail(C_rows) = d_w;
     }
 
     int C_stack_rows = static_cast<int>(C_stack_.rows());
@@ -131,40 +121,55 @@ bool HierarchicalQP::SolveQP(
 
     /* ========================== Compute G And g0 ========================== */
 
+    /*
+        G  = [ Zq^T Ap^T Ap Zq, 0
+                             0, I ]
+        g0 = [ Zq^T Ap^T (Ap x_opt - bp) 
+                                       0 ]
+    */
+
     MatrixXd G = MatrixXd::Identity(A_cols + C_rows, A_cols + C_rows);
     VectorXd g0 = VectorXd::Zero(A_cols + C_rows);
     
-    if (priority != 1) {
-        G.block(0, 0, A_cols, A_cols) = Z_.transpose() * A.transpose() * A * Z_;
+    if (priority != 0) {
+        G.topLeftCorner(A_cols, A_cols) = Z_.transpose() * A_w.transpose() * A_w * Z_;
 
-        g0.segment(0, A_cols) = Z_.transpose() * A.transpose() * (A * sol_ - b);
+        g0.head(A_cols) = Z_.transpose() * A_w.transpose() * (A_w * sol_ - b_w);
     } else {
-        G.block(0, 0, A_cols, A_cols) = A.transpose() * A;
+        G.topLeftCorner(A_cols, A_cols) = A_w.transpose() * A_w;
 
-        g0.segment(0, A_cols) = - A.transpose() * b;
+        g0.head(A_cols) = - A_w.transpose() * b_w;
     }
 
-    // Add the regularization term. This is required in order to ensure that the matrix is positive definite, and is also desirable.
-    G.block(0, 0, A_cols, A_cols) += regularization_ * MatrixXd::Identity(A_cols, A_cols);
+    // Add the regularization term. This is required in order to ensure that the matrix is positive definite (necessary for the eiquadprog library), and is also desirable.
+    G.topLeftCorner(A_cols, A_cols) += regularization_ * MatrixXd::Identity(A_cols, A_cols);
 
 
     /* ========================= Compute CI And Ci0 ========================= */
 
+    /*
+        CI  = [   0,       I
+                - C_stack, [0; I] ]
+        ci0 = [ 0       
+                d - C_stack x_opt + [w_opt_stack; 0] ]
+    */
+
     MatrixXd CI = MatrixXd::Zero(C_rows + C_stack_rows, A_cols + C_rows);
-    CI.block(          0, A_cols,      C_rows, C_rows) = MatrixXd::Identity(C_rows, C_rows);
+    CI.topRightCorner(C_rows, C_rows) = MatrixXd::Identity(C_rows, C_rows);
     CI.block(     C_rows,      0, C_stack_rows, A_cols) = - C_stack_ * Z_;
-    CI.block(C_stack_rows, A_cols,      C_rows, C_rows) = MatrixXd::Identity(C_rows, C_rows);
+    CI.bottomRightCorner(C_rows, C_rows) = MatrixXd::Identity(C_rows, C_rows);
 
     VectorXd ci0 = VectorXd::Zero(C_rows + C_stack_rows);
     ci0.segment(C_rows, C_stack_rows) = d_stack_ - C_stack_ * sol_;
-    if (priority != 1) {
+    if (priority != 0) {
         ci0.segment(C_rows, C_stack_rows - C_rows) = w_opt_stack_;
     }
 
 
     /* ============================ Solve The QP ============================ */
 
-    VectorXd xiOpt(A_cols + C_rows);
+    // Initialize the solution vector
+    VectorXd xi_opt(A_cols + C_rows);
 
     /* The problem is in the form:
      * min 0.5 * x G x + g0 x
@@ -175,51 +180,57 @@ bool HierarchicalQP::SolveQP(
 
     using namespace eiquadprog::solvers;
 
+    // Instantiate the solver object
     EiquadprogFast qp;
     qp.reset(A_cols + C_rows, 0, C_rows + C_stack_rows);
 
+    // There are no equality contraints, since the tasks equality constraints are inglobated into the cost function.
     MatrixXd CE = MatrixXd::Zero(0, 0);
     VectorXd ce0 = VectorXd::Zero(0);
 
-    EiquadprogFast_status status = qp.solve_quadprog(
+    /*EiquadprogFast_status status = */qp.solve_quadprog(
         G,
         g0,
         CE,
         ce0,
         CI,
         ci0,
-        xiOpt
+        xi_opt
     );
 
-    sol_ += Z_ * xiOpt.segment(0, A_cols);
+    // Project the new solution in the null space of the higher priority contraints.
+    sol_ += Z_ * xi_opt.head(A_cols);
 
 
     /* =========================== Post Processing ========================== */
 
-    if (priority == 1) {
-        Z_ = NullSpaceProjector(A);
+    // Compute the new null_space_projector for the next time step (if necessary).
+    if (priority == 0) {
+        // If it is the first task, the computation is slightly easier since Z_ = Identity.
+        Z_ = null_space_projector(A_w);
     } else if (priority < n_tasks_) {
-        Z_ *= NullSpaceProjector(A * Z_);
+        // If it is the last task, it is not necessary to compute the null space projector.
+        Z_ *= null_space_projector(A_w * Z_);
     }
 
+    // Update the stack of the w_opt slack variables (only if it is not the last task, and if there are inequality constraints in the current task).
     if (priority < n_tasks_ && C_rows > 0) {
         int w_opt_stack_rows = static_cast<int>(w_opt_stack_.rows());
         w_opt_stack_.conservativeResize(w_opt_stack_rows + C_rows, NoChange);
-        w_opt_stack_.segment(w_opt_stack_rows, C_rows) = xiOpt.segment(A_cols, C_rows);
+        w_opt_stack_.segment(w_opt_stack_rows, C_rows) = xi_opt.segment(A_cols, C_rows);
     }
-
-    return 0;
-
 }
 
 
 
 /* ========================================================================== */
-/*                             NULLSPACEPROJECTOR                             */
+/*                            NULL_SPACE_PROJECTOR                            */
 /* ========================================================================== */
 
-MatrixXd HierarchicalQP::NullSpaceProjector(MatrixXd M) {
-    return M.completeOrthogonalDecomposition().pseudoInverse();
+MatrixXd HierarchicalQP::null_space_projector(MatrixXd M)
+{
+    return   Eigen::MatrixXd::Identity(M.cols(), M.cols())
+           - M.completeOrthogonalDecomposition().pseudoInverse().eval() * M;
 }
 
 
@@ -228,7 +239,8 @@ MatrixXd HierarchicalQP::NullSpaceProjector(MatrixXd M) {
 /*                                   RESETQP                                  */
 /* ========================================================================== */
 
-void HierarchicalQP::ResetQP(int sol_dim) {
+void HierarchicalQP::reset_qp(int sol_dim)
+{
     sol_ = VectorXd::Zero(sol_dim);
     Z_ = MatrixXd::Identity(sol_dim, sol_dim);
     C_stack_ = MatrixXd::Zero(0, sol_dim);

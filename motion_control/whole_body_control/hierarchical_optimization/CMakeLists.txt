@@ -37,16 +37,15 @@ find_package(eiquadprog REQUIRED)
 #                                 ADD LIBRARIES                                 
 # ==============================================================================
 
-add_library(${PROJECT_NAME} INTERFACE)
+add_library(${PROJECT_NAME} src/hierarchical_qp.cpp)
 
-target_include_directories(${PROJECT_NAME}
-  INTERFACE
+target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
     ${EIGEN3_INCLUDE_DIR}
 )
 
-ament_target_dependencies(${PROJECT_NAME} INTERFACE Eigen3 eiquadprog)
+ament_target_dependencies(${PROJECT_NAME} Eigen3 eiquadprog)
 
 ament_export_targets(${PROJECT_NAME}_targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(

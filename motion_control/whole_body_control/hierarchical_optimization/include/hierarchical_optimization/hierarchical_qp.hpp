@@ -1,74 +1,47 @@
-/* ========================================================================== */
-/*                                 DESCRIPTION                                */
-/* ========================================================================== */
-
-/*
-
-*/
-
-
-
-/* ========================================================================== */
-/*                              IMPORT LIBRARIES                              */
-/* ========================================================================== */
-
 #pragma once
 
 #include <Eigen/Core>
 
 
 
-/* ========================================================================== */
-/*                                    CODE                                    */
-/* ========================================================================== */
-
 namespace hopt {
 
 class HierarchicalQP {
     public:
-        /**
-         * @brief Construct a new Hierarchical QP object.
-         * 
-         * @param nTasks the total number of tasks with different priorities of the Hierarchical QP 
-         * @param xDim the dimension of the optimization vector
-         */
+        /// @brief Construct a new Hierarchical QP object.
+        /// @param[in] nTasks the total number of tasks with different priorities of the Hierarchical QP 
         HierarchicalQP(int n_tasks);
 
-        /**
-         * @brief Solve a single task of the hierarchical QP problem.
-         * 
-         */
-        bool SolveQP(
-            Eigen::MatrixXd& A,
-            Eigen::VectorXd& b,
-            Eigen::MatrixXd& C,
-            Eigen::VectorXd& d,
-            Eigen::VectorXd& we,
-            Eigen::VectorXd& wi,
-            int Priority
-        );
+        /// @brief Solve a single prioritized task of the hierarchical QP problem.
+        void solve_qp(
+            const Eigen::MatrixXd& A,
+            const Eigen::VectorXd& b,
+            const Eigen::MatrixXd& C,
+            const Eigen::VectorXd& d,
+            const Eigen::VectorXd& we,
+            const Eigen::VectorXd& wi,
+            int Priority);
+
+        /// @brief Get the QP problem solution
+        Eigen::VectorXd get_sol() {return sol_;}
         
     private:
-        /**
-         * @brief Compute the null space projector of a matrix M.
-         * 
-         * @param M 
-         * @return Eigen::MatrixXd 
-         */
-        Eigen::MatrixXd NullSpaceProjector(Eigen::MatrixXd M);
+        /// @brief Compute the null space projector of a matrix M.
+        /// @param[in] M 
+        /// @return Eigen::MatrixXd Square matrix of dimension (A_cols, A_cols)
+        Eigen::MatrixXd null_space_projector(Eigen::MatrixXd M);
 
-        /**
-         * @brief Reset the class attributes before starting a new optimization problem.
-         * 
-         * @param solDim dimension of the optimization vector
-         */
-        void ResetQP(int sol_dim);
+        /// @brief Reset the class attributes before starting a new optimization problem.
+        /// @param[in] solDim dimension of the optimization vector
+        void reset_qp(int sol_dim);
+
+        /* ================================================================== */
 
         /// @brief Total number of taks with different priorities */
         int n_tasks_;
 
         /// @brief Regularization factor introduced in order to ensure that G is Positive Definite. */
-        int regularization_ = 1e-6;
+        double regularization_ = 1e-6;
 
         /// @brief Optimization vector. */
         Eigen::VectorXd sol_;
@@ -86,7 +59,3 @@ class HierarchicalQP {
 };
 
 } // namespace hopt
-
-
-
-#include "hierarchical_optimization/hierarchical_qp.tpp"

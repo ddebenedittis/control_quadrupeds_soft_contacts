@@ -1,17 +1,3 @@
-/* ========================================================================== */
-/*                                 DESCRIPTION                                */
-/* ========================================================================== */
-
-/*
-
-*/
-
-
-
-/* ========================================================================== */
-/*                              IMPORT LIBRARIES                              */
-/* ========================================================================== */
-
 #include "robot_model/robot_model.hpp"
 
 #include <ryml_std.hpp> // optional header. BUT when used, needs to be included BEFORE ryml.hpp
@@ -31,30 +17,27 @@
 #include <string>
 #include <vector>
 
+#include <iostream>
 
 
-/* ========================================================================== */
-/*                                    CODE                                    */
-/* ========================================================================== */
 
 namespace robot_wrapper {
-
-
 
 /* ========================================================================== */
 /*                           RYML-RELATED FUNCTIONS                           */
 /* ========================================================================== */
 
-// helper functions for sample_parse_file()
+// Helper functions for sample_parse_file()
 template<class CharContainer> CharContainer file_get_contents(const char *filename);
 template<class CharContainer> size_t        file_get_contents(const char *filename, CharContainer *v);
 
-// helper functions for sample_parse_file()
+// Helper functions for sample_parse_file()
 
 C4_SUPPRESS_WARNING_MSVC_WITH_PUSH(4996) // fopen: this function or variable may be unsafe
-/** load a file from disk and return a newly created CharContainer */
+/// Load a file from disk and return a newly created CharContainer */
 template<class CharContainer>
-size_t file_get_contents(const char *filename, CharContainer *v) {
+size_t file_get_contents(const char *filename, CharContainer *v)
+{
     ::FILE *fp = ::fopen(filename, "rb");
     C4_CHECK_MSG(fp != nullptr, "could not open file");
     ::fseek(fp, 0, SEEK_END);
@@ -69,9 +52,10 @@ size_t file_get_contents(const char *filename, CharContainer *v) {
     return v->size();
 }
 
-/** load a file from disk into an existing CharContainer */
+/// Load a file from disk into an existing CharContainer */
 template<class CharContainer>
-CharContainer file_get_contents(const char *filename) {
+CharContainer file_get_contents(const char *filename)
+{
     CharContainer cc;
     file_get_contents(filename, &cc);
     return cc;
@@ -80,25 +64,26 @@ CharContainer file_get_contents(const char *filename) {
 
 
 /* ========================================================================== */
-/*                          ROBOTMODEL IMPLEMENTATION                         */
+/*                              ROBOTMODEL CLASS                              */
 /* ========================================================================== */
 
 /* ========================= RobotModel Constructor ========================= */
 
-RobotModel::RobotModel(std::string robot_name)
+RobotModel::RobotModel(const std::string& robot_name)
 : feet_names(4),
-  feet_displacement(3) {
+  feet_displacement(3)
+{
     // Location of the file containing some info on the robots
-    const char filename[] = "robots/all_robots.yaml";
+    const char file_path[] = "robots/all_robots.yaml";
 
     // Parse the yaml file
-    std::string contents = file_get_contents<std::string>(filename);
+    std::string contents = file_get_contents<std::string>(file_path);
     ryml::Tree tree = ryml::parse_in_arena(ryml::to_csubstr(contents)); // immutable (csubstr) overload
 
     ryml::NodeRef root = tree.rootref();
     ryml::NodeRef root_robot;
 
-    // Find where the considered robot is in the file.
+    // Find where the robot name is in the file.
     for(ryml::NodeRef n : root.children()) {
         if (ryml::to_csubstr(robot_name) == n.key()) {
             root_robot = n;
@@ -106,13 +91,16 @@ RobotModel::RobotModel(std::string robot_name)
         }
     }
 
+    // Populate the urdf_path attribute
     ryml::from_chars(root_robot["urdf_path"].val(), &this->urdf_path);
     this->urdf_path.insert(0, "robots/");
 
+    // Populate the feet_names attribute
     for (int i=0; i<4; i++) {
         ryml::from_chars(root_robot["feet_names"][i].val(), &this->feet_names[i]);
     }
 
+    // Populate the feet_displacement attribute. Local scope for the temp_string variable.
     {
         std::string temp_string;
 
@@ -134,7 +122,8 @@ RobotModel::RobotModel(std::string robot_name)
 
 /* =============================== compute_EOM ============================== */
 
-void RobotModel::compute_EOM(Eigen::VectorXd& q, Eigen::VectorXd& v) {
+void RobotModel::compute_EOM(const Eigen::VectorXd& q, const Eigen::VectorXd& v)
+{
     // Update the joint placements
     pinocchio::forwardKinematics(model, data, q);
 
@@ -152,7 +141,8 @@ void RobotModel::compute_EOM(Eigen::VectorXd& q, Eigen::VectorXd& v) {
 
 /* ========================= compute_second_order_FK ======================== */
 
-void RobotModel::compute_second_order_FK(Eigen::VectorXd& q, Eigen::VectorXd& v) {
+void RobotModel::compute_second_order_FK(const Eigen::VectorXd& q, const Eigen::VectorXd& v)
+{
     // Update the joint accelerations
     pinocchio::forwardKinematics(model, data, q, v, Eigen::VectorXd::Zero(model.nv));
 }
@@ -160,10 +150,13 @@ void RobotModel::compute_second_order_FK(Eigen::VectorXd& q, Eigen::VectorXd& v)
 
 /* =============================== compute_Jc =============================== */
 
-void RobotModel::get_Jc(Eigen::MatrixXd& Jc) {
-    // Compute the stack of the contact Jacobians
+void RobotModel::get_Jc(Eigen::MatrixXd& Jc)
+{
+    // Initialize a temp Jacobian that must be used to store the contact jacobian of a contact foot.
+    // Jc is the stack of J_temp of all the contact feet.
     Eigen::MatrixXd J_temp(6, model.nv);
 
+    // Compute the stack of the contact Jacobians
     for (size_t i = 0; i < contact_feet_names.size(); i++) {
         pinocchio::FrameIndex frame_id = model.getFrameId(contact_feet_names[i]);
 
@@ -171,14 +164,15 @@ void RobotModel::get_Jc(Eigen::MatrixXd& Jc) {
         
         pinocchio::getFrameJacobian(model, data, frame_id, pinocchio::LOCAL_WORLD_ALIGNED, J_temp);
 
-        Jc.block(0, 3*i, model.nv, 3) = J_temp.block(0, 0, 3, model.nv);
+        Jc.block(3*i, 0, 3, model.nv) = J_temp.block(0, 0, 3, model.nv);
     }
 }
 
 
 /* =============================== compute_Jb =============================== */
 
-void RobotModel::get_Jb(Eigen::MatrixXd& Jb) {
+void RobotModel::get_Jb(Eigen::MatrixXd& Jb)
+{
     pinocchio::FrameIndex base_id = 1;
 
     pinocchio::getFrameJacobian(model, data, base_id, pinocchio::LOCAL_WORLD_ALIGNED, Jb);
@@ -187,10 +181,13 @@ void RobotModel::get_Jb(Eigen::MatrixXd& Jb) {
 
 /* =============================== compute_Js =============================== */
 
-void RobotModel::get_Js(Eigen::MatrixXd& Js) {
-    // Compute the stack of the contact Jacobians
+void RobotModel::get_Js(Eigen::MatrixXd& Js)
+{
+    // Initialize a temp Jacobian that must be used to store the swing feet jacobian.
+    // Js is the stack of J_temp of all the swing feet.
     Eigen::MatrixXd J_temp(6, model.nv);
 
+    // Compute the stack of the swing jacobians.
     for (size_t i = 0; i < swing_feet_names.size(); i++) {
         pinocchio::FrameIndex frame_id = model.getFrameId(swing_feet_names[i]);
 
@@ -198,14 +195,15 @@ void RobotModel::get_Js(Eigen::MatrixXd& Js) {
         
         pinocchio::getFrameJacobian(model, data, frame_id, pinocchio::LOCAL_WORLD_ALIGNED, J_temp);
 
-        Js.block(0, 3*i, model.nv, 3) = J_temp.block(0, 0, 3, model.nv);
+        Js.block(3*i, 0, 3, model.nv) = J_temp.block(0, 0, 3, model.nv);
     }
 }
 
 
 /* ========================= compute_Jc_dot_times_v ========================= */
 
-void RobotModel::get_Jc_dot_times_v(Eigen::VectorXd& Jc_dot_times_v) {
+void RobotModel::get_Jc_dot_times_v(Eigen::VectorXd& Jc_dot_times_v)
+{
     for (size_t i = 0; i < contact_feet_names.size(); i++) {
         pinocchio::FrameIndex frame_id = model.getFrameId(contact_feet_names[i]);
 
@@ -216,7 +214,8 @@ void RobotModel::get_Jc_dot_times_v(Eigen::VectorXd& Jc_dot_times_v) {
 
 /* ========================= compute_Jc_dot_times_v ========================= */
 
-void RobotModel::get_Jb_dot_times_v(Eigen::VectorXd& Jb_dot_times_v) {
+void RobotModel::get_Jb_dot_times_v(Eigen::VectorXd& Jb_dot_times_v)
+{
     pinocchio::FrameIndex base_id = 1;
 
     Jb_dot_times_v = pinocchio::getClassicalAcceleration(model, data, base_id, pinocchio::LOCAL_WORLD_ALIGNED).toVector();
@@ -225,7 +224,8 @@ void RobotModel::get_Jb_dot_times_v(Eigen::VectorXd& Jb_dot_times_v) {
 
 /* ========================= compute_Js_dot_times_v ========================= */
 
-void RobotModel::get_Js_dot_times_v(Eigen::VectorXd& Js_dot_times_v) {
+void RobotModel::get_Js_dot_times_v(Eigen::VectorXd& Js_dot_times_v)
+{
     for (size_t i = 0; i < swing_feet_names.size(); i++) {
         pinocchio::FrameIndex frame_id = model.getFrameId(swing_feet_names[i]);
 
@@ -236,7 +236,8 @@ void RobotModel::get_Js_dot_times_v(Eigen::VectorXd& Js_dot_times_v) {
 
 /* =============================== Compute_oRb ============================== */
 
-void RobotModel::get_oRb(Eigen::MatrixXd& oRb) {
+void RobotModel::get_oRb(Eigen::Matrix3d& oRb)
+{
     pinocchio::FrameIndex base_id = 1;
 
     oRb = data.oMi[base_id].rotation();
@@ -245,18 +246,22 @@ void RobotModel::get_oRb(Eigen::MatrixXd& oRb) {
 
 /* ================================= get_r_s ================================ */
 
-void RobotModel::get_r_s(Eigen::VectorXd& r_s) {
+void RobotModel::get_r_s(Eigen::VectorXd& r_s)
+{
     for (size_t i = 0; i < swing_feet_names.size(); i++) {
         pinocchio::FrameIndex frame_id = model.getFrameId(swing_feet_names[i]);
 
-        r_s.segment(3*i, i) = data.oMf[frame_id].translation() + feet_displacement;
+        r_s.segment(3*i, 3) = data.oMf[frame_id].translation() + feet_displacement;
     }
 }
 
 
 /* ======================== compute_swing_feet_names ======================== */
 
-void RobotModel::compute_swing_feet_names() {
+void RobotModel::set_swing_feet_names()
+{
+    swing_feet_names = {};
+
     for (size_t i = 0; i < 4; i++) {
         if ( std::find(contact_feet_names.begin(), contact_feet_names.end(), feet_names[i]) == contact_feet_names.end() ) {
             // The foot name is NOT a member of the contact_feet_names vector, hence it is a swing foot.

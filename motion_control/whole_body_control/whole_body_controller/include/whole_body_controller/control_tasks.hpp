@@ -1,17 +1,3 @@
-/* ========================================================================== */
-/*                                 DESCRIPTION                                */
-/* ========================================================================== */
-
-/*
-
-*/
-
-
-
-/* ========================================================================== */
-/*                              IMPORT LIBRARIES                              */
-/* ========================================================================== */
-
 #pragma once
 
 #include "robot_model/robot_model.hpp"
@@ -23,108 +9,127 @@
 
 
 
-/* ========================================================================== */
-/*                                    CODE                                    */
-/* ========================================================================== */
-
 namespace wbc {
 
+/// @class @brief Implements all the tasks that are used for the the hierarchical optimization problem.
+/// @details The ControlTasks class provides methods to compute the matrices A, b, C, d that define the tasks used in the control problem. These tasks are specified in no specific order.
+/// This class is intended to be used with prioritized_tasks. This second class organizes the various control tasks by merging them in a single task of a certain priority. The priority order of the control tasks can be specified by means of the attribute prioritized_tasks_list.
 class ControlTasks {
     public:
-        ControlTasks(std::string robot_name);
+        ControlTasks(const std::string& robot_name);
 
-        /**
-         * @brief Reset the class before restarting the optimization problem.
-         * 
-         * @param q 
-         * @param v 
-         * @param contact_feet_names 
-         */
-        void reset(Eigen::VectorXd& q, Eigen::VectorXd& v, std::vector<std::string> contact_feet_names);
+        /// @brief Reset the class before restarting the optimization problem.
+        /// @param[in] q
+        /// @param[in] v
+        /// @param[in] contact_feet_names
+        void reset(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const std::vector<std::string>& contact_feet_names);
 
-        /**
-         * @brief Compute the matrices A and b that enforce the dynamic consistency with the Equations of Motion of the floating base.
-         * 
-         * @param A 
-         * @param b 
-         */
-        void task_floating_base_eom(Eigen::Ref<Eigen::MatrixXd>& A, Eigen::Ref<Eigen::VectorXd>& b);
+        /// @brief Compute the matrices A and b that enforce the dynamic consistency with the Equations of Motion of the floating base.
+        /// @param[out] A
+        /// @param[out] b
+        void task_floating_base_eom(Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b);
 
-        /**
-         * @brief Compute the matrices C and d that enfore the limits on the joint torques.
-         * 
-         * @param C 
-         * @param d 
-         */
-        void task_torque_limits(Eigen::Ref<Eigen::MatrixXd>& C, Eigen::Ref<Eigen::VectorXd>& d);
+        /// @brief Compute the matrices C and d that enfore the limits on the joint torques.
+        /// @param[out] C
+        /// @param[out] d
+        void task_torque_limits(Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d);
 
-        /**
-         * @brief Compute C and d that enforce the friction limits and the limits on the normal component of the contact forces.
-         * 
-         * @param C 
-         * @param d 
-         */
-        void task_friction_Fc_modulation(Eigen::Ref<Eigen::MatrixXd>& C, Eigen::Ref<Eigen::VectorXd>& d);
+        /// @brief Compute C and d that enforce the friction limits and the limits on the normal component of the contact forces.
+        /// @param[out] C
+        /// @param[out] d
+        void task_friction_Fc_modulation(Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d);
 
-        /**
-         * @brief Compute
-         * 
-         * @param A 
-         * @param b 
-         * @param r_b_ddot_des 
-         * @param r_b_dot_des 
-         * @param r_b_des 
-         */
+        /// @brief Compute A and b that enforce the tracking of the reference base linear trajectory.
+        /// @param[out] A
+        /// @param[out] b
+        /// @param[in]  r_b_ddot_des
+        /// @param[in]  r_b_dot_des
+        /// @param[in]  r_b_des
         void task_linear_motion_tracking(
-            Eigen::Ref<Eigen::MatrixXd>& A, Eigen::Ref<Eigen::VectorXd>& b,
-            Eigen::VectorXd& r_b_ddot_des, Eigen::VectorXd& r_b_dot_des, Eigen::VectorXd& r_b_des
+            Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b,
+            const Eigen::Vector3d& r_b_ddot_des, const Eigen::Vector3d& r_b_dot_des, const Eigen::Vector3d& r_b_des
         );
 
+        /// @brief Compute A and b that enforce the tracking of the reference base angular motion.
+        /// @param[out] A 
+        /// @param[out] b 
+        /// @param[in]  omega_des 
+        /// @param[in]  q_des 
         void task_angular_motion_tracking(
-            Eigen::Ref<Eigen::MatrixXd>& A, Eigen::Ref<Eigen::VectorXd>& b,
-            Eigen::Vector3d& omega_des, Eigen::Vector4d& q_des
+            Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b,
+            const Eigen::Vector3d& omega_des, const Eigen::Vector4d& q_des
         );
 
+        /// @brief Compute A and b that enforce the trajectory tracking of the reference swing feet motion.
+        /// @param[out] A 
+        /// @param[out] b 
+        /// @param[in]  r_s_ddot_des 
+        /// @param[in]  r_s_dot_des 
+        /// @param[in]  r_s_des 
         void task_swing_feet_tracking(
-            Eigen::Ref<Eigen::MatrixXd>& A, Eigen::Ref<Eigen::VectorXd>& b,
-            Eigen::VectorXd& r_s_ddot_des, Eigen::VectorXd& r_s_dot_des, Eigen::VectorXd& r_s_des
+            Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b,
+            const Eigen::VectorXd& r_s_ddot_des, const Eigen::VectorXd& r_s_dot_des, const Eigen::VectorXd& r_s_des
         );
 
-        void task_contact_constraints();
+        /// @brief Compute A, b, C, d that enforce the soft contact constraints, assuming a Kelving-Voight soft contact model (linear springs and linear dampers).
+        /// @param[out] A 
+        /// @param[out] b 
+        /// @param[out] C 
+        /// @param[out] d 
+        /// @param[in]  d_k1 Deformations of the feet in contact with the terrain at the previous time step.
+        /// @param[in]  d_k2  Deformations of the feet in contact with the terrain at the second previous time step.
+        /// @param[in]  dt Time step between two controllers cycles.
+        void task_contact_constraints_soft_kv(
+            Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b,
+            Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d,
+            const Eigen::VectorXd& d_k1, const Eigen::VectorXd& d_k2,
+            float dt
+        );
 
-        void task_energy_forces_optimization(Eigen::Ref<Eigen::MatrixXd>& A, Eigen::Ref<Eigen::VectorXd>& b);
+        /// @brief Compute A and b that enforce the rigid contact constraints.
+        /// @param[out] A 
+        /// @param[out] b 
+        void task_contact_constraints_rigid(Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b);
 
-    private:
+        /// @brief Compute A and b that enforce the minimization of the energy (the square of the torques) and of the contact forces.
+        /// @param[out] A 
+        /// @param[out] b 
+        void task_energy_forces_minimization(Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b);
+
         robot_wrapper::RobotModel robot_model;
 
+        int nv;     ///< @brief Dimension of the generalized velocity vector
+        int nc;     ///< @brief Number of feet in contact with the terrain
+        int nF;     ///< @brief Dimension of the stack of the contact forces with the terrain (= 3*nc)
+        int nd;     ///< @brief Dimension of the stack of the desired feet deformations (= 3*nc iff a soft contact model is used)
+
+    private:
         Eigen::VectorXd q;
         Eigen::VectorXd v;
 
-        double tau_max;
-        double mu;
-        double Fn_max;
-        double Fn_min;
+        double tau_max = 80;    ///< @brief Maximum joint torques
+        double mu = 0.8;        ///< @brief friction coefficient
+        double Fn_max = 350;    ///< @brief Maximum normal contact force (this may be a function of the swing phase)
+        double Fn_min = 40;     ///< @brief Minimum normal contact force (this may be a function of the swing phase)
 
-        int nv;
-        int nc;
-        int nc3;
-        int ns3;
+        Eigen::MatrixXd M;                  ///< @brief Mass matrix
+        Eigen::VectorXd h;                  ///< @brief Nonlinear terms vector
+        Eigen::MatrixXd Jc;                 ///< @brief Stack of the contact points jacobians
 
-        Eigen::MatrixXd M;
-        Eigen::VectorXd h;
-        Eigen::MatrixXd Jc;
+        Eigen::MatrixXd Jb;                 ///< @brief Base jacobian
+        Eigen::VectorXd Jb_dot_times_v;     ///< @brief Vector representing Jb_dot * v
 
-        Eigen::MatrixXd Jb;
-        Eigen::VectorXd Jb_dot_times_v;
+        Eigen::Vector3d kp_b_pos = {1, 1, 1};       ///< @brief Controller gains on the position error of the base
+        Eigen::Vector3d kd_b_pos = {1, 1, 1};       ///< @brief Controller gains on the velocity error of the base
 
-        Eigen::MatrixXd Kp_b_pos;
-        Eigen::MatrixXd Kd_b_pos;
+        Eigen::Vector3d kp_b_ang = {1, 1, 1};       ///< @brief Controller gains on the orientation error of the base
+        Eigen::Vector3d kd_b_ang = {1, 1, 1};       ///< @brief Controller gains on the angular velocity error of the base
 
-        Eigen::MatrixXd Kp_b_ang;
-        Eigen::MatrixXd Kd_b_ang;
+        Eigen::Vector3d kp_s_pos = {1, 1, 1};       ///< @brief Controller gains on the position error of the swing feet
+        Eigen::Vector3d kd_s_pos = {1, 1, 1};       ///< @brief Controller gains on the velocity error of the swing feet
 
-        Eigen::MatrixXd Kp_s_pos;
-        Eigen::MatrixXd Kd_s_pos;
+        Eigen::Vector3d Kp_terr = {1, 1, 1};        ///< @brief Stiffness of the soft foot in the three directions
+        Eigen::Vector3d Kd_terr = {1, 1, 1};        ///< @brief Damping of the soft foot in the three directions
 };
 
 } // namespace wbc

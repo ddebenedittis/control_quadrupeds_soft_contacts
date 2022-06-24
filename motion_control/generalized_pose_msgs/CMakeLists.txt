@@ -3,7 +3,7 @@
 # ==============================================================================
 
 cmake_minimum_required(VERSION 3.5)
-project(test_pkg)
+project(generalized_pose_msgs)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -21,7 +21,6 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}../external/rapidyaml/samples/find_package/build/Release/ryml-install")
 
 
 # ==============================================================================
@@ -29,29 +28,27 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ==============================================================================
 
 find_package(ament_cmake REQUIRED)
-find_package(Eigen3 REQUIRED)
-find_package(pinocchio REQUIRED)
-find_package(robot_model REQUIRED)
-
-find_package(ryml REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 
 
 
 # ==============================================================================
-#                                ADD EXECUTABLES                                
+#                                 GENERATE MSGS                                 
 # ==============================================================================
 
-add_executable(TestBioParco test/test_robot_model.cpp)
-
-target_include_directories(TestBioParco PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-    ${EIGEN3_INCLUDE_DIR}
+# Declare the list of messages you want to generate
+set(msg_files
+    "msg/DesiredGeneralizedPose.msg"
 )
 
-# target_link_libraries(${PROJECT_NAME} PUBLIC)
-target_link_libraries(TestBioParco PUBLIC)
-ament_target_dependencies(TestBioParco PUBLIC Eigen3 pinocchio robot_model)
+# Generate the messages
+rosidl_generate_interfaces(${PROJECT_NAME}
+  ${msg_files}
+)
+
+ament_export_dependencies(rosidl_default_runtime)
+
+
 
 if(BUILD_TESTING)
     find_package(ament_lint_auto REQUIRED)
