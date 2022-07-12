@@ -14,13 +14,14 @@ class HierarchicalQP {
 
         /// @brief Solve a single prioritized task of the hierarchical QP problem.
         void solve_qp(
+            int priority,
             const Eigen::MatrixXd& A,
             const Eigen::VectorXd& b,
             const Eigen::MatrixXd& C,
             const Eigen::VectorXd& d,
             const Eigen::VectorXd& we,
-            const Eigen::VectorXd& wi,
-            int Priority);
+            const Eigen::VectorXd& wi
+            );
 
         /// @brief Get the QP problem solution
         Eigen::VectorXd get_sol() {return sol_;}
@@ -37,7 +38,7 @@ class HierarchicalQP {
 
         /* ================================================================== */
 
-        /// @brief Total number of taks with different priorities */
+        /// @brief Total number of tasks with different priorities */
         int n_tasks_;
 
         /// @brief Regularization factor introduced in order to ensure that G is Positive Definite. */

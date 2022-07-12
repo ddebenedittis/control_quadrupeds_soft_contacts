@@ -2,7 +2,6 @@
 
 #include "eiquadprog/eiquadprog-fast.hpp"
 
-#include <Eigen/Core>
 #include <Eigen/QR>
 
 
@@ -67,13 +66,14 @@ HierarchicalQP::HierarchicalQP(int n_tasks)
 */
 
 void HierarchicalQP::solve_qp(
+    int priority,
     const MatrixXd& A,
     const VectorXd& b,
     const MatrixXd& C,
     const VectorXd& d,
     const VectorXd& we,
-    const VectorXd& wi,
-    int priority)
+    const VectorXd& wi
+    )
 {
     /* =================== Setup The Optimization Problem =================== */
 
@@ -90,29 +90,38 @@ void HierarchicalQP::solve_qp(
     // Construct the matrices A, b, C, d weighted by we and wi.
     // Each element of we and wi multiplies a whole row of A and C respectively (and an element of b and d). This is more easily implemented using Eigen arrays.
 
-    Eigen::MatrixXd A_w = A.array().colwise() * we.array();
-    Eigen::VectorXd b_w = b.array().colwise() * we.array();
-    Eigen::MatrixXd C_w = C.array().colwise() * wi.array();
-    Eigen::VectorXd d_w = d.array().colwise() * wi.array();
+    Eigen::MatrixXd A_w(A.rows(), A_cols);
+    Eigen::VectorXd b_w(A.rows());
+    Eigen::MatrixXd C_w(C_rows, A_cols);
+    Eigen::VectorXd d_w(C_rows);
 
+    if (A.rows() > 0) {
+        A_w = A.array().colwise() * we.array();
+        b_w = b.array().colwise() * we.array();
+    }
+    if (C_rows > 0) {
+        C_w = C.array().colwise() * wi.array();
+        d_w = d.array().colwise() * wi.array();
+    }
+    
 
     /* ===================== Update C_stack_ And d_stack_ ===================== */
 
     //           [ C1 ]               [ d1 ]
     // C_stack = [ C2 ]     d_stack = [ d2 ]
     //           [ .. ]               [ .. ]
-    //           [ Cp ]               [ d4 ]
+    //           [ Cp ]               [ dp ]
 
-    if (priority == 0) {
+    if (C_stack_.rows() == 0 && C_rows > 0) {
         C_stack_ = C_w;
         d_stack_ = d_w;
-    } else {
+    } else if (C_rows > 0) {
         int C_stack_rows = static_cast<int>(C_stack_.rows());
 
-        C_stack_.conservativeResize(C_stack_rows + C.rows(), NoChange);
+        C_stack_.conservativeResize(C_stack_rows + C_rows, NoChange);
         C_stack_.bottomRows(C_rows) = C_w;
 
-        d_stack_.conservativeResize(C_stack_rows + d.rows(), NoChange);
+        d_stack_.conservativeResize(C_stack_rows + C_rows);
         d_stack_.tail(C_rows) = d_w;
     }
 
@@ -131,10 +140,15 @@ void HierarchicalQP::solve_qp(
     MatrixXd G = MatrixXd::Identity(A_cols + C_rows, A_cols + C_rows);
     VectorXd g0 = VectorXd::Zero(A_cols + C_rows);
     
-    if (priority != 0) {
+    if (priority != 0 && A.rows() > 0) {
         G.topLeftCorner(A_cols, A_cols) = Z_.transpose() * A_w.transpose() * A_w * Z_;
 
         g0.head(A_cols) = Z_.transpose() * A_w.transpose() * (A_w * sol_ - b_w);
+    }
+    else if (priority != 0) {
+        G.topLeftCorner(A_cols, A_cols) = MatrixXd::Zero(A_cols, A_cols);
+
+        g0.head(A_cols) = VectorXd::Zero(A_cols);
     } else {
         G.topLeftCorner(A_cols, A_cols) = A_w.transpose() * A_w;
 
@@ -162,7 +176,7 @@ void HierarchicalQP::solve_qp(
     VectorXd ci0 = VectorXd::Zero(C_rows + C_stack_rows);
     ci0.segment(C_rows, C_stack_rows) = d_stack_ - C_stack_ * sol_;
     if (priority != 0) {
-        ci0.segment(C_rows, C_stack_rows - C_rows) = w_opt_stack_;
+        ci0.segment(C_rows, C_stack_rows - C_rows) += w_opt_stack_;
     }
 
 
@@ -187,7 +201,7 @@ void HierarchicalQP::solve_qp(
     // There are no equality contraints, since the tasks equality constraints are inglobated into the cost function.
     MatrixXd CE = MatrixXd::Zero(0, 0);
     VectorXd ce0 = VectorXd::Zero(0);
-
+    
     /*EiquadprogFast_status status = */qp.solve_quadprog(
         G,
         g0,
@@ -208,7 +222,7 @@ void HierarchicalQP::solve_qp(
     if (priority == 0) {
         // If it is the first task, the computation is slightly easier since Z_ = Identity.
         Z_ = null_space_projector(A_w);
-    } else if (priority < n_tasks_) {
+    } else if (priority < n_tasks_ && A.rows() > 0) {
         // If it is the last task, it is not necessary to compute the null space projector.
         Z_ *= null_space_projector(A_w * Z_);
     }
@@ -217,7 +231,7 @@ void HierarchicalQP::solve_qp(
     if (priority < n_tasks_ && C_rows > 0) {
         int w_opt_stack_rows = static_cast<int>(w_opt_stack_.rows());
         w_opt_stack_.conservativeResize(w_opt_stack_rows + C_rows, NoChange);
-        w_opt_stack_.segment(w_opt_stack_rows, C_rows) = xi_opt.segment(A_cols, C_rows);
+        w_opt_stack_.tail(C_rows) = xi_opt.tail(C_rows);
     }
 }
 

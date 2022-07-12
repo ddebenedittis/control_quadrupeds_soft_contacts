@@ -10,7 +10,7 @@ namespace wbc {
 /*                   DEFORMATIONSHISTORYMANAGER CONSTRUCTOR                   */
 /* ========================================================================== */
 
-DeformationsHistoryManager::DeformationsHistoryManager(std::vector<std::string> all_feet_names)
+DeformationsHistoryManager::DeformationsHistoryManager(const std::vector<std::string>& all_feet_names)
 : all_feet_names(all_feet_names) {}
 
 
@@ -19,7 +19,7 @@ DeformationsHistoryManager::DeformationsHistoryManager(std::vector<std::string> 
 /*                   INITIALIZE_DEFORMATIONS_AFTER_PLANNING                   */
 /* ========================================================================== */
 
-void DeformationsHistoryManager::initialize_deformations_after_planning(std::vector<std::string>& new_contact_feet_names)
+void DeformationsHistoryManager::initialize_deformations_after_planning(const std::vector<std::string>& new_contact_feet_names)
 {
     // If the current feet in contact with the terrain are the same as in the previous time step, nothing has to be done and the function can return
     
@@ -73,7 +73,7 @@ void DeformationsHistoryManager::initialize_deformations_after_planning(std::vec
 /*                   UPDATE_DEFORMATIONS_AFTER_OPTIMIZATION                   */
 /* ========================================================================== */
 
-void DeformationsHistoryManager::update_deformations_after_optimization(Eigen::VectorXd& d_k)
+void DeformationsHistoryManager::update_deformations_after_optimization(const Eigen::Ref<const Eigen::VectorXd> d_k)
 {
     d_k2 = d_k1;
     d_k1 = d_k;

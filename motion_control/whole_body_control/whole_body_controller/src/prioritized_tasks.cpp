@@ -1,14 +1,19 @@
 #include "whole_body_controller/prioritized_tasks.hpp"
 
-#include <algorithm>
-
 
 
 namespace wbc {
 
-PrioritizedTasks::PrioritizedTasks(std::string robot_name)
-: control_tasks(robot_name),
-  dt(1/400) {}
+PrioritizedTasks::PrioritizedTasks(std::string robot_name, float dt)
+: control_tasks(robot_name, dt)
+{
+    compute_prioritized_tasks_vector();
+}
+
+void PrioritizedTasks::reset(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const std::vector<std::string>& contact_feet_names)
+{
+    control_tasks.reset(q, v, contact_feet_names);
+}
 
 void PrioritizedTasks::compute_task_p(
     int priority,
@@ -19,7 +24,7 @@ void PrioritizedTasks::compute_task_p(
 ) {
     std::vector<int> task_rows = get_task_dimension(priority);
 
-    int cols = control_tasks.nv + control_tasks.nF + control_tasks.nd;
+    int cols = control_tasks.get_nv() + control_tasks.get_nF() + control_tasks.get_nd();
 
     A.resize(task_rows[0], cols);
     A.setZero();
@@ -37,7 +42,7 @@ void PrioritizedTasks::compute_task_p(
     int ne_temp = 0;
     int ni_temp = 0;
 
-    for (int i = 0; i < tasks_vector.size(); i++) {
+    for (int i = 0; i < static_cast<int>(tasks_vector.size()); i++) {
         if (tasks_vector[i] == priority) {
             switch (static_cast<TasksNames>(i))
             {
@@ -52,21 +57,21 @@ void PrioritizedTasks::compute_task_p(
                 ne += ne_temp;
                 break;
             case TasksNames::TorqueLimits:
-                ni_temp += 2 * (control_tasks.nv - 6);
+                ni_temp = 2 * (control_tasks.get_nv() - 6);
 
                 control_tasks.task_torque_limits(C.middleRows(ni, ni_temp), d.segment(ni, ni_temp));
 
                 ni += ni_temp;
                 break;
             case TasksNames::FrictionAndFcModulation:
-                ni_temp += 6 * control_tasks.nc;
+                ni_temp = 6 * control_tasks.get_nc();
 
                 control_tasks.task_friction_Fc_modulation(C.middleRows(ni, ni_temp), d.segment(ni, ni_temp));
 
                 ni += ni_temp;
                 break;
             case TasksNames::LinearBaseMotionTracking:
-                ne_temp += 3;
+                ne_temp = 3;
 
                 control_tasks.task_linear_motion_tracking(
                     A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
@@ -76,7 +81,7 @@ void PrioritizedTasks::compute_task_p(
                 ne += ne_temp;
                 break;
             case TasksNames::AngularBaseMotionTracking:
-                ne_temp += 3;
+                ne_temp = 3;
 
                 control_tasks.task_angular_motion_tracking(
                     A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
@@ -86,7 +91,7 @@ void PrioritizedTasks::compute_task_p(
                 ne += ne_temp;
                 break;
             case TasksNames::SwingFeetMotionTracking:
-                ne_temp += 12 - 3 * control_tasks.nc;
+                ne_temp = 12 - 3 * control_tasks.get_nc();
 
                 control_tasks.task_swing_feet_tracking(
                     A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
@@ -96,24 +101,26 @@ void PrioritizedTasks::compute_task_p(
                 ne += ne_temp;
                 break;
             case TasksNames::ContactConstraints:
-                ne_temp += 2 * control_tasks.nF;
-                ni_temp += 2 * control_tasks.nF;
+                ne_temp = 2 * control_tasks.get_nF();
+                ni_temp = 2 * control_tasks.get_nF();
 
                 control_tasks.task_contact_constraints_soft_kv(
                     A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
                     C.middleRows(ni, ni_temp), d.segment(ni, ni_temp),
-                    d_k1, d_k2, dt
+                    d_k1, d_k2
                 );
 
                 ne += ne_temp;
                 ni += ni_temp;
                 break;
             case TasksNames::EnergyAndForcesOptimization:
-                ne_temp += (control_tasks.nv - 6) + 2 * control_tasks.nF;
+                ne_temp = (control_tasks.get_nv() - 6) + 2 * control_tasks.get_nF();
 
                 control_tasks.task_energy_forces_minimization(A.middleRows(ne, ne_temp), b.segment(ne, ne_temp));
 
                 ne += ne_temp;
+                break;
+            case TasksNames::SEPARATOR:
                 break;
             }
         }
@@ -125,7 +132,7 @@ std::vector<int> PrioritizedTasks::get_task_dimension(int priority)
     int ne = 0;
     int ni = 0;
 
-    for (int i = 0; i < tasks_vector.size(); i++) {
+    for (int i = 0; i < static_cast<int>(tasks_vector.size()); i++) {
         if (tasks_vector[i] == priority) {
             switch (static_cast<TasksNames>(i))
             {
@@ -133,10 +140,10 @@ std::vector<int> PrioritizedTasks::get_task_dimension(int priority)
                 ne += 6;
                 break;
             case TasksNames::TorqueLimits:
-                ni += 2 * (control_tasks.nv - 6);
+                ni += 2 * (control_tasks.get_nv() - 6);
                 break;
             case TasksNames::FrictionAndFcModulation:
-                ni += 6 * control_tasks.nc;
+                ni += 6 * control_tasks.get_nc();
                 break;
             case TasksNames::LinearBaseMotionTracking:
                 ne += 3;
@@ -145,14 +152,16 @@ std::vector<int> PrioritizedTasks::get_task_dimension(int priority)
                 ne += 3;
                 break;
             case TasksNames::SwingFeetMotionTracking:
-                ne += 12 - 3 * control_tasks.nc;
+                ne += 12 - 3 * control_tasks.get_nc();
                 break;
             case TasksNames::ContactConstraints:
-                ne += 2 * control_tasks.nF;
-                ni += 2 * control_tasks.nF;
+                ne += 2 * control_tasks.get_nF();
+                ni += 2 * control_tasks.get_nF();
                 break;
             case TasksNames::EnergyAndForcesOptimization:
-                ne += control_tasks.nv - 6 + 2 * control_tasks.nF;
+                ne += control_tasks.get_nv() - 6 + 2 * control_tasks.get_nF();
+                break;
+            case TasksNames::SEPARATOR:
                 break;
             }
         }
@@ -164,8 +173,7 @@ std::vector<int> PrioritizedTasks::get_task_dimension(int priority)
 void PrioritizedTasks::compute_prioritized_tasks_vector()
 {
     int count = static_cast<int>(TasksNames::SEPARATOR);
-
-    int max_priority = std::count(prioritized_tasks_list.begin(), prioritized_tasks_list.end(), TasksNames::SEPARATOR);
+    tasks_vector.resize(count);
 
     {
         int priority = 0;

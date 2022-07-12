@@ -11,6 +11,8 @@ namespace wbc {
 /*                           GENERALIZEDPOSE STRUCT                           */
 /* ========================================================================== */
 
+// TODO: this same struct is defined here and in static_walk_planner/static_walk_planner.hpp. Avoid this repetition.
+
 /// @brief Stores the generalized desired pose computed by a planner and used by the whole-body controller.
 struct GeneralizedPose {
     // Base linear quantities
@@ -23,9 +25,9 @@ struct GeneralizedPose {
     Eigen::Vector4d base_quat = {0, 0, 0, 1};
 
     // Swing feet linear quantities
-    Eigen::VectorXd feet_acc;
-    Eigen::VectorXd feet_vel;
-    Eigen::VectorXd feet_pos;
+    Eigen::VectorXd feet_acc = {};
+    Eigen::VectorXd feet_vel = {};
+    Eigen::VectorXd feet_pos = {};
 
     // List of feet names in contact with the ground
     std::vector<std::string> contact_feet_names;
@@ -62,7 +64,9 @@ enum class TasksNames {
 class PrioritizedTasks {
     public:
         /// @brief Construct a new PrioritizedTasks class.
-        PrioritizedTasks(std::string robot_name);
+        PrioritizedTasks(std::string robot_name, float dt);
+
+        void reset(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const std::vector<std::string>& contact_feet_names);
 
         /// @brief Compute the matrices A, b, C, d that represents the task.
         /// @param[in] priority
@@ -80,6 +84,18 @@ class PrioritizedTasks {
             GeneralizedPose& gen_pose,
             Eigen::VectorXd& d_k1, Eigen::VectorXd& d_k2
         );
+
+        int get_nv() {return control_tasks.get_nv();}
+        int get_nF() {return control_tasks.get_nF();}
+        int get_nd() {return control_tasks.get_nd();}
+
+        const Eigen::MatrixXd& get_M()  { return control_tasks.get_M(); }
+        const Eigen::VectorXd& get_h()  { return control_tasks.get_h(); }
+        const Eigen::MatrixXd& get_Jc() { return control_tasks.get_Jc(); }
+
+        const std::vector<std::string>& get_all_feet_names() const {return control_tasks.get_all_feet_names();}
+
+        int get_max_priority() {return *max_element(tasks_vector.begin(), tasks_vector.end());}
 
     private:
         /// @brief Get the number of rows of the equality and inequality matrices (A and C) of a whole task of priority p (which may be composed by several elementary control tasks).
@@ -101,8 +117,6 @@ class PrioritizedTasks {
 
         /// @brief Auxiliary vector that is used to compute the various tasks matrices.
         std::vector<int> tasks_vector;
-
-        float dt;
 };
 
 } // namespace wbc

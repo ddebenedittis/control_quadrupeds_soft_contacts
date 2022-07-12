@@ -45,6 +45,7 @@ add_library(${LIBRARY_NAME} # SHARED?
     src/deformations_history_manager.cpp
     src/control_tasks.cpp
     src/prioritized_tasks.cpp
+    src/whole_body_controller.cpp
 )
 
 target_include_directories(${LIBRARY_NAME} PUBLIC
@@ -88,25 +89,25 @@ install(
 #                                   ADD TESTS                                   
 # ==============================================================================
 
-# add_executable(TestDeformationsHistoryManager test/test_deformations_history_manager.cpp)
+add_executable(TestDeformationsHistoryManager test/test_deformations_history_manager.cpp)
 
-# target_include_directories(TestDeformationsHistoryManager PUBLIC
-#     ${EIGEN3_INCLUDE_DIR}
-# )
+target_include_directories(TestDeformationsHistoryManager PUBLIC
+    ${EIGEN3_INCLUDE_DIR}
+)
 
-# target_link_libraries(TestDeformationsHistoryManager PUBLIC ${LIBRARY_NAME})
-# ament_target_dependencies(TestDeformationsHistoryManager PUBLIC Eigen3)
+target_link_libraries(TestDeformationsHistoryManager PUBLIC ${LIBRARY_NAME})
+ament_target_dependencies(TestDeformationsHistoryManager PUBLIC Eigen3)
 
 # ==============================================================================
 
-# add_executable(TestControlTasks test/test_control_tasks.cpp)
+add_executable(TestControlTasks test/test_control_tasks.cpp)
 
-# target_include_directories(TestControlTasks PUBLIC
-#     ${EIGEN3_INCLUDE_DIR}
-# )
+target_include_directories(TestControlTasks PUBLIC
+    ${EIGEN3_INCLUDE_DIR}
+)
 
-# target_link_libraries(TestControlTasks PUBLIC ${LIBRARY_NAME})
-# ament_target_dependencies(TestControlTasks PUBLIC Eigen3)
+target_link_libraries(TestControlTasks PUBLIC ${LIBRARY_NAME})
+ament_target_dependencies(TestControlTasks PUBLIC Eigen3)
 
 # ==============================================================================
 
@@ -118,6 +119,17 @@ target_include_directories(TestPrioritizedTasks PUBLIC
 
 target_link_libraries(TestPrioritizedTasks PUBLIC ${LIBRARY_NAME})
 ament_target_dependencies(TestPrioritizedTasks PUBLIC Eigen3)
+
+# ==============================================================================
+
+add_executable(TestWBC test/test_whole_body_controller.cpp)
+
+target_include_directories(TestWBC PUBLIC
+    ${EIGEN3_INCLUDE_DIR}
+)
+
+target_link_libraries(TestWBC PUBLIC ${LIBRARY_NAME})
+ament_target_dependencies(TestWBC PUBLIC Eigen3)
 
 
 

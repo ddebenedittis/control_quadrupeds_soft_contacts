@@ -13,15 +13,15 @@ namespace wbc {
 class DeformationsHistoryManager {
     public:
         /// @brief Construct a new DeformationsHistoryManager class.
-        DeformationsHistoryManager(std::vector<std::string> all_feet_names);
+        DeformationsHistoryManager(const std::vector<std::string>& all_feet_names);
 
-        /// @brief Shrink or expand the vectors representing the history of the deformations when the feet in contact with the terrain change. If a new foot is in contact with the terrain, d_k1 and d_k2 are initialized to a zero vector (for that specific foot).
+        /// @brief Shrink or expand the vector representing the history of the deformations when the feet in contact with the terrain change. If a new foot is in contact with the terrain, d_k1 and d_k2 are initialized to a zero vector (for that specific foot).
         /// @param[in] new_contact_feet_names 
-        void initialize_deformations_after_planning(std::vector<std::string>& new_contact_feet_names);
+        void initialize_deformations_after_planning(const std::vector<std::string>& new_contact_feet_names);
 
         /// @brief Update the history of the feet (desired) deformations after a whole optimization step has been solved.
         /// @param[in] d_k 
-        void update_deformations_after_optimization(Eigen::VectorXd& d_k);
+        void update_deformations_after_optimization(const Eigen::Ref<const Eigen::VectorXd> d_k);
 
         /// @brief Get the deformations history vectors.
         /// @return std::pair<Eigen::VectorXd, Eigen::VectorXd> 

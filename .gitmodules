@@ -4,3 +4,6 @@
 [submodule "external/eiquadprog"]
 	path = external/eiquadprog
 	url = https://github.com/ddebenedittis/eiquadprog
+[submodule "robot/robots/anymal_c_simple_description"]
+	path = robot/robots/anymal_c_simple_description
+	url = https://github.com/ddebenedittis/anymal_c_simple_description

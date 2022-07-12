@@ -1,0 +1,35 @@
+<?xml version="1.0" ?>
+<sdf version="1.4">
+  <!-- We use a custom world for the anymal so that the camera angle is initialized appropriately -->
+
+  <world name="default">
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <!-- Global light source -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <!-- Focus camera on anymal -->
+    <!-- You can get the current camera pose with: file -> save world as -->
+    <gui fullscreen='0'>
+      <camera name='user_camera'>
+                <pose>0.889092 -3.44513 0.822919 0 0.083643 1.76019</pose>
+        <view_controller>orbit</view_controller>
+      </camera>
+    </gui>
+
+    <physics type='ode'>
+      <!-- <ode>
+        <solver>
+          <type>world</type>
+        </solver>
+      </ode> -->
+      <real_time_update_rate>250</real_time_update_rate>   <!-- 1000 is normal speed -->
+      <gravity>0 0 -9.81</gravity>
+    </physics>
+
+  </world>
+</sdf>

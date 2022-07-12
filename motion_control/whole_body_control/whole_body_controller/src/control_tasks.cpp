@@ -2,14 +2,7 @@
 
 #include "robot_model/robot_model.hpp"
 
-#include "pinocchio/algorithm/kinematics.hpp"
-#include "pinocchio/algorithm/crba.hpp"
-
-#include <Eigen/Core>
 #include <Eigen/Geometry>
-
-#include <string>
-#include <vector>
 
 
 
@@ -34,9 +27,17 @@ Eigen::VectorXd tile(const Eigen::VectorXd& v, int repeat)
 }
 
 
+
+/* ========================================================================== */
+/*                            CONTROLTASKS METHODS                            */
+/* ========================================================================== */
+
+
 /* ======================== ControlTasks Constructor ======================== */
 
-ControlTasks::ControlTasks(const std::string& robot_name) : robot_model(robot_name)
+ControlTasks::ControlTasks(const std::string& robot_name, float dt)
+: robot_model(robot_name),
+  dt(dt)
 {
     nv = robot_model.get_model().nv;
 }
@@ -46,6 +47,7 @@ ControlTasks::ControlTasks(const std::string& robot_name) : robot_model(robot_na
 
 void ControlTasks::reset(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const std::vector<std::string>& contact_feet_names)
 {
+    // Update the joints position and velocity vector
     this->q = q;
     this->v = v;
 
@@ -57,9 +59,8 @@ void ControlTasks::reset(const Eigen::VectorXd& q, const Eigen::VectorXd& v, con
     nF = 3 * nc;
     nd = nF;
 
-    
+    // Initialize these matrices with all zeros (required by Pinocchio library)
     Jc = Eigen::MatrixXd::Zero(3*nc, nv);
-
     Jb = Eigen::MatrixXd::Zero(6, nv);
     Jb_dot_times_v = Eigen::VectorXd::Zero(6);
 }
@@ -114,10 +115,11 @@ void ControlTasks::task_torque_limits(Ref<MatrixXd> C, Ref<VectorXd> d)
     C.topLeftCorner(nv-6, nv) = M.bottomRows(nv-6);
     C.block(0, nv, nv-6, nF) = - Jc.rightCols(nv-6).transpose();
 
-    d.topRows(nv-6) = VectorXd::Ones(nv-6) * tau_max - h.bottomRows(nv-6);
+    d.head(nv-6) = VectorXd::Ones(nv-6) * tau_max - h.tail(nv-6);
 
     C.bottomRows(nv-6) = - C.topRows(nv-6);
-    d.bottomRows(nv-6) = - d.topRows(nv-6);
+    // d.bottomRows(nv-6) = - d.topRows(nv-6);
+    d.tail(nv-6) = VectorXd::Ones(nv-6) * tau_max + h.tail(nv-6);
 }
 
 
@@ -130,9 +132,9 @@ void ControlTasks::task_friction_Fc_modulation(Ref<MatrixXd> C, Ref<VectorXd> d)
     // he = [ 0 0 0 1 0 0 0 0 0 ]   ∈ nc x (3 nc)
     //      [ 0 0 0 0 0 0 1 0 0 ]
 
-    MatrixXd he(nc, nF);
-    MatrixXd la(nc, nF);
-    MatrixXd  n(nc, nF);
+    MatrixXd he = MatrixXd::Zero(nc, nF);
+    MatrixXd la = MatrixXd::Zero(nc, nF);
+    MatrixXd  n = MatrixXd::Zero(nc, nF);
 
     for (int i = 0; i < nc; i++) {
         he.block(i, 3*i, 1, 3) << 1, 0, 0;
@@ -180,7 +182,6 @@ void ControlTasks::task_linear_motion_tracking(
     robot_model.get_Jb(Jb);
     robot_model.get_Jb_dot_times_v(Jb_dot_times_v);
 
-
     // A = [ Jb_pos, 0, 0 ]   ∈ 3 x (nv+nF+nd)
 
     A.leftCols(nv) = Jb.topRows(3);
@@ -220,21 +221,21 @@ void ControlTasks::task_swing_feet_tracking(
     Ref<MatrixXd> A, Ref<VectorXd> b,
     const VectorXd& r_s_ddot_des, const VectorXd& r_s_dot_des, const VectorXd& r_s_des
 ) {
-    MatrixXd Js(4*3-nF, nv);
+    MatrixXd Js = MatrixXd::Zero(4*3-nF, nv);
     robot_model.get_Js(Js);
 
-    VectorXd Js_dot_times_v(4*3-nF);
+    VectorXd Js_dot_times_v = VectorXd::Zero(4*3-nF);
     robot_model.get_Js_dot_times_v(Js_dot_times_v);
 
-    VectorXd r_s(4*3-nF);
+    VectorXd r_s = VectorXd::Zero(4*3-nF);
     robot_model.get_r_s(r_s);
 
     A.leftCols(nv) = Js;
 
     b =   r_s_ddot_des 
-        + tile(kd_s_pos, nc).asDiagonal() * (r_s_dot_des - Js * v)
-        + tile(kp_s_pos, nc).asDiagonal() * (r_s_des - r_s)
-        - Jb_dot_times_v;
+        + tile(kd_s_pos, 4-nc).asDiagonal() * (r_s_dot_des - Js * v)
+        + tile(kp_s_pos, 4-nc).asDiagonal() * (r_s_des - r_s)
+        - Js_dot_times_v;
 }
 
 
@@ -243,8 +244,7 @@ void ControlTasks::task_swing_feet_tracking(
 void ControlTasks::task_contact_constraints_soft_kv(
     Ref<MatrixXd> A, Ref<VectorXd> b,
     Ref<MatrixXd> C, Ref<VectorXd> d,
-    const VectorXd& d_k1, const VectorXd& d_k2,
-    float dt
+    const VectorXd& d_k1, const VectorXd& d_k2
 ) {
     // Fc = Kp d + Kd d_dot
 
@@ -262,26 +262,24 @@ void ControlTasks::task_contact_constraints_soft_kv(
     A.bottomLeftCorner(nF, nv) = Jc;
     A.block(nF, nv+nF, nd, nd) = MatrixXd::Identity(nd, nd) / (dt*dt);
 
-    VectorXd Jc_dot_times_v(nF);
+    VectorXd Jc_dot_times_v = VectorXd::Zero(nF);
     robot_model.get_Jc_dot_times_v(Jc_dot_times_v);
 
-    b.head(nv) = - Kd * d_k1 / dt;
+    b.head(nF) = - Kd * d_k1 / dt;
     b.tail(nF) = - Jc_dot_times_v + 2 * d_k1 / (dt*dt) - d_k2 / (dt*dt);
 
 
     // c = [ ... ]   ∈ 2*nF x (nv+nF+nd)
     // d = [ ... ]
 
-    MatrixXd ma_che_fai_scemo(3,3);
-    ma_che_fai_scemo << 0, 0, 0,
-                        0, 0, 0,
-                        0, 0, 1;
-    MatrixXd C_temp = tile(ma_che_fai_scemo, nc);
+    VectorXd ma_che_fai_scemo(3);
+    ma_che_fai_scemo << 0, 0, 1;
+    MatrixXd C_temp = tile(ma_che_fai_scemo, nc).asDiagonal();
 
     C.block( 0, nv+nF, nd, nd) = - C_temp;
     C.block(nd, nv+nF, nd, nd) = (Kp - Kd/dt) * C_temp;
 
-    d.tail(nd) = Kd * d_k1 / dt * C_temp.diagonal();
+    d.tail(nd) = C_temp * Kd * d_k1 / dt;
 }
 
 
@@ -292,10 +290,11 @@ void ControlTasks::task_contact_constraints_rigid(Ref<MatrixXd> A, Ref<VectorXd>
     // A = [ Jc, 0 ]
     // b = [ - Jc_dot_times_v ]
 
+    VectorXd Jc_dot_times_v = VectorXd::Zero(nF);
+    robot_model.get_Jc_dot_times_v(Jc_dot_times_v);
+
     A.leftCols(nv) = Jc;
 
-    VectorXd Jc_dot_times_v(nF);
-    robot_model.get_Jc_dot_times_v(Jc_dot_times_v);
     b = - Jc_dot_times_v;
 }
 
@@ -314,12 +313,10 @@ void ControlTasks::task_energy_forces_minimization(Ref<MatrixXd> A, Ref<VectorXd
 
     A.topLeftCorner(nv-6, nv) = M.bottomRows(nv-6);
     A.block(0, nv, nv-6, nF) = - Jc.rightCols(nv-6).transpose();
+    A.block(nv-6, nv, nF, nF) = MatrixXd::Identity(nF, nd);
+    A.bottomRightCorner(nd, nd) = MatrixXd::Identity(nd, nd);
 
     b.topRows(nv-6) = - h.bottomRows(nv-6);
-
-    A.block(nv-6, nv, nF, nF) = MatrixXd::Identity(nF, nd);
-
-    A.bottomRightCorner(nd, nd) = MatrixXd::Identity(nd, nd);
 }
 
 

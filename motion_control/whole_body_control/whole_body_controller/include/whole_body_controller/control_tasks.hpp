@@ -2,11 +2,6 @@
 
 #include "robot_model/robot_model.hpp"
 
-#include <Eigen/Core>
-
-#include <string>
-#include <vector>
-
 
 
 namespace wbc {
@@ -16,7 +11,7 @@ namespace wbc {
 /// This class is intended to be used with prioritized_tasks. This second class organizes the various control tasks by merging them in a single task of a certain priority. The priority order of the control tasks can be specified by means of the attribute prioritized_tasks_list.
 class ControlTasks {
     public:
-        ControlTasks(const std::string& robot_name);
+        ControlTasks(const std::string& robot_name, float dt);
 
         /// @brief Reset the class before restarting the optimization problem.
         /// @param[in] q
@@ -78,12 +73,10 @@ class ControlTasks {
         /// @param[out] d 
         /// @param[in]  d_k1 Deformations of the feet in contact with the terrain at the previous time step.
         /// @param[in]  d_k2  Deformations of the feet in contact with the terrain at the second previous time step.
-        /// @param[in]  dt Time step between two controllers cycles.
         void task_contact_constraints_soft_kv(
             Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b,
             Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d,
-            const Eigen::VectorXd& d_k1, const Eigen::VectorXd& d_k2,
-            float dt
+            const Eigen::VectorXd& d_k1, const Eigen::VectorXd& d_k2
         );
 
         /// @brief Compute A and b that enforce the rigid contact constraints.
@@ -96,6 +89,22 @@ class ControlTasks {
         /// @param[out] b 
         void task_energy_forces_minimization(Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b);
 
+        int get_nv() {return nv;}
+        int get_nc() {return nc;}
+        int get_nF() {return nF;}
+        int get_nd() {return nd;}
+
+        const pinocchio::Model& get_model() { return robot_model.get_model(); }
+        
+        const pinocchio::Data& get_data() { return robot_model.get_data(); }
+
+        const Eigen::MatrixXd& get_M()  { return M; }
+        const Eigen::VectorXd& get_h()  { return h; }
+        const Eigen::MatrixXd& get_Jc() { return Jc; }
+
+        const std::vector<std::string>& get_all_feet_names() const {return robot_model.get_all_feet_names();}
+
+    private:
         robot_wrapper::RobotModel robot_model;
 
         int nv;     ///< @brief Dimension of the generalized velocity vector
@@ -103,9 +112,10 @@ class ControlTasks {
         int nF;     ///< @brief Dimension of the stack of the contact forces with the terrain (= 3*nc)
         int nd;     ///< @brief Dimension of the stack of the desired feet deformations (= 3*nc iff a soft contact model is used)
 
-    private:
         Eigen::VectorXd q;
         Eigen::VectorXd v;
+
+        float dt;   ///< @brief Time step between two controllers cycles.
 
         double tau_max = 80;    ///< @brief Maximum joint torques
         double mu = 0.8;        ///< @brief friction coefficient
