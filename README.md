@@ -8,7 +8,7 @@ Whole-Body Controller with soft contacts constraints implemented in C++.
 
 ## Dependencies
 
-- `ROS2`, `gazebo_ros_pkgs`, `ros2-control`, `ros2-controllers`
+- `ROS2`, `gazebo-ros-pkgs`, `gazebo-ros2-control`, `ros2-control`, `ros2-controllers`, `xacro`
 - `Pinocchio`
 - `Eigen`
 

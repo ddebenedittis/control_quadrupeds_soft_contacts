@@ -7,3 +7,6 @@
 [submodule "robot/robots/anymal_c_simple_description"]
 	path = robot/robots/anymal_c_simple_description
 	url = https://github.com/ddebenedittis/anymal_c_simple_description
+[submodule "robot/robots/solo_description"]
+	path = robot/robots/solo_description
+	url = https://github.com/ddebenedittis/solo_description

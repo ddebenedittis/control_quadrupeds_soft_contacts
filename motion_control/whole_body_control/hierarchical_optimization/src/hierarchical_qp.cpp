@@ -3,6 +3,7 @@
 #include "eiquadprog/eiquadprog-fast.hpp"
 
 #include <Eigen/QR>
+// #include <Eigen/SVD>
 
 
 
@@ -241,8 +242,35 @@ void HierarchicalQP::solve_qp(
 /*                            NULL_SPACE_PROJECTOR                            */
 /* ========================================================================== */
 
+/* ============================== pseudoinverse ============================= */
+
+// Thank you Gael Guennebaud
+
+template<typename MatType>
+using PseudoInverseType = Eigen::Matrix<typename MatType::Scalar, MatType::ColsAtCompileTime, MatType::RowsAtCompileTime>;
+template<typename MatType>
+
+PseudoInverseType<MatType> pseudoinverse(const MatType &a, double epsilon = std::numeric_limits<double>::epsilon())
+{
+    using WorkingMatType = Eigen::Matrix<typename MatType::Scalar, Eigen::Dynamic, Eigen::Dynamic, 0,
+    MatType::MaxRowsAtCompileTime, MatType::MaxColsAtCompileTime>;
+    Eigen::BDCSVD<WorkingMatType> svd(a, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    svd.setThreshold(epsilon*std::max(a.cols(), a.rows()));
+    Eigen::Index rank = svd.rank();
+    Eigen::Matrix<typename MatType::Scalar, Eigen::Dynamic, MatType::RowsAtCompileTime,
+    0, Eigen::BDCSVD<WorkingMatType>::MaxDiagSizeAtCompileTime, MatType::MaxRowsAtCompileTime>
+    tmp = svd.matrixU().leftCols(rank).adjoint();
+    tmp = svd.singularValues().head(rank).asDiagonal().inverse() * tmp;
+    return svd.matrixV().leftCols(rank) * tmp;
+}
+
+/* ========================== null_space_projector ========================== */
+
 MatrixXd HierarchicalQP::null_space_projector(MatrixXd M)
 {
+    // return   Eigen::MatrixXd::Identity(M.cols(), M.cols())
+    //        - pseudoinverse(M) * M;
+
     return   Eigen::MatrixXd::Identity(M.cols(), M.cols())
            - M.completeOrthogonalDecomposition().pseudoInverse().eval() * M;
 }

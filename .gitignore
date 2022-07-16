@@ -1,5 +1,7 @@
 .vscode/
 
+__pycache__
+
 template_pkg/
 
 test_pkg/

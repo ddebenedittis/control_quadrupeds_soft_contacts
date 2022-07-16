@@ -18,9 +18,9 @@ def generate_launch_description():
                 os.path.join(get_package_share_directory('robot_gazebo'), 'launch', 'robot.launch.py')
             ),
             launch_arguments = {
-                'package_name': 'anymal_c_simple_description',
-                'xacro_file_path': os.path.join('urdf', 'anymal.xacro'),
-                'config_file_path': os.path.join('config', 'anymal_controller_effort.yaml'),
+                'package_name': 'solo_description',
+                'xacro_file_path': os.path.join('xacro', 'solo12.urdf.xacro'),
+                'config_file_path': os.path.join('config', 'solo_controller_effort.yaml'),
                 'world_file_path': os.path.join('worlds', 'anymal.world'),
             }.items()
         ),

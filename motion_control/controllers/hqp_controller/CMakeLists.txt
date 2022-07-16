@@ -93,11 +93,6 @@ install(
 )
 
 install(
-    DIRECTORY launch
-    DESTINATION share/${PROJECT_NAME}/
-)
-
-install(
     TARGETS ${EXECUTABLE_NAME}
     EXPORT ${EXECUTABLE_NAME}_targets
     LIBRARY DESTINATION lib/${PROJECT_NAME}

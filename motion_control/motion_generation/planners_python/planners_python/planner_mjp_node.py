@@ -1,3 +1,4 @@
+import threading
 import rclpy
 from rclpy.node import Node
 
@@ -27,7 +28,7 @@ class MinimalSubscriber(Node):
 
         self.imu_subscription = self.create_subscription(
             Imu,
-            "/imu",
+            "/imu_sensor_broadcaster/imu",
             self.imu_callback,
             1
         )
@@ -47,12 +48,12 @@ class MinimalSubscriber(Node):
         # /gazebo/link_states returns the pose and the twist in the inertial or world frame.
         
         # Extract the base position and orientation (quaternion)
-        pos = msg.pose[1].position
-        orient = msg.pose[1].orientation
+        pos = msg.pose[base_id].position
+        orient = msg.pose[base_id].orientation
 
         # Extract the base linear and angular velocity
-        lin = msg.twist[1].linear
-        ang = msg.twist[1].angular
+        lin = msg.twist[base_id].linear
+        ang = msg.twist[base_id].angular
 
         # Save the base pose and twists as numpy arrays
         self.q_b = np.array([pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w])
@@ -104,9 +105,9 @@ class MinimalPublisher(Node):
         msg.base_quat.z = q_des[2]
         msg.base_quat.w = q_des[3]
 
-        msg.feet_acc = r_s_ddot_des
-        msg.feet_vel = r_s_dot_des
-        msg.feet_pos = r_s_des
+        msg.feet_acc = r_s_ddot_des.tolist()
+        msg.feet_vel = r_s_dot_des.tolist()
+        msg.feet_pos = r_s_des.tolist()
 
         msg.contact_feet = contactFeet
 
@@ -121,8 +122,8 @@ def main(args=None):
 
     minimal_subscriber = MinimalSubscriber()
 
-    rclpy.spin(minimal_subscriber)
-
+    thread = threading.Thread(target=rclpy.spin, args=(minimal_subscriber, ), daemon=True)
+    thread.start()
 
     # Instantiate the motion planner
     planner = MotionPlanner()
@@ -134,7 +135,6 @@ def main(args=None):
 
 
     # Set the rate of this node
-    # rate = rospy.Rate(int(1 / planner.dt))
     rate = minimal_subscriber.create_rate(int(1 / planner.dt))
 
 
@@ -196,7 +196,7 @@ def main(args=None):
 
                 # Base angular quantities
                 omega_des = np.zeros(3)
-                q_des = np.array([0,0,0,1])
+                q_des = np.array([0., 0., 0., 1.])
             
                 # Swing feet position quantities
                 r_s_ddot_des = np.array([])
@@ -221,6 +221,8 @@ def main(args=None):
     minimal_publisher.destroy_node()
     minimal_subscriber.destroy_node()
     rclpy.shutdown()
+
+    thread.join()
 
 
 

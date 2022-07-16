@@ -77,8 +77,8 @@ void ControlTasks::reset(const Eigen::VectorXd& q, const Eigen::VectorXd& v, con
    Optimization vector:
 
    x = [ u_dot
-         d_des
-           F_c ]
+         F_c
+         d_des ]
 */
 
 /* ========================= task_floating_base_eom ========================= */
@@ -143,7 +143,7 @@ void ControlTasks::task_friction_Fc_modulation(Ref<MatrixXd> C, Ref<VectorXd> d)
     }
 
 
-    //     [ 0_(nc, nv), + he - mu*n, 0_(nc, nv) ]
+    //     [ 0_(nc, nv), + he - mu*n, 0_(nc, nf) ]
     //     | 0,          - he - mu*n, 0          |
     // C = | 0,          + la - mu*n, 0          |   ∈ 6(nc) x (nv+nF+nd)
     //     | 0,          - la - mu*n, 0          |

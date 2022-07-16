@@ -32,3 +32,17 @@ anymal_c_softfoot_q:
     - 0
     - 0
     - -0.052
+
+### Solo12
+solo12:
+  pkg_name: solo_description
+  urdf_path: urdf/solo12.urdf
+  feet_names:
+    - FL_FOOT
+    - FR_FOOT
+    - HL_FOOT
+    - HR_FOOT
+  ankle_feet_displacement:
+    - 0
+    - 0
+    - 0

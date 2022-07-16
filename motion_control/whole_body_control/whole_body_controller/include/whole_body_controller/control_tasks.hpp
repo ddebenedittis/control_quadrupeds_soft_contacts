@@ -104,6 +104,18 @@ class ControlTasks {
 
         const std::vector<std::string>& get_all_feet_names() const {return robot_model.get_all_feet_names();}
 
+        void set_kp_b_pos(Eigen::Vector3d kp_b_pos) {this->kp_b_pos = kp_b_pos;}
+        void set_kd_b_pos(Eigen::Vector3d kd_b_pos) {this->kd_b_pos = kd_b_pos;}
+
+        void set_kp_b_ang(Eigen::Vector3d kp_b_ang) {this->kp_b_ang = kp_b_ang;}
+        void set_kd_b_ang(Eigen::Vector3d kd_b_ang) {this->kd_b_ang = kd_b_ang;}
+
+        void set_kp_s_pos(Eigen::Vector3d kp_s_pos) {this->kp_s_pos = kp_s_pos;}
+        void set_kd_s_pos(Eigen::Vector3d kd_s_pos) {this->kd_s_pos = kd_s_pos;}
+
+        void set_Kp_terr(Eigen::Vector3d Kp_terr) {this->Kp_terr = Kp_terr;}
+        void set_Kd_terr(Eigen::Vector3d Kd_terr) {this->Kd_terr = Kd_terr;}
+
     private:
         robot_wrapper::RobotModel robot_model;
 

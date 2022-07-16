@@ -22,10 +22,14 @@ int main()
     v(9) = - 2; v(13) = - 1;
 
     GeneralizedPose gen_pose;
-    gen_pose.feet_acc = VectorXd::Zero(6);
-    gen_pose.feet_vel = VectorXd::Zero(6);
-    gen_pose.feet_pos = VectorXd::Zero(6);
-    gen_pose.contact_feet_names = {"LF_FOOT", "LH_FOOT"};
+    // gen_pose.feet_acc = VectorXd::Zero(6);
+    // gen_pose.feet_vel = VectorXd::Zero(6);
+    // gen_pose.feet_pos = VectorXd::Zero(6);
+    // gen_pose.contact_feet_names = {"LF_FOOT", "LH_FOOT"};
+    gen_pose.feet_acc = VectorXd::Zero(0);
+    gen_pose.feet_vel = VectorXd::Zero(0);
+    gen_pose.feet_pos = VectorXd::Zero(0);
+    gen_pose.contact_feet_names = {"LF_FOOT", "RF_FOOT", "LH_FOOT", "RH_FOOT"};
 
     wbc.step(q, v, gen_pose);
 

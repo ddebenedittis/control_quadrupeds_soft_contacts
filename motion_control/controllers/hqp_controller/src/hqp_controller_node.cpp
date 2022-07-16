@@ -29,6 +29,7 @@ class MinimalSubscriber : public rclcpp::Node
             const char* joint_state_topic_name,
             const char* link_states_topic_name,
             const char* desired_generalized_state_topic_name,
+            std::vector<std::string> all_feet_names,
             int base_id=1)
         : Node("minimal_subscriber"),
           q(nv+1),
@@ -36,14 +37,19 @@ class MinimalSubscriber : public rclcpp::Node
           nj(nv-6),
           base_id(base_id)
         {
+            q = Eigen::VectorXd::Zero(nv+1);
+            v = Eigen::VectorXd::Zero(nv);
+
+            gen_pose.contact_feet_names = all_feet_names;
+
             joint_states_subscription_ = this->create_subscription<sensor_msgs::msg::JointState>(
-            joint_state_topic_name, 10, std::bind(&MinimalSubscriber::joint_state_callback, this, _1));
+                joint_state_topic_name, 10, std::bind(&MinimalSubscriber::joint_state_callback, this, _1));
 
             link_state_subscription_ = this->create_subscription<gazebo_msgs::msg::LinkStates>(
-            link_states_topic_name, 10, std::bind(&MinimalSubscriber::link_states_callback, this, _1));
+                link_states_topic_name, 10, std::bind(&MinimalSubscriber::link_states_callback, this, _1));
 
             desired_generalized_pose_subscription_ = this->create_subscription<generalized_pose_msgs::msg::DesiredGeneralizedPose>(
-            desired_generalized_state_topic_name, 10, std::bind(&MinimalSubscriber::desired_generalized_pose_callback, this, _1));
+                desired_generalized_state_topic_name, 10, std::bind(&MinimalSubscriber::desired_generalized_pose_callback, this, _1));
         }
 
         ///@brief Get the joints coordinates and velocity vectors, and the generalized desired pose of the planner.
@@ -129,7 +135,7 @@ class MinimalPublisher : public rclcpp::Node
         : Node("Minimal_publisher")
         {
             torques_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
-                "robot/joints_torque_controller/command", 1);
+                "/effort_controller/commands", 1);
         }
 
         void publish_torques(Eigen::VectorXd& torques)
@@ -146,45 +152,77 @@ class MinimalPublisher : public rclcpp::Node
 int main(int argc, char* argv[])
 {
     rclcpp::init(argc, argv);
-
-    const char* robot_name = "anymal_c";
-
-    double dt = 1./400.;
-
     
+    auto nh = rclcpp::Node::make_shared("_");
+    nh->declare_parameter("robot_name");
+    rclcpp::Parameter robot_name_param = nh->get_parameter("robot_name");
+    std::string robot_name = robot_name_param.as_string();
+
+    float dt = 1./400.;
 
     rclcpp::Rate loop_rate(1/dt);
 
     wbc::WholeBodyController wbc(robot_name, dt);
 
+    wbc.set_kp_b_pos(100 * Eigen::Vector3d(1,1,1));
+    wbc.set_kd_b_pos( 10 * Eigen::Vector3d(1,1,1));
+
+    wbc.set_kp_b_ang(150 * Eigen::Vector3d(1,1,1));
+    wbc.set_kd_b_ang( 35 * Eigen::Vector3d(1,1,1));
+
+    wbc.set_kp_s_pos(150 * Eigen::Vector3d(1,1,1));
+    wbc.set_kd_s_pos( 30 * Eigen::Vector3d(1,1,1));
+
+    wbc.set_Kp_terr(1000 * Eigen::Vector3d(1,1,1));
+    wbc.set_Kd_terr(1000 * Eigen::Vector3d(1,1,1));
+
     int nv = wbc.get_nv();
 
-    const char* joint_state_topic_name = "/robot/joint_states";
+    const char* joint_state_topic_name = "/joint_states";
     const char* link_states_topic_name = "/gazebo/link_states";
     const char* desired_generalized_state_topic_name = "/robot/desired_generalized_pose";
     
-    // 
     auto subscr = std::make_shared<MinimalSubscriber>(
         nv,
         joint_state_topic_name,
         link_states_topic_name,
-        desired_generalized_state_topic_name
+        desired_generalized_state_topic_name,
+        wbc.get_all_feet_names()
     );
 
-    rclcpp::spin(subscr);
+    std::thread thread([](auto subscr){rclcpp::spin(subscr);}, subscr);
+
+    auto publsh = std::make_shared<MinimalPublisher>();
+
+    Eigen::VectorXd q;
+    Eigen::VectorXd v;
+    wbc::GeneralizedPose des_gen_pose;
+
+    Eigen::VectorXd tau;
 
     while (rclcpp::ok()) {
-        // subscr->get_all();
+        subscr->get_all(q, v, des_gen_pose);
+
+        if (q.segment(3, 4).squaredNorm() > 0) {
+            break;
+        }
 
         loop_rate.sleep();
     }
 
     while (rclcpp::ok()) {
-        // TODO: put the controller here
+        subscr->get_all(q, v, des_gen_pose);
+
+        wbc.step(q, v, des_gen_pose);
+
+        tau = wbc.get_tau_opt();
+
+        publsh->publish_torques(tau);
 
         loop_rate.sleep();
     }
 
     rclcpp::shutdown();
+    thread.join();
     return 0;
 }
