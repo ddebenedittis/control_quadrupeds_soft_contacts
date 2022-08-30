@@ -1,12 +1,12 @@
-[submodule "external/rapidyaml"]
-	path = external/rapidyaml
-	url = https://github.com/biojppm/rapidyaml
-[submodule "external/eiquadprog"]
-	path = external/eiquadprog
-	url = https://github.com/ddebenedittis/eiquadprog
-[submodule "robot/robots/anymal_c_simple_description"]
-	path = robot/robots/anymal_c_simple_description
-	url = https://github.com/ddebenedittis/anymal_c_simple_description
-[submodule "robot/robots/solo_description"]
-	path = robot/robots/solo_description
+[submodule "src/external/quadprog"]
+	path = src/external/quadprog
+	url = https://github.com/ddebenedittis/quadprog\
+[submodule "src/external/rapidyaml"]
+	path = src/external/rapidyaml
+	url = https://github.com/ddebenedittis/rapidyaml
+[submodule "src/robot/robots/solo_description"]
+	path = src/robot/robots/solo_description
 	url = https://github.com/ddebenedittis/solo_description
+[submodule "src/robot/robots/anymal_c_simple_description"]
+	path = src/robot/robots/anymal_c_simple_description
+	url = https://github.com/ddebenedittis/anymal_c_simple_description
