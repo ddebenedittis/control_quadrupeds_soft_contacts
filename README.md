@@ -1,4 +1,4 @@
-# Quadruped_Control_Soft_Contacts
+# Quadruped Control Soft Contacts
 
 Whole-Body Controller with soft contacts constraints implemented in C++.
 
@@ -22,7 +22,7 @@ Run the container:
 ```
 Build the ROS workspace:
 ```shell
-colcon build --symlink-install && source devel/setup.bash
+colcon build --symlink-install && source install/setup.bash
 ```
 
 ## Dependencies

@@ -11,13 +11,6 @@ then
     chmod a+r $XAUTH
 fi
 
-# Create a shared volume to store the ros_ws
-docker volume create --driver local \
-    --opt type="none" \
-    --opt device="${PWD}" \
-    --opt o="bind" \
-    "vol"
-
 xhost +
 docker run \
     --net=host \

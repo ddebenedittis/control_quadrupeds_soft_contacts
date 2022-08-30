@@ -53,7 +53,6 @@ ARG UID=1000
 ARG GID=1000
 ARG USER=ros
 ARG PWDR=/
-RUN echo ${PWDR}
 RUN addgroup --gid ${GID} ${USER}
 RUN adduser --gecos "ROS User" --disabled-password --uid ${UID} --gid ${GID} ${USER}
 RUN usermod -a -G dialout ${USER}

@@ -9,6 +9,8 @@ while getopts 'r' opt; do
 done
 shift "$(( OPTIND - 1 ))" 
 
+mkdir -p build install log 
+
 docker pull osrf/ros:galactic-desktop
 
 MYUID="$(id -u $USER)"

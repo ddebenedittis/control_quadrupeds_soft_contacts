@@ -1,6 +1,6 @@
 [submodule "src/external/quadprog"]
 	path = src/external/quadprog
-	url = https://github.com/ddebenedittis/quadprog\
+	url = https://github.com/ddebenedittis/quadprog
 [submodule "src/external/rapidyaml"]
 	path = src/external/rapidyaml
 	url = https://github.com/ddebenedittis/rapidyaml
