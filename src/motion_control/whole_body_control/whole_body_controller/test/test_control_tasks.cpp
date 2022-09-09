@@ -4,6 +4,8 @@
 
 #include <iostream>
 
+
+
 int main()
 {
     std::string robot_name = "anymal_c";

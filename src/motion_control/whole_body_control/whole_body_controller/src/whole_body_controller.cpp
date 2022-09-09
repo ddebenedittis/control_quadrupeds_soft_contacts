@@ -18,7 +18,7 @@ WholeBodyController::WholeBodyController(std::string robot_name, float dt)
 /*                                    STEP                                    */
 /* ========================================================================== */
 
-void WholeBodyController::step(Eigen::VectorXd& q, Eigen::VectorXd& v, GeneralizedPose& gen_pose)
+void WholeBodyController::step(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const GeneralizedPose& gen_pose)
 {
     deformations_history_manager.initialize_deformations_after_planning(gen_pose.contact_feet_names);
 

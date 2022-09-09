@@ -14,6 +14,17 @@
     <build_depend>eigen</build_depend>
     <build_export_depend>eigen</build_export_depend> <!-- If your package uses Eigen3 in public headers, then also add these tags so downstream packages also depend on this package and Eigen3. -->
 
+    <depend>rclcpp</depend>
+
+    <depend>controller_interface</depend>
+    <depend>hardware_interface</depend>
+    <depend>pluginlib</depend>
+    <depend>rclcpp_lifecycle</depend>
+
+    <depend>controller_manager</depend>
+
+    <depend>generalized_pose_msgs</depend>
+
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>ament_lint_common</test_depend>
 

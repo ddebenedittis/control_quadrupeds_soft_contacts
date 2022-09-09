@@ -31,10 +31,10 @@ find_package(ament_cmake REQUIRED)
 
 find_package(rclcpp REQUIRED)
 
-find_package(std_msgs REQUIRED)
 find_package(gazebo_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)
 find_package(generalized_pose_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 
 
@@ -44,6 +44,15 @@ find_package(generalized_pose_msgs REQUIRED)
 
 set(EXECUTABLE_NAME teleop_robot_base_node)
 
+set(EXECUTABLE_DEPENDENCIES
+    rclcpp
+
+    gazebo_msgs
+    generalized_pose_msgs
+    std_msgs
+    sensor_msgs
+)
+
 add_executable(${EXECUTABLE_NAME} src/teleop_robot_base_node.cpp)
 
 target_include_directories(${EXECUTABLE_NAME} PUBLIC
@@ -51,24 +60,10 @@ target_include_directories(${EXECUTABLE_NAME} PUBLIC
     $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
 )
 
-ament_target_dependencies(${EXECUTABLE_NAME} PUBLIC 
-    rclcpp
-
-    std_msgs
-    gazebo_msgs
-    sensor_msgs
-    generalized_pose_msgs
-)
+ament_target_dependencies(${EXECUTABLE_NAME} PUBLIC ${EXECUTABLE_DEPENDENCIES})
 
 ament_export_targets(${EXECUTABLE_NAME}_targets HAS_LIBRARY_TARGET)
-ament_export_dependencies(
-    rclcpp
-
-    std_msgs
-    gazebo_msgs
-    sensor_msgs
-    generalized_pose_msgs
-)
+ament_export_dependencies(${EXECUTABLE_DEPENDENCIES})
 
 install(
     DIRECTORY include/

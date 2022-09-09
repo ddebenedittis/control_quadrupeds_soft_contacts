@@ -1,0 +1,9 @@
+<library path="static_walk_planner">
+    <class name="static_walk_planner/SWPController"
+           type="static_walk_planner::SWPController"
+           base_class_type="controller_interface::ControllerInterface">
+        <description>
+            Jo mama
+        </description>
+    </class>
+</library>

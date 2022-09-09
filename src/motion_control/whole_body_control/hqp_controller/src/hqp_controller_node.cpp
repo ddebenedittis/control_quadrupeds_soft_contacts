@@ -1,18 +1,16 @@
-#include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/string.hpp"
-
-#include "std_msgs/msg/float64_multi_array.hpp"
-#include "gazebo_msgs/msg/link_states.hpp"
-#include "sensor_msgs/msg/joint_state.hpp"
-#include "generalized_pose_msgs/msg/desired_generalized_pose.hpp"
-
 #include "whole_body_controller/whole_body_controller.hpp"
+
+#include "rclcpp/rclcpp.hpp"
+
+#include "gazebo_msgs/msg/link_states.hpp"
+#include "generalized_pose_msgs/msg/desired_generalized_pose.hpp"
+#include "sensor_msgs/msg/joint_state.hpp"
+#include "std_msgs/msg/float64_multi_array.hpp"
+#include "std_msgs/msg/string.hpp"
 
 #include <Eigen/Core>
 
 #include <memory>
-
-#include <iostream>
 
 
 

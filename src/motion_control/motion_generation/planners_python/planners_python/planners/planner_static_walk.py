@@ -98,7 +98,7 @@ class MotionPlanner:
 
         # Base angular quantities
         omega_des = np.zeros(3)
-        q_des = np.array([0,0,0,1])
+        q_des = np.array([0.,0.,0.,1.])
         
 
         # Swing feet position quantities

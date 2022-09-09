@@ -5,7 +5,10 @@
 #include <string>
 #include <vector>
 
+
+
 namespace static_walk_planner {
+
 
 
 /* ========================================================================== */
@@ -35,26 +38,31 @@ struct GeneralizedPose {
 };
 
 
-
+/// @class @brief 
 class StaticWalkPlanner {
     public:
         StaticWalkPlanner();
 
-        GeneralizedPose plan();
+        /// @brief Template for a planner. Outputs a constant pose.
+        /// @param[out] gen_pose 
+        void step_template(GeneralizedPose& gen_pose);
 
-    private:
-        ///@brief 
-        ///
-        ///@param[in]  p_i 
-        ///@param[in]  p_f 
-        ///@param[in]  t 
-        ///@param[out] p_t 
-        ///@param[out] v_t 
-        ///@param[out] a_t 
-        void spline(
-            Eigen::VectorXd p_i, Eigen::VectorXd p_f, double t,
-            Eigen::VectorXd p_t, Eigen::VectorXd v_t, Eigen::VectorXd a_t
-        );
+        /// @brief Step of a planner that makes the robot raise a foot.
+        /// @param[out] gen_pose 
+        void step_raise_foot(GeneralizedPose& gen_pose);
+
+        /// @brief Step of a planner that implement a simple static walk.
+        /// @param[out] gen_pose 
+        void step(GeneralizedPose& gen_pose);
+
+        /// @brief Planner sample time
+        double dt_ = 1 / 200;
+
+        /// @brief Initialization phase duration, expressed in full gait phase duration
+        double init_phase_ = 0.2;
+
+        /// @brief Names of the robot feet
+        std::vector<std::string> all_feet_names_ = {"LF", "RF", "LH", "RH"};
 
         /// @brief Gait pattern sequence
         std::vector<std::string> gait_pattern_ = {"LF", "RH", "RF", "LH"};
@@ -62,7 +70,7 @@ class StaticWalkPlanner {
         /// @brief Time period between two consecutive footfalls of the same foot (eg: LF)
         double cycle_duration_ = 4;
 
-        /// @brief Ratio in which the designated swing foot is in contact with the terrain in order to move the COM position
+        /// @brief Time ratio of contact phase vs swing phase of a foot during its phase.
         double step_duty_factor_ = 0.7;
 
         /// @brief Lenght of a single step
@@ -70,6 +78,9 @@ class StaticWalkPlanner {
 
         /// @brief Maximum height of a step
         double step_height_ = 0.1;
+
+        /// @brief Desired foot penetration
+        double desired_foot_penetration_ = 0.01;
 
         /// @brief Spline order for the generation of the swing feet trajectories
         int spline_order_ = 3;
@@ -83,11 +94,41 @@ class StaticWalkPlanner {
         /// @brief Coordinates x and y of the center of mass at the start of the gait cycle
         std::pair<double, double> init_com_position_ = {0, 0};
 
+        /// @brief Completed whole gait cycles
+        // TODO: remove, it's ugly
+        int cycles_completed_ = 0;
+
         /// @brief Absolute x and y coordinates of the feet relative to the COM in body frame. (The legs are symmetric)
         std::pair<double, double> abs_leg_pos_ = {0.4, 0.3};
 
         /// @brief Base oscillation quantities
-        std::pair<double, double> base_osc = {0.06, 0.06};
+        std::pair<double, double> base_osc_ = {0.06, 0.06};
+
+    private:
+        /// @brief Initialization phase 0: move the robot base from the initial position to a comfortable standing position.
+        /// @param[out] gen_pose 
+        void step_initialization_0(GeneralizedPose& gen_pose);
+
+        /// @brief Initialization phase 1: move the robot base from the comfortable standing position to a new position so that the COG will lie in the next support polygon with a sufficient margin.
+        /// @param[out] gen_pose 
+        void step_initialization_1(GeneralizedPose& gen_pose);
+
+        /// @brief Perform the real planner computations. 
+        /// @param[out] gen_pose 
+        void step_plan(GeneralizedPose& gen_pose);
+
+        ///@brief 
+        ///
+        ///@param[in]  p_i 
+        ///@param[in]  p_f 
+        ///@param[in]  t 
+        ///@param[out] p_t 
+        ///@param[out] v_t 
+        ///@param[out] a_t 
+        void spline(
+            Eigen::Ref<Eigen::Vector3d> p_i, Eigen::Ref<Eigen::Vector3d> p_f, double t,
+            Eigen::Ref<Eigen::Vector3d> p_t, Eigen::Ref<Eigen::Vector3d> v_t, Eigen::Ref<Eigen::Vector3d> a_t
+        );
 };
 
 } // namespace static_walk_planner

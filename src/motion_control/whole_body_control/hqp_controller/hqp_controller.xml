@@ -1,0 +1,9 @@
+<library path="hqp_controller">
+    <class name="hqp_controller/HQPController"
+           type="hqp_controller::HQPController"
+           base_class_type="controller_interface::ControllerInterface">
+        <description>
+            Jo mama
+        </description>
+    </class>
+</library>

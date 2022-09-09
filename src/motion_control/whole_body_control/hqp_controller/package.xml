@@ -13,8 +13,10 @@
 
     <depend>rclcpp</depend>
 
-    <depend>controller_manager</depend>
-    <depend>robot_state_publisher</depend>
+    <depend>controller_interface</depend>
+    <depend>hardware_interface</depend>
+    <depend>pluginlib</depend>
+    <depend>rclcpp_lifecycle</depend>
 
     <depend>std_msgs</depend>
     <depend>gazebo_msgs</depend>

@@ -1,6 +1,5 @@
 import os
 
-# from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import ExecuteProcess 
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
@@ -43,17 +42,6 @@ def generate_launch_description():
             additional_env={'__NV_PRIME_RENDER_OFFLOAD': '1',
                             '__GLX_VENDOR_LIBRARY_NAME': 'nvidia'},
             output='screen'
-        ),
-
-        Node(
-            package = 'controller_manager',
-            executable = 'ros2_control_node',
-            parameters = [
-                {'use_sim_time': use_sim_time},
-                {'robot_description': ParameterValue(Command(['xacro', ' ' ,xacro_file_path]), value_type=str)},
-                config_file_path
-            ],
-            output="both",
         ),
 
         Node(

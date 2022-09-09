@@ -8,12 +8,14 @@
     <license>TODO: License declaration</license>
 
     <buildtool_depend>ament_cmake</buildtool_depend>
+    <buildtool_depend>ament_cmake_python</buildtool_depend>
 
+    <depend>ament_index_cpp</depend>
+    <depend>ament_index_python</depend>
     <build_depend>eigen</build_depend>
     <build_export_depend>eigen</build_export_depend> <!-- If your package uses Eigen3 in public headers, then also add these tags so downstream packages also depend on this package and Eigen3. -->
     <depend>pinocchio</depend>
     <depend>ryml</depend>
-    <depend>ament_index_cpp</depend>
 
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>ament_lint_common</test_depend>

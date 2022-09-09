@@ -11,10 +11,10 @@
 
     <depend>rclcpp</depend>
 
-    <depend>std_msgs</depend>
     <depend>gazebo_msgs</depend>
-    <depend>sensor_msgs</depend>
     <depend>generalized_pose_msgs</depend>
+    <depend>std_msgs</depend>
+    <depend>sensor_msgs</depend>
 
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>ament_lint_common</test_depend>

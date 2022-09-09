@@ -1,9 +1,9 @@
 #include "hierarchical_optimization/hierarchical_qp.hpp"
 
-#include "quadprog/quadprog.hpp"
-
 #include <Eigen/QR>
 // #include <Eigen/SVD>
+#include "quadprog/quadprog.hpp"
+
 
 
 namespace hopt {

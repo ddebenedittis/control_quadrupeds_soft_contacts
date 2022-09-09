@@ -19,8 +19,8 @@ void PrioritizedTasks::compute_task_p(
     int priority,
     Eigen::MatrixXd& A, Eigen::VectorXd& b,
     Eigen::MatrixXd& C, Eigen::VectorXd& d,
-    GeneralizedPose& gen_pose,
-    Eigen::VectorXd& d_k1, Eigen::VectorXd& d_k2
+    const GeneralizedPose& gen_pose,
+    const Eigen::VectorXd& d_k1, const Eigen::VectorXd& d_k2
 ) {
     std::vector<int> task_rows = get_task_dimension(priority);
 

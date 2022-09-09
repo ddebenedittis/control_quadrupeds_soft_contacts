@@ -2,15 +2,15 @@
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
-#include <ryml_std.hpp> // optional header. BUT when used, needs to be included BEFORE ryml.hpp
-#include <ryml.hpp>
-#include <c4/format.hpp>
-
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
 #include "pinocchio/algorithm/crba.hpp"
 #include "pinocchio/algorithm/rnea.hpp"
 #include "pinocchio/algorithm/frames.hpp"
+
+#include <ryml_std.hpp> // optional header. BUT when used, needs to be included BEFORE ryml.hpp
+#include <ryml.hpp>
+#include <c4/format.hpp>
 
 
 

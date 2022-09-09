@@ -6,6 +6,7 @@
 
 namespace hopt {
 
+/// @class @brief 
 class HierarchicalQP {
     public:
         /// @brief Construct a new Hierarchical QP object.

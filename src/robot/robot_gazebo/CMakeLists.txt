@@ -1,3 +1,7 @@
+# ==============================================================================
+#                             PROJECT CONFIGURATION                             
+# ==============================================================================
+
 cmake_minimum_required(VERSION 3.5)
 project(robot_gazebo)
 
@@ -15,10 +19,21 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+
+
+# ==============================================================================
+#                               FIND DEPENDENCIES                               
+# ==============================================================================
+
 find_package(ament_cmake REQUIRED)
 
 
+
+# ==============================================================================
+#                              INSTALL DIRECTORIES                              
+# ==============================================================================
 
 install(
     DIRECTORY launch worlds

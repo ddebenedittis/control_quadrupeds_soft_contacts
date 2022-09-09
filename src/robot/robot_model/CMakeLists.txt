@@ -28,10 +28,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ==============================================================================
 
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
+
+find_package(ament_index_cpp REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(ryml REQUIRED)
-find_package(ament_index_cpp REQUIRED)
 
 
 
@@ -41,7 +43,14 @@ find_package(ament_index_cpp REQUIRED)
 
 set(LIBRARY_NAME ${PROJECT_NAME})
 
-add_library(${LIBRARY_NAME} src/robot_model.cpp)    # SHARED?
+set(LIBRARY_DEPENDENCIES
+    ament_index_cpp
+    Eigen3
+    pinocchio
+    ryml
+)
+
+add_library(${LIBRARY_NAME} src/robot_model.cpp)
 
 target_include_directories(${LIBRARY_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -50,15 +59,10 @@ target_include_directories(${LIBRARY_NAME} PUBLIC
 )
 
 target_link_libraries(${LIBRARY_NAME} PUBLIC ryml::ryml)
-ament_target_dependencies(${LIBRARY_NAME} PUBLIC Eigen3 pinocchio ryml ament_index_cpp)
+ament_target_dependencies(${LIBRARY_NAME} PUBLIC ${LIBRARY_DEPENDENCIES})
 
 ament_export_targets(${LIBRARY_NAME}_targets HAS_LIBRARY_TARGET)
-ament_export_dependencies(
-    Eigen3
-    pinocchio
-    ryml
-    ament_index_cpp
-)
+ament_export_dependencies(${LIBRARY_DEPENDENCIES})
 
 install(
     DIRECTORY include/
@@ -87,11 +91,18 @@ install(
 
 add_executable(TestRobotModel test/test_robot_model.cpp)
 
-target_include_directories(TestRobotModel PUBLIC
-    ${EIGEN3_INCLUDE_DIR}
-)
+target_include_directories(TestRobotModel PUBLIC ${EIGEN3_INCLUDE_DIR})
+
 target_link_libraries(TestRobotModel PUBLIC ${LIBRARY_NAME})
 ament_target_dependencies(TestRobotModel PUBLIC Eigen3 pinocchio)
+
+
+
+# ==============================================================================
+#                            INSTALL PYTHON MODULES                             
+# ==============================================================================
+
+ament_python_install_package(${PROJECT_NAME})
 
 
 

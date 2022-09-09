@@ -27,7 +27,7 @@ def generate_launch_description():
 
         Node(
             package='planners_python',
-            executable='planner_mjp_node',
+            executable='planner_static_walk_node',
             parameters=[{'use_sim_time': use_sim_time}],
             output='screen'
         ),
@@ -41,4 +41,18 @@ def generate_launch_description():
             ],
             output='screen'
         ),
+        
+        # Node(
+        #     package = 'controller_manager',
+        #     executable = 'spawner',
+        #     arguments = ['whole_body_controller', '--controller-manager', '/controller_manager'],
+        #     parameters=[{'use_sim_time': use_sim_time}],
+        # ),
+        # 
+        # Node(
+        #     package = 'controller_manager',
+        #     executable = 'spawner',
+        #     arguments = ['planner', '--controller-manager', '/controller_manager'],
+        #     parameters=[{'use_sim_time': use_sim_time}],
+        # ),
     ])

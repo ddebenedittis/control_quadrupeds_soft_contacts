@@ -81,8 +81,8 @@ class PrioritizedTasks {
             int priority,
             Eigen::MatrixXd& A, Eigen::VectorXd& b,
             Eigen::MatrixXd& C, Eigen::VectorXd& d,
-            GeneralizedPose& gen_pose,
-            Eigen::VectorXd& d_k1, Eigen::VectorXd& d_k2
+            const GeneralizedPose& gen_pose,
+            const Eigen::VectorXd& d_k1, const Eigen::VectorXd& d_k2
         );
 
         int get_nv() {return control_tasks.get_nv();}

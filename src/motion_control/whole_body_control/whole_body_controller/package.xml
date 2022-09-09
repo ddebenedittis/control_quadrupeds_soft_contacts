@@ -13,8 +13,8 @@
     <build_export_depend>eigen</build_export_depend> <!-- If your package uses Eigen3 in public headers, then also add these tags so downstream packages also depend on this package and Eigen3. -->
     <depend>pinocchio</depend>
 
-    <depend>robot_model</depend>
     <depend>hierarchical_optimization</depend>
+    <depend>robot_model</depend>
 
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>ament_lint_common</test_depend>

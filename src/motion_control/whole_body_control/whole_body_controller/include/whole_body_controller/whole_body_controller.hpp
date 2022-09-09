@@ -1,8 +1,9 @@
 #pragma once
 
-#include "whole_body_controller/prioritized_tasks.hpp"
-#include "whole_body_controller/deformations_history_manager.hpp"
 #include "hierarchical_optimization/hierarchical_qp.hpp"
+#include "whole_body_controller/deformations_history_manager.hpp"
+#include "whole_body_controller/prioritized_tasks.hpp"
+
 
 
 namespace wbc {
@@ -17,7 +18,7 @@ class WholeBodyController {
         ///@param q 
         ///@param v 
         ///@param gen_pose 
-        void step(Eigen::VectorXd& q, Eigen::VectorXd& v, GeneralizedPose& gen_pose);
+        void step(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const GeneralizedPose& gen_pose);
 
         Eigen::VectorXd& get_x_opt() {return x_opt;}
 

@@ -1,9 +1,10 @@
 #pragma once
 
-// Include libraries
-#include <stdio.h>
-#include <math.h>
 #include <array>
+#include <math.h>
+#include <stdio.h>
+
+
 
 // Quaternion multiplication function
 std::array<double, 4> quat_mult(std::array<double, 4> q, std::array<double, 4> p)

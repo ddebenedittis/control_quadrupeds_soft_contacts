@@ -6,6 +6,8 @@ Whole-Body Controller with soft contacts constraints implemented in C++.
 - [Installation with Docker](#installation-with-docker)
 - [Dependencies](#dependencies)
 - [Installation](#installation)
+- [Usage](#usage)
+- [Author](#author)
 
 ## Installation with Docker
 Clone the repo:
@@ -29,9 +31,9 @@ colcon build --symlink-install && source install/setup.bash
 
 - `git`
 - `Eigen`
-- `ROS2 Galactic`, `ros2-control`, `ros2-controllers`, `gazebo-ros-pkgs`, `gazebo-ros2-control`, `xacro`
-- `Pinocchio`
-- `numpy`, `scipy`, `quadprog`
+- `ROS2 Galactic`, and the following ROS2 packages: `ros2-control`, `ros2-controllers`, `gazebo-ros-pkgs`, `gazebo-ros2-control`, `xacro`
+- [`Pinocchio`](https://github.com/stack-of-tasks/pinocchio)
+- `numpy`, `scipy`, [`quadprog`](https://github.com/quadprog/quadprog)
 
 ## Installation
 ```shell
@@ -39,3 +41,12 @@ git clone --recursive https://github.com/ddebenedittis/Quadruped_Control_Soft_Co
 cd Quadruped_Control_Soft_Contacts
 colcon build --symlink-install
 ```
+
+## Usage
+- 
+```shell
+ros2 launch robot_gazebo anymal.launch.py
+```
+
+## Author
+Davide De Benedittis

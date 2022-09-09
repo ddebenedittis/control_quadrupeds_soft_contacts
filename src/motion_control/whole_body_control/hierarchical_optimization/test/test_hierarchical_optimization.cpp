@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+
+
 int main()
 {
     hopt::HierarchicalQP hqp(4);

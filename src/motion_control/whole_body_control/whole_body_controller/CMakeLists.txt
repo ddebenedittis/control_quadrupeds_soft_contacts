@@ -28,10 +28,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ==============================================================================
 
 find_package(ament_cmake REQUIRED)
+
 find_package(Eigen3 REQUIRED)
 find_package(pinocchio REQUIRED)
-find_package(robot_model REQUIRED)
+
 find_package(hierarchical_optimization REQUIRED)
+find_package(robot_model REQUIRED)
 
 
 
@@ -41,7 +43,15 @@ find_package(hierarchical_optimization REQUIRED)
 
 set(LIBRARY_NAME ${PROJECT_NAME})
 
-add_library(${LIBRARY_NAME} # SHARED?
+set(LIBRARY_DEPENDENCIES
+    Eigen3
+    pinocchio
+
+    hierarchical_optimization
+    robot_model
+)
+
+add_library(${LIBRARY_NAME}
     src/deformations_history_manager.cpp
     src/control_tasks.cpp
     src/prioritized_tasks.cpp
@@ -54,20 +64,10 @@ target_include_directories(${LIBRARY_NAME} PUBLIC
     ${EIGEN3_INCLUDE_DIR}
 )
 
-ament_target_dependencies(${LIBRARY_NAME} PUBLIC
-    Eigen3
-    pinocchio
-    robot_model
-    hierarchical_optimization
-)
+ament_target_dependencies(${LIBRARY_NAME} PUBLIC ${LIBRARY_DEPENDENCIES})
 
 ament_export_targets(${LIBRARY_NAME}_targets HAS_LIBRARY_TARGET)
-ament_export_dependencies(
-    Eigen3
-    pinocchio
-    robot_model
-    hierarchical_optimization
-)
+ament_export_dependencies(${LIBRARY_DEPENDENCIES})
 
 install(
     DIRECTORY include/

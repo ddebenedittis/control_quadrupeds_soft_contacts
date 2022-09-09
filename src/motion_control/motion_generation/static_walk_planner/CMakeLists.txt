@@ -28,7 +28,16 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ==============================================================================
 
 find_package(ament_cmake REQUIRED)
+
 find_package(Eigen3 REQUIRED)
+
+find_package(controller_interface REQUIRED)
+find_package(hardware_interface REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+find_package(pluginlib REQUIRED)
+
+find_package(generalized_pose_msgs REQUIRED)
 
 
 
@@ -36,17 +45,36 @@ find_package(Eigen3 REQUIRED)
 #                                 ADD LIBRARIES                                 
 # ==============================================================================
 
-set(LIBRARY_NAME ${PROJECT_NAME})
+set(PROJECT_DEPENDENCIES
+    Eigen3
 
-add_library(${LIBRARY_NAME} src/static_walk_planner.cpp)
+    controller_interface
+    hardware_interface
+    rclcpp
+    rclcpp_lifecycle
+    pluginlib
+    
+    generalized_pose_msgs
+)
 
-target_include_directories(${LIBRARY_NAME} PUBLIC
+add_library(${PROJECT_NAME} SHARED
+    src/static_walk_planner.cpp
+    src/static_walk_planner_controller.cpp
+)
+
+target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
     ${EIGEN3_INCLUDE_DIR}
 )
 
-ament_target_dependencies(${LIBRARY_NAME} PUBLIC Eigen3)
+ament_target_dependencies(${PROJECT_NAME} PUBLIC ${PROJECT_DEPENDENCIES})
+
+# Export hardware plugins
+pluginlib_export_plugin_description_file(controller_interface static_walk_planner_controller.xml)
+
+ament_export_targets(${PROJECT_NAME}_targets HAS_LIBRARY_TARGET)
+ament_export_dependencies(${PROJECT_DEPENDENCIES})
 
 install(
     DIRECTORY include/
@@ -54,13 +82,26 @@ install(
 )
 
 install(
-    TARGETS ${LIBRARY_NAME}
-    EXPORT ${LIBRARY_NAME}_targets
+    TARGETS ${PROJECT_NAME}
+    EXPORT ${PROJECT_NAME}_targets
     LIBRARY DESTINATION lib/${PROJECT_NAME}
     ARCHIVE DESTINATION lib/${PROJECT_NAME}
     RUNTIME DESTINATION lib/${PROJECT_NAME}
     INCLUDES DESTINATION include/${PROJECT_NAME}
 )
+
+
+
+# ==============================================================================
+#                                   ADD TESTS                                   
+# ==============================================================================
+
+add_executable(Test test/test.cpp)
+
+target_include_directories(Test PUBLIC ${EIGEN3_INCLUDE_DIR})
+
+target_link_libraries(Test PUBLIC ${PROJECT_NAME})
+ament_target_dependencies(Test PUBLIC Eigen3)
 
 
 
