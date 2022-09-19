@@ -33,7 +33,7 @@ colcon build --symlink-install -DCMAKE_BUILD_TYPE=Release && source install/setu
 - `Eigen`
 - `ROS2 Galactic`, and the following ROS2 packages: `ros2-control`, `ros2-controllers`, `gazebo-ros-pkgs`, `gazebo-ros2-control`, `xacro`
 - [`Pinocchio`](https://github.com/stack-of-tasks/pinocchio)
-- `numpy`, `scipy`, [`quadprog`](https://github.com/quadprog/quadprog)
+- `numpy`, `scipy`, `numpy_quaternion`, [`quadprog`](https://github.com/quadprog/quadprog)
 
 ## Installation
 ```shell
@@ -43,9 +43,13 @@ colcon build --symlink-install
 ```
 
 ## Usage
-- 
+- Anymal C static walk simulation:
 ```shell
 ros2 launch robot_gazebo anymal.launch.py
+```
+- SOLO12 static walk simulation:
+```shell
+ros2 launch robot_gazebo solo.launch.py
 ```
 
 ## Author

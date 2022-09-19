@@ -21,7 +21,7 @@ def generate_launch_description():
                 'package_name': 'solo_description',
                 'xacro_file_path': os.path.join('xacro', 'solo12.urdf.xacro'),
                 'config_file_path': os.path.join('config', 'solo_controller_effort.yaml'),
-                'world_file_path': os.path.join('worlds', 'anymal.world'),
+                'world_file_path': os.path.join('worlds', 'solo.world'),
                 'height': '0.34'
             }.items()
         ),

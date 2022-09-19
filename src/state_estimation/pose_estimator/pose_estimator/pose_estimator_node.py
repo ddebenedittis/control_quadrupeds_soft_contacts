@@ -10,6 +10,7 @@ from rclpy.node import Node
 from gazebo_msgs.msg import LinkStates
 from generalized_pose_msgs.msg import GeneralizedPose
 from geometry_msgs.msg import Pose, Twist
+from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import JointState, Imu
 
 from .kalman_filter import KalmanFilter
@@ -17,16 +18,18 @@ from .kalman_filter import KalmanFilter
 
 
 # ============================================================================ #
-#                            PoseEstimatorSubscriber                           #
+#                               POSEESTIMATORNODE                              #
 # ============================================================================ #
 
-class PoseEstimatorSubscriber(Node):
+class PoseEstimatorNode(Node):
     """
-    Subscriber to the topics used by the state estimator. It subscribes to information regarding the joint states, the imu measurements (accelerometer and gyroscope), and the generalized pose published by the planner.
+    
     """
 
-    def __init__(self):
-        super().__init__("pose_estimator_subscriber")
+    def __init__(self, robot_name):
+        super().__init__("pose_estimator_node")
+        
+        # ============================ Subscriber ============================ #
         
         self.joint_state_subscription = self.create_subscription(
             JointState,
@@ -55,7 +58,9 @@ class PoseEstimatorSubscriber(Node):
             self.gen_pose_callback,
             1)
         self.gen_pose_subscription      # prevent unused variable warning
-
+        
+        
+        # ================= Variables Saved By The Subscriber ================ #
 
         self.q_b = np.zeros(7)
         self.v_b = np.zeros(6)
@@ -68,6 +73,24 @@ class PoseEstimatorSubscriber(Node):
         self.contact_feet_names = []    # names of the feet in contact with the ground
         
         self.time = 0                   # time of last message from the imu
+        
+        
+        # ============================= Publisher ============================ #
+        
+        self._pose_publisher = self.create_publisher(Pose, '/state_estimator/pose', 1)
+        self._twist_publisher = self.create_publisher(Twist, '/state_estimator/twist', 1)
+        
+        
+        # =============================== Timer ============================== #
+
+        timer_period = 1/100    # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+        
+        
+        # ============================== Filter ============================== #
+        
+        self.filter = KalmanFilter(robot_name)
+        
         
         
     def joint_state_callback(self, msg):
@@ -118,24 +141,8 @@ class PoseEstimatorSubscriber(Node):
     def gen_pose_callback(self, msg):
         # It is necessary to save only the names of the feet that the planner wants to be in contact with the terrain.
         self.contact_feet_names = msg.contact_feet
-
-
-
-# ============================================================================ #
-#                            PoseEstimatorPublisher                            #
-# ============================================================================ #
-
-class PoseEstimatorPublisher(Node):
-    """
-    Publish the filtered measurements: base position, orientation, and linear velocity.
-    """
-
-    def __init__(self):
-        super().__init__("pose_estimator_publisher")
-
-        self._pose_publisher = self.create_publisher(Pose, '/state_estimator/pose', 1)
-        self._twist_publisher = self.create_publisher(Twist, '/state_estimator/twist', 1)
-
+        
+    
     def publish_pose_twist(self, p, q, v):
         # Publish the pose
         pose_msg = Pose()
@@ -161,6 +168,38 @@ class PoseEstimatorPublisher(Node):
         self._twist_publisher.publish(twist_msg)
         
         
+    def timer_callback(self):
+        self.filter.predict(self.w_b, self.a_b, self.time)
+
+        self.filter.fuse_odo(self.q_j, self.v_j, self.contact_feet_names.copy())
+        
+        self.publish_pose_twist(self.filter._state[10:13], self.filter._state[0:4], self.filter._state[13:16])
+        
+        # Get the yaw, pitch, and roll angles from the orientation quaternion and print them.
+        # q = quaternion.from_float_array(filter._state[0:4])
+        # yaw = atan2(2.0*(q.y*q.z + q.w*q.x), q.w*q.w - q.x*q.x - q.y*q.y + q.z*q.z)
+        # pitch = asin(-2.0*(q.x*q.z - q.w*q.y))
+        # roll = atan2(2.0*(q.x*q.y + q.w*q.z), q.w*q.w + q.x*q.x - q.y*q.y - q.z*q.z)
+        # print(roll, " - ", pitch, " - ", yaw)
+        
+        
+        
+class blockingNode(Node):
+    def __init__(self):
+        super().__init__("blocking_node")
+        
+        self.clock_subscription = self.create_subscription(
+            Clock,
+            "/clock",
+            self.clock_callback,
+            1)        
+        self.clock_subscription   # prevent unused variable warning
+                
+    def clock_callback(self, msg):
+        if (msg.clock.nanosec == 0):
+            rclpy.spin_once(self)
+        
+        
 
 # ============================================================================ #
 #                                     main                                     #
@@ -168,70 +207,30 @@ class PoseEstimatorPublisher(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    
-    subscriber = PoseEstimatorSubscriber()
-
-    publisher = PoseEstimatorPublisher()
-    
-    # Create another thread in order not to block with the subscriber callbacks.
-    thread = threading.Thread(target=rclpy.spin, args=(subscriber, ), daemon=True)
-    thread.start()
-    
-    filter = KalmanFilter("anymal_c")
-    filter.sample_time = 1/200
-    filter.decimation_factor = 5
-    filter._state[12] = 0.6
-    filter._flag_fuse_odo_pos = True
-    filter.update_private_properties()
-    
-    rate = subscriber.create_rate(int(1 / filter.sample_time))
-    
+        
+    node = PoseEstimatorNode("anymal_c")
+        
+    node.filter.decimation_factor = 5
+    node.filter._state[12] = 0.6
+    node.filter._flag_fuse_odo_pos = True
+    node.filter.update_private_properties()
+        
     
     # =================== Block Until The Simulation Starts ================== #
 
     # While cycle used to pause the execution of the script until the simulation is started and thus the measurements are obtained.
-    q = subscriber.q_j
-    a = subscriber.a_b
-    while q.size == 0 or a.size == 0:
-        q = subscriber.q_j
-        a = subscriber.a_b
-
-        rate.sleep()
-    
+    blocking_node = blockingNode()
+    rclpy.spin_once(blocking_node)
+    blocking_node.destroy_node()
+            
         
     # =============================== Main Loop ============================== #
     
-    try:
-        while rclpy.ok():            
-            filter.predict(subscriber.w_b, subscriber.a_b, subscriber.time)
-
-            filter.fuse_odo(subscriber.q_j, subscriber.v_j, subscriber.contact_feet_names)
-            
-            # Get the yaw, pitch, and roll angles from the orientation quaternion and print them.
-            # q = quaternion.from_float_array(filter._state[0:4])
-            # yaw = atan2(2.0*(q.y*q.z + q.w*q.x), q.w*q.w - q.x*q.x - q.y*q.y + q.z*q.z)
-            # pitch = asin(-2.0*(q.x*q.z - q.w*q.y))
-            # roll = atan2(2.0*(q.x*q.y + q.w*q.z), q.w*q.w + q.x*q.x - q.y*q.y - q.z*q.z)
-            # print(roll, " - ", pitch, " - ", yaw)
-            
-            # print(filter._state[4:7],)
-            # print(filter._state[7:10], "\n")
-            
-            # print(subscriber.v_b[0:3])
-            # print(filter._state[13:16], "\n")
-            
-            publisher.publish_pose_twist(filter._state[10:13], filter._state[0:4], filter._state[13:16])
-            
-            rate.sleep()
-    except KeyboardInterrupt:
-        pass
+    rclpy.spin(node)
     
-    
-    subscriber.destroy_node()
+    node.destroy_node()
     rclpy.shutdown()
-    
-    thread.join()
-    
+            
     
     
 if __name__ == '__main__':
