@@ -24,7 +24,7 @@ Run the container:
 ```
 Build the ROS workspace:
 ```shell
-colcon build --symlink-install && source install/setup.bash
+colcon build --symlink-install -DCMAKE_BUILD_TYPE=Release && source install/setup.bash
 ```
 
 ## Dependencies
