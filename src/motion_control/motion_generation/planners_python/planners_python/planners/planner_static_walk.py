@@ -46,6 +46,9 @@ class MotionPlanner:
 
         # Desired base height
         self.h_b_des = 0.47
+        
+        # Initial height
+        self.h_init = 0.6
 
         # Time normalized stride phase
         self.phi = 0
@@ -259,7 +262,7 @@ class MotionPlanner:
             # Base linear position quantities
             r_b_ddot_des = np.zeros(3)
             r_b_dot_des = np.zeros(3)
-            r_b_des = np.array([0.0,0.0,0.6]) + self.phi / (init_phase / 2) * (init_pos - np.array([0.0,0.0,0.6]))
+            r_b_des = np.array([0.0,0.0,self.h_init]) + self.phi / (init_phase / 2) * (init_pos - np.array([0.0,0.0,self.h_init]))
 
             # Contact Feet list
             contactFeet = allFeet

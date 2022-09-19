@@ -31,6 +31,22 @@ CallbackReturn HQPController::on_init()
     try {
         auto_declare<std::string>("robot_name", std::string());
         auto_declare<double>("sample_time", double());
+
+        auto_declare<std::vector<std::string>>("joints", std::vector<std::string>());
+
+        auto_declare<double>("tau_max", double());
+        auto_declare<double>("mu", double());
+        auto_declare<double>("Fn_max", double());
+        auto_declare<double>("Fn_min", double());
+
+        auto_declare<std::vector<double>>("kp_b_pos", std::vector<double>());
+        auto_declare<std::vector<double>>("kd_b_pos", std::vector<double>());
+        auto_declare<std::vector<double>>("kp_b_ang", std::vector<double>());
+        auto_declare<std::vector<double>>("kd_b_ang", std::vector<double>());
+        auto_declare<std::vector<double>>("kp_s_pos", std::vector<double>());
+        auto_declare<std::vector<double>>("kd_s_pos", std::vector<double>());
+        auto_declare<std::vector<double>>("kp_terr", std::vector<double>());
+        auto_declare<std::vector<double>>("kd_terr", std::vector<double>());
     }
     catch(const std::exception& e) {
         fprintf(stderr,"Exception thrown during init stage with message: %s \n", e.what());
@@ -86,14 +102,102 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& previo
         return CallbackReturn::ERROR;
     }
 
+
+    joint_names_ = get_node()->get_parameter("joints").as_string_array();
+    if (joint_names_.empty()) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'joints' is empty");
+        return CallbackReturn::ERROR;
+    }
+
+
     wbc = wbc::WholeBodyController(robot_name, dt);
 
     q_.resize(wbc.get_nv() + 1);
     q_(6) = 1;
     v_.resize(wbc.get_nv());
-    des_gen_pose_.feet_pos.resize(12);
-    des_gen_pose_.feet_vel.resize(12);
-    des_gen_pose_.feet_acc.resize(12);
+
+    des_gen_pose_.feet_pos.resize(3);
+    des_gen_pose_.feet_vel.resize(3);
+    des_gen_pose_.feet_acc.resize(3);
+    des_gen_pose_.feet_pos.resize(0);
+    des_gen_pose_.feet_vel.resize(0);
+    des_gen_pose_.feet_acc.resize(0);
+
+    wbc.set_tau_max(get_node()->get_parameter("tau_max").as_double());
+    if (get_node()->get_parameter("tau_max").as_double() <= 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'tau_max' parameter is <= 0");
+        return CallbackReturn::ERROR;
+    }
+    
+    wbc.set_mu(get_node()->get_parameter("mu").as_double());
+    if (get_node()->get_parameter("mu").as_double() <= 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'mu' parameter is <= 0");
+        return CallbackReturn::ERROR;
+    }
+    
+    wbc.set_Fn_max(get_node()->get_parameter("Fn_max").as_double());
+    if (get_node()->get_parameter("Fn_max").as_double() <= 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'Fn_max' parameter is <= 0");
+        return CallbackReturn::ERROR;
+    }
+    
+    wbc.set_Fn_min(get_node()->get_parameter("Fn_min").as_double());
+    if (get_node()->get_parameter("Fn_min").as_double() <= 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'Fn_min' parameter is <= 0");
+        return CallbackReturn::ERROR;
+    }
+
+
+    if (get_node()->get_parameter("kp_b_pos").as_double_array().size() != 3) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'kp_b_pos' parameter does not have three elements");
+        return CallbackReturn::ERROR;
+    }
+    wbc.set_kp_b_pos(Eigen::Vector3d::Map(get_node()->get_parameter("kp_b_pos").as_double_array().data()));
+
+    if (get_node()->get_parameter("kd_b_pos").as_double_array().size() != 3) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'kd_b_pos' parameter does not have three elements");
+        return CallbackReturn::ERROR;
+    }
+    wbc.set_kd_b_pos(Eigen::Vector3d::Map(get_node()->get_parameter("kd_b_pos").as_double_array().data()));
+
+
+    if (get_node()->get_parameter("kp_b_ang").as_double_array().size() != 3) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'kp_b_ang' parameter does not have three elements");
+        return CallbackReturn::ERROR;
+    }
+    wbc.set_kp_b_ang(Eigen::Vector3d::Map(get_node()->get_parameter("kp_b_ang").as_double_array().data()));
+
+    if (get_node()->get_parameter("kd_b_ang").as_double_array().size() != 3) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'kd_b_ang' parameter does not have three elements");
+        return CallbackReturn::ERROR;
+    }
+    wbc.set_kd_b_ang(Eigen::Vector3d::Map(get_node()->get_parameter("kd_b_ang").as_double_array().data()));
+
+
+    if (get_node()->get_parameter("kp_s_pos").as_double_array().size() != 3) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'kp_s_pos' parameter does not have three elements");
+        return CallbackReturn::ERROR;
+    }
+    wbc.set_kp_s_pos(Eigen::Vector3d::Map(get_node()->get_parameter("kp_s_pos").as_double_array().data()));
+
+    if (get_node()->get_parameter("kd_s_pos").as_double_array().size() != 3) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'kd_s_pos' parameter does not have three elements");
+        return CallbackReturn::ERROR;
+    }
+    wbc.set_kd_s_pos(Eigen::Vector3d::Map(get_node()->get_parameter("kd_s_pos").as_double_array().data()));
+
+
+    if (get_node()->get_parameter("kp_terr").as_double_array().size() != 3) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'kp_terr' parameter does not have three elements");
+        return CallbackReturn::ERROR;
+    }
+    wbc.set_kp_terr(Eigen::Vector3d::Map(get_node()->get_parameter("kp_terr").as_double_array().data()));
+
+    if (get_node()->get_parameter("kd_terr").as_double_array().size() != 3) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'kd_terr' parameter does not have three elements");
+        return CallbackReturn::ERROR;
+    }
+    wbc.set_kd_terr(Eigen::Vector3d::Map(get_node()->get_parameter("kd_terr").as_double_array().data()));
 
     joint_state_subscription_ = get_node()->create_subscription<gazebo_msgs::msg::LinkStates>(
         "/gazebo/link_states", rclcpp::SystemDefaultsQoS(),
@@ -115,9 +219,9 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& previo
         }
     );
 
-    desired_generalized_pose_subscription_ = get_node()->create_subscription<generalized_pose_msgs::msg::DesiredGeneralizedPose>(
+    desired_generalized_pose_subscription_ = get_node()->create_subscription<generalized_pose_msgs::msg::GeneralizedPose>(
         "/robot/desired_generalized_pose", rclcpp::SystemDefaultsQoS(),
-        [this](const generalized_pose_msgs::msg::DesiredGeneralizedPose::SharedPtr msg) -> void
+        [this](const generalized_pose_msgs::msg::GeneralizedPose::SharedPtr msg) -> void
         {
             des_gen_pose_.base_acc << msg->base_acc.x, msg->base_acc.y, msg->base_acc.z;
             des_gen_pose_.base_vel << msg->base_vel.x, msg->base_vel.y, msg->base_vel.z;
@@ -126,9 +230,9 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& previo
             des_gen_pose_.base_angvel << msg->base_angvel.x, msg->base_angvel.y, msg->base_angvel.z;
             des_gen_pose_.base_quat << msg->base_quat.x, msg->base_quat.y, msg->base_quat.z, msg->base_quat.w;
 
-            des_gen_pose_.feet_acc = Eigen::VectorXd::Map(&msg->feet_acc[0], msg->feet_acc.size());
-            des_gen_pose_.feet_vel = Eigen::VectorXd::Map(&msg->feet_vel[0], msg->feet_vel.size());
-            des_gen_pose_.feet_pos = Eigen::VectorXd::Map(&msg->feet_pos[0], msg->feet_pos.size());
+            des_gen_pose_.feet_acc = Eigen::VectorXd::Map(msg->feet_acc.data(), msg->feet_acc.size());
+            des_gen_pose_.feet_vel = Eigen::VectorXd::Map(msg->feet_vel.data(), msg->feet_vel.size());
+            des_gen_pose_.feet_pos = Eigen::VectorXd::Map(msg->feet_pos.data(), msg->feet_pos.size());
 
             des_gen_pose_.contact_feet_names.assign(&msg->contact_feet[0], &msg->contact_feet[msg->contact_feet.size()]);
         }
@@ -163,8 +267,14 @@ controller_interface::return_type HQPController::update(
         q_(i+7) = state_interfaces_[2*i].get_value();
         v_(i+6) = state_interfaces_[2*i+1].get_value();
     }
+
+    if (des_gen_pose_.contact_feet_names.size() + des_gen_pose_.feet_pos.size()/3 != 4) {
+        return controller_interface::return_type::OK;
+    }
+
+    wbc::GeneralizedPose des_gen_pose_copy = des_gen_pose_;
     
-    wbc.step(q_, v_, des_gen_pose_);
+    wbc.step(q_, v_, des_gen_pose_copy);
 
     tau_ = wbc.get_tau_opt();
 

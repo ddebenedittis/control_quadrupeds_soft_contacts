@@ -8,10 +8,12 @@
 #include "rclcpp_lifecycle/state.hpp"
 
 #include "gazebo_msgs/msg/link_states.hpp"
-#include "generalized_pose_msgs/msg/desired_generalized_pose.hpp"
+#include "generalized_pose_msgs/msg/generalized_pose.hpp"
 
 #include <string>
 #include <vector>
+
+
 
 namespace hqp_controller {
 
@@ -51,7 +53,7 @@ class HQPController : public controller_interface::ControllerInterface {
 
         rclcpp::Subscription<gazebo_msgs::msg::LinkStates>::SharedPtr joint_state_subscription_ = nullptr;
 
-        rclcpp::Subscription<generalized_pose_msgs::msg::DesiredGeneralizedPose>::SharedPtr desired_generalized_pose_subscription_ = nullptr;
+        rclcpp::Subscription<generalized_pose_msgs::msg::GeneralizedPose>::SharedPtr desired_generalized_pose_subscription_ = nullptr;
 };
 
 } // namespace hqp_controller

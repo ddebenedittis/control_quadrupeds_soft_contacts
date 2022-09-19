@@ -36,7 +36,7 @@
                 <type>world</type>
                 </solver>
             </ode> -->
-            <real_time_update_rate>250</real_time_update_rate>   <!-- 1000 is normal speed -->
+            <real_time_update_rate>500</real_time_update_rate>   <!-- 1000 is normal speed -->
         </physics>
 
         <gravity>0 0 -9.81</gravity>

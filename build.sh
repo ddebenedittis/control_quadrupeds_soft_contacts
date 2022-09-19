@@ -9,7 +9,7 @@ while getopts 'r' opt; do
 done
 shift "$(( OPTIND - 1 ))" 
 
-mkdir -p build install log 
+mkdir -p build install log .vscode
 
 docker pull osrf/ros:galactic-desktop
 

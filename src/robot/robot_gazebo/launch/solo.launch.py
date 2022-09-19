@@ -26,20 +26,53 @@ def generate_launch_description():
             }.items()
         ),
 
-        Node(
-            package='planners_python',
-            executable='planner_mjp_node',
-            parameters=[{'use_sim_time': use_sim_time}],
-            output='screen'
-        ),
+        # Node(
+        #     package='planners_python',
+        #     executable='planner_mjp_node',
+        #     parameters=[{'use_sim_time': use_sim_time}],
+        #     output='screen'
+        # ),
 
+        # Node(
+        #     package='hqp_controller',
+        #     executable='hqp_controller_node',
+        #     parameters=[
+        #         {'use_sim_time': use_sim_time},
+        #         {'robot_name': 'solo12'}
+        #     ],
+        #     output='screen'
+        # ),
+        
+        # Node(
+        #     package = 'controller_manager',
+        #     executable = 'spawner',
+        #     arguments = ['effort_controller', '--controller-manager', '/controller_manager'],
+        #     parameters=[{'use_sim_time': use_sim_time}],
+        #     output = 'screen'
+        # ),
+        
+        # Node(
+        #     package='pose_estimator',
+        #     executable='pose_estimator_node',
+        #     parameters=[
+        #         {'use_sim_time': use_sim_time},
+        #         {'robot_name': 'anymal_c'}
+        #     ],
+        #     emulate_tty=True,
+        #     output='screen'
+        # ),
+        
         Node(
-            package='hqp_controller',
-            executable='hqp_controller_node',
-            parameters=[
-                {'use_sim_time': use_sim_time},
-                {'robot_name': 'solo12'}
-            ],
-            output='screen'
+            package = 'controller_manager',
+            executable = 'spawner',
+            arguments = ['planner', '--controller-manager', '/controller_manager'],
+            parameters=[{'use_sim_time': use_sim_time}],
+        ),
+        
+        Node(
+            package = 'controller_manager',
+            executable = 'spawner',
+            arguments = ['whole_body_controller', '--controller-manager', '/controller_manager'],
+            parameters=[{'use_sim_time': use_sim_time}],
         ),
     ])

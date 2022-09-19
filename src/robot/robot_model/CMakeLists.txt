@@ -50,7 +50,7 @@ set(LIBRARY_DEPENDENCIES
     ryml
 )
 
-add_library(${LIBRARY_NAME} src/robot_model.cpp)
+add_library(${LIBRARY_NAME} SHARED src/robot_model.cpp)
 
 target_include_directories(${LIBRARY_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -77,10 +77,9 @@ install(
 install(
     TARGETS ${LIBRARY_NAME}
     EXPORT ${LIBRARY_NAME}_targets
-    LIBRARY DESTINATION lib/${PROJECT_NAME}
-    ARCHIVE DESTINATION lib/${PROJECT_NAME}
-    RUNTIME DESTINATION lib/${PROJECT_NAME}
-    INCLUDES DESTINATION include/${PROJECT_NAME}
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
 )
 
 

@@ -4,7 +4,7 @@ from rclpy.node import Node
 
 from gazebo_msgs.msg import LinkStates
 from sensor_msgs.msg import Imu
-from generalized_pose_msgs.msg import DesiredGeneralizedPose
+from generalized_pose_msgs.msg import GeneralizedPose
 
 from .planners.planner_mjp import MotionPlanner
 
@@ -81,7 +81,7 @@ class MinimalPublisher(Node):
     def __init__(self):
         super().__init__("minimal_publisher")
 
-        self.publisher_ = self.create_publisher(DesiredGeneralizedPose, 'robot/desired_generalized_pose', 1)
+        self.publisher_ = self.create_publisher(GeneralizedPose, 'robot/desired_generalized_pose', 1)
 
     def publish_desired_gen_pose(
         self,
@@ -92,7 +92,7 @@ class MinimalPublisher(Node):
     ):
         # Initialize and fully populate the desired generalized pose message
 
-        msg = DesiredGeneralizedPose()
+        msg = GeneralizedPose()
 
         msg.base_acc.x = r_b_ddot_des[0]
         msg.base_acc.y = r_b_ddot_des[1]

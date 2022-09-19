@@ -45,6 +45,7 @@ ENV CMAKE_PREFIX_PATH="/opt/openrobots:$CMAKE_PREFIX_PATH"
 RUN pip3 install \
     numpy \
     scipy \
+    numpy-quaternion \
     quadprog \
     --upgrade
 

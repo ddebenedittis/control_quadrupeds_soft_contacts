@@ -24,35 +24,54 @@ def generate_launch_description():
                 'world_file_path': os.path.join('worlds', 'anymal.world'),
             }.items()
         ),
-
-        Node(
-            package='planners_python',
-            executable='planner_static_walk_node',
-            parameters=[{'use_sim_time': use_sim_time}],
-            output='screen'
-        ),
-
-        Node(
-            package='hqp_controller',
-            executable='hqp_controller_node',
-            parameters=[
-                {'use_sim_time': use_sim_time},
-                {'robot_name': 'anymal_c'}
-            ],
-            output='screen'
-        ),
+        
+        # Node(
+        #     package='planners_python',
+        #     executable='planner_static_walk_node',
+        #     parameters=[{'use_sim_time': use_sim_time}],
+        #     output='screen'
+        # ),
+        
+        # Node(
+        #     package='hqp_controller',
+        #     executable='hqp_controller_node',
+        #     parameters=[
+        #         {'use_sim_time': use_sim_time},
+        #         {'robot_name': 'anymal_c'}
+        #     ],
+        #     output='screen'
+        # ),
         
         # Node(
         #     package = 'controller_manager',
         #     executable = 'spawner',
-        #     arguments = ['whole_body_controller', '--controller-manager', '/controller_manager'],
+        #     arguments = ['effort_controller', '--controller-manager', '/controller_manager'],
         #     parameters=[{'use_sim_time': use_sim_time}],
+        #     output = 'screen'
         # ),
-        # 
-        # Node(
-        #     package = 'controller_manager',
-        #     executable = 'spawner',
-        #     arguments = ['planner', '--controller-manager', '/controller_manager'],
-        #     parameters=[{'use_sim_time': use_sim_time}],
-        # ),
+        
+        Node(
+            package='pose_estimator',
+            executable='pose_estimator_node',
+            parameters=[
+                {'use_sim_time': use_sim_time},
+                {'robot_name': 'anymal_c'}
+            ],
+            emulate_tty=True,
+            output='screen'
+        ),
+        
+        Node(
+            package = 'controller_manager',
+            executable = 'spawner',
+            arguments = ['planner', '--controller-manager', '/controller_manager'],
+            parameters=[{'use_sim_time': use_sim_time}],
+        ),
+        
+        Node(
+            package = 'controller_manager',
+            executable = 'spawner',
+            arguments = ['whole_body_controller', '--controller-manager', '/controller_manager'],
+            parameters=[{'use_sim_time': use_sim_time}],
+        ),
     ])

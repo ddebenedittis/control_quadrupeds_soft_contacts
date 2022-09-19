@@ -41,6 +41,7 @@ CallbackReturn SWPController::on_init()
         auto_declare<double>("step_height", double());
         auto_declare<double>("desired_foot_penetration", double());
         auto_declare<double>("desired_base_height", double());
+        auto_declare<double>("initial_base_height", double());
         auto_declare<std::vector<double>>("initial_position", std::vector<double>());
         auto_declare<std::vector<double>>("leg_position", std::vector<double>());
         auto_declare<std::vector<double>>("base_oscillation", std::vector<double>());
@@ -59,6 +60,7 @@ CallbackReturn SWPController::on_init()
 InterfaceConfiguration SWPController::command_interface_configuration() const
 {
     InterfaceConfiguration command_interfaces_config;
+    command_interfaces_config.type = interface_configuration_type::NONE;
 
     return command_interfaces_config;
 }
@@ -69,6 +71,7 @@ InterfaceConfiguration SWPController::command_interface_configuration() const
 InterfaceConfiguration SWPController::state_interface_configuration() const
 {
     InterfaceConfiguration state_interfaces_config;
+    state_interfaces_config.type = interface_configuration_type::NONE;
 
     return state_interfaces_config;
 }
@@ -138,32 +141,39 @@ CallbackReturn SWPController::on_configure(const rclcpp_lifecycle::State& previo
         return CallbackReturn::ERROR;
     }
 
+    planner_.h_base_init = get_node()->get_parameter("initial_base_height").as_double();
+    if (planner_.h_base_init <= 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'initial_base_height' parameter is <= 0.");
+        return CallbackReturn::ERROR;
+    }
+
     planner_.init_com_position_ = std::make_pair(get_node()->get_parameter("initial_position").as_double_array()[0],
                                                  get_node()->get_parameter("initial_position").as_double_array()[1]);
-    if (sizeof(get_node()->get_parameter("initial_position").as_double_array()) / sizeof(double) != 2) {
+    if (get_node()->get_parameter("initial_position").as_double_array().size() != 2) {
         RCLCPP_ERROR(get_node()->get_logger(),"'initial_position' does not have two elements.");
         return CallbackReturn::ERROR;
     }
 
     planner_.abs_leg_pos_ = std::make_pair(get_node()->get_parameter("leg_position").as_double_array()[0],
                                            get_node()->get_parameter("leg_position").as_double_array()[1]);
-    if (sizeof(get_node()->get_parameter("leg_position").as_double_array()) / sizeof(double) != 2) {
+    if (get_node()->get_parameter("leg_position").as_double_array().size() != 2) {
         RCLCPP_ERROR(get_node()->get_logger(),"'leg_position' does not have two elements.");
         return CallbackReturn::ERROR;
     }
 
     planner_.base_osc_ = std::make_pair(get_node()->get_parameter("base_oscillation").as_double_array()[0],
                                         get_node()->get_parameter("base_oscillation").as_double_array()[1]);
-    if (sizeof(get_node()->get_parameter("base_oscillation").as_double_array()) / sizeof(double) != 2) {
+    if (get_node()->get_parameter("base_oscillation").as_double_array().size() != 2) {
         RCLCPP_ERROR(get_node()->get_logger(),"'base_oscillation' does not have two elements.");
         return CallbackReturn::ERROR;
     }
 
     /* ====================================================================== */
 
-    gen_pose_publisher_ = get_node()->create_publisher<generalized_pose_msgs::msg::DesiredGeneralizedPose>(
+    gen_pose_publisher_ = get_node()->create_publisher<generalized_pose_msgs::msg::GeneralizedPose>(
         "/robot/desired_generalized_pose", rclcpp::SystemDefaultsQoS()
     );
+
 
     return CallbackReturn::SUCCESS;
 }
@@ -201,7 +211,7 @@ controller_interface::return_type SWPController::update(const rclcpp::Time& time
 
 void SWPController::publish_gen_pose()
 {
-    generalized_pose_msgs::msg::DesiredGeneralizedPose msg;
+    generalized_pose_msgs::msg::GeneralizedPose msg;
 
     msg.base_acc.x = gen_pose_.base_acc[0];
     msg.base_acc.y = gen_pose_.base_acc[1];

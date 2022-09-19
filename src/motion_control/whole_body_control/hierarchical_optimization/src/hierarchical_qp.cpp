@@ -203,7 +203,7 @@ void HierarchicalQP::solve_qp(
     // VectorXd ce0 = VectorXd::Zero(0);
     
     // /*EiquadprogFast_status status = */qp.solve_quadprog(
-    int result = solve_quadprog(
+    /*int result = */solve_quadprog(
         G,
         g0,
         CI,

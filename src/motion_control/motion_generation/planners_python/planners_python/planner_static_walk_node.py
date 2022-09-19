@@ -1,17 +1,17 @@
 import threading
+
+import numpy as np
+
 import rclpy
 from rclpy.node import Node
 
 from gazebo_msgs.msg import LinkStates
+from generalized_pose_msgs.msg import GeneralizedPose
 from sensor_msgs.msg import Imu
-from generalized_pose_msgs.msg import DesiredGeneralizedPose
 
 from .planners.planner_static_walk import MotionPlanner
-
 from .utils.quat_math import q_mult
 from .utils.fading_filter import FadingFilter
-
-import numpy as np
 
 
 
@@ -29,20 +29,19 @@ class MinimalSubscriber(Node):
             self.link_states_callback,
             1)
         
-        self.link_states_subscription # prevent unused variable warning
+        self.link_states_subscription   # prevent unused variable warning
 
         self.imu_subscription = self.create_subscription(
             Imu,
             "/imu_sensor_broadcaster/imu",
             self.imu_callback,
-            1
-        )
+            1)
 
-        self.imu_subscription # prevent unused variable warning
+        self.imu_subscription           # prevent unused variable warning
 
-        self.q_b = np.array([])     # base position
-        self.v_b = np.array([])     # base velocity
-        self.a_b = np.array([])     # base acceleration
+        self.q_b = np.array([])         # base position
+        self.v_b = np.array([])         # base velocity
+        self.a_b = np.array([])         # base acceleration
 
 
     # Save the base pose and twist
@@ -81,7 +80,7 @@ class MinimalPublisher(Node):
     def __init__(self):
         super().__init__("minimal_publisher")
 
-        self.publisher_ = self.create_publisher(DesiredGeneralizedPose, 'robot/desired_generalized_pose', 1)
+        self.publisher_ = self.create_publisher(GeneralizedPose, 'robot/desired_generalized_pose', 1)
 
     def publish_desired_gen_pose(
         self,
@@ -92,7 +91,7 @@ class MinimalPublisher(Node):
     ):
         # Initialize and fully populate the desired generalized pose message
 
-        msg = DesiredGeneralizedPose()
+        msg = GeneralizedPose()
 
         msg.base_acc.x = r_b_ddot_des[0]
         msg.base_acc.y = r_b_ddot_des[1]

@@ -97,17 +97,22 @@ class PrioritizedTasks {
 
         int get_max_priority() {return *max_element(tasks_vector.begin(), tasks_vector.end());}
 
-        void set_kp_b_pos(Eigen::Vector3d kp_b_pos) {control_tasks.set_kp_b_pos(kp_b_pos);}
-        void set_kd_b_pos(Eigen::Vector3d kd_b_pos) {control_tasks.set_kd_b_pos(kd_b_pos);}
+        void set_tau_max(const double tau_max) {control_tasks.set_tau_max(tau_max);}
+        void set_mu(const double mu) {control_tasks.set_mu(mu);}
+        void set_Fn_max(const double Fn_max) {control_tasks.set_Fn_max(Fn_max);}
+        void set_Fn_min(const double Fn_min) {control_tasks.set_Fn_min(Fn_min);}
 
-        void set_kp_b_ang(Eigen::Vector3d kp_b_ang) {control_tasks.set_kp_b_ang(kp_b_ang);}
-        void set_kd_b_ang(Eigen::Vector3d kd_b_ang) {control_tasks.set_kd_b_ang(kd_b_ang);}
+        void set_kp_b_pos(const Eigen::Ref<const Eigen::Vector3d>& kp_b_pos) {control_tasks.set_kp_b_pos(kp_b_pos);}
+        void set_kd_b_pos(const Eigen::Ref<const Eigen::Vector3d>& kd_b_pos) {control_tasks.set_kd_b_pos(kd_b_pos);}
 
-        void set_kp_s_pos(Eigen::Vector3d kp_s_pos) {control_tasks.set_kp_s_pos(kp_s_pos);}
-        void set_kd_s_pos(Eigen::Vector3d kd_s_pos) {control_tasks.set_kd_s_pos(kd_s_pos);}
+        void set_kp_b_ang(const Eigen::Ref<const Eigen::Vector3d>& kp_b_ang) {control_tasks.set_kp_b_ang(kp_b_ang);}
+        void set_kd_b_ang(const Eigen::Ref<const Eigen::Vector3d>& kd_b_ang) {control_tasks.set_kd_b_ang(kd_b_ang);}
 
-        void set_Kp_terr(Eigen::Vector3d Kp_terr) {control_tasks.set_Kp_terr(Kp_terr);}
-        void set_Kd_terr(Eigen::Vector3d Kd_terr) {control_tasks.set_Kd_terr(Kd_terr);}
+        void set_kp_s_pos(const Eigen::Ref<const Eigen::Vector3d>& kp_s_pos) {control_tasks.set_kp_s_pos(kp_s_pos);}
+        void set_kd_s_pos(const Eigen::Ref<const Eigen::Vector3d>& kd_s_pos) {control_tasks.set_kd_s_pos(kd_s_pos);}
+
+        void set_kp_terr(const Eigen::Ref<const Eigen::Vector3d>& kp_terr) {control_tasks.set_kp_terr(kp_terr);}
+        void set_kd_terr(const Eigen::Ref<const Eigen::Vector3d>& kd_terr) {control_tasks.set_kd_terr(kd_terr);}
 
     private:
         /// @brief Get the number of rows of the equality and inequality matrices (A and C) of a whole task of priority p (which may be composed by several elementary control tasks).

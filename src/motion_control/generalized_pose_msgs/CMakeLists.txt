@@ -42,7 +42,7 @@ find_package(std_msgs REQUIRED)
 
 # Declare the list of messages you want to generate
 set(msg_files
-    "msg/DesiredGeneralizedPose.msg"
+    "msg/GeneralizedPose.msg"
 )
 
 # Generate the messages

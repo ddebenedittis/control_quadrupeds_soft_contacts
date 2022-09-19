@@ -68,14 +68,6 @@ def generate_launch_description():
         Node(
             package = 'controller_manager',
             executable = 'spawner',
-            arguments = ['effort_controller', '--controller-manager', '/controller_manager'],
-            parameters=[{'use_sim_time': use_sim_time}],
-            output = 'screen'
-        ),
-
-        Node(
-            package = 'controller_manager',
-            executable = 'spawner',
             arguments = ['joint_state_broadcaster', '--controller-manager', '/controller_manager'],
             parameters=[{'use_sim_time': use_sim_time}],
         ),

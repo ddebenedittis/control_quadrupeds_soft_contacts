@@ -51,7 +51,7 @@ set(LIBRARY_DEPENDENCIES
     robot_model
 )
 
-add_library(${LIBRARY_NAME}
+add_library(${LIBRARY_NAME} SHARED
     src/deformations_history_manager.cpp
     src/control_tasks.cpp
     src/prioritized_tasks.cpp
@@ -77,10 +77,9 @@ install(
 install(
     TARGETS ${LIBRARY_NAME}
     EXPORT ${LIBRARY_NAME}_targets
-    LIBRARY DESTINATION lib/${PROJECT_NAME}
-    ARCHIVE DESTINATION lib/${PROJECT_NAME}
-    RUNTIME DESTINATION lib/${PROJECT_NAME}
-    INCLUDES DESTINATION include/${PROJECT_NAME}
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
 )
 
 

@@ -57,7 +57,4 @@ class RobotModel:
             B_r_fb[i, :] = self._data.oMf[frame_id].translation
             B_v_fb[i, :] = pin.getFrameVelocity(self._model, self._data, frame_id, pin.LOCAL_WORLD_ALIGNED).linear
             
-        print(B_r_fb)
-        print(B_v_fb)
-            
         return [B_r_fb, B_v_fb]

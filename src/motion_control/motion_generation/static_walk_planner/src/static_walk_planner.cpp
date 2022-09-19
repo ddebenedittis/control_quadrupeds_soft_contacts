@@ -72,7 +72,7 @@ void StaticWalkPlanner::step(GeneralizedPose& gen_pose)
     /* ======================= Increase The Gait Phase ====================== */
 
     // Increase the phase
-    phi_ = dt_ / cycle_duration_;
+    phi_ += dt_ / cycle_duration_;
 
     // If the phase is greater than one, reset it to 0 (plus the init_phase_).
     if (phi_ - init_phase_ > 1) {
@@ -94,16 +94,16 @@ void StaticWalkPlanner::step_initialization_0(GeneralizedPose& gen_pose)
     // Base linear quantities.
     gen_pose.base_acc << 0, 0, 0;
     gen_pose.base_vel << 0, 0, 0;
-    gen_pose.base_pos << 0, 0, 0.6;
+    gen_pose.base_pos << 0, 0, h_base_init;
     gen_pose.base_pos += phi_ / (init_phase_ / 2) * (init_pos - gen_pose.base_pos);
 
     // Contact feet names.
     gen_pose.contact_feet_names = all_feet_names_;
 
     // The swing feet quantities are empty lists since no feet are in swing phase.
-    // gen_pose.feet_acc = {};
-    // gen_pose.feet_vel = {};
-    // gen_pose.feet_pos = {};
+    gen_pose.feet_acc = {};
+    gen_pose.feet_vel = {};
+    gen_pose.feet_pos = {};
 }
 
 
@@ -126,9 +126,9 @@ void StaticWalkPlanner::step_initialization_1(GeneralizedPose& gen_pose)
     gen_pose.contact_feet_names = all_feet_names_;
 
     // The swing feet quantities are empty lists since no feet are in swing phase.
-    // gen_pose.feet_acc = {};
-    // gen_pose.feet_vel = {};
-    // gen_pose.feet_pos = {};
+    gen_pose.feet_acc = {};
+    gen_pose.feet_vel = {};
+    gen_pose.feet_pos = {};
 }
 
 
@@ -171,10 +171,10 @@ void StaticWalkPlanner::step_plan(GeneralizedPose& gen_pose)
     double phi = phi_ - init_phase_;
 
     // Id of the foot in swing phase (id in the gait_pattern_ vector)
-    int swing_foot_id = floor(4 * phi);
+    double swing_foot_id = floor(4 * phi);
 
     // Update the position of the base and of the legs to take into account how much the robot has walked.
-    r_b_osc = r_b_osc + MatrixXd::Ones(4, 1) * step * (swing_foot_id/4 + cycles_completed_);
+    r_b_osc = r_b_osc + MatrixXd::Ones(4, 1) * step.transpose() * (swing_foot_id/4 + cycles_completed_);
     abs_legs_pos.row(swing_foot_id) += step.head(2) * cycles_completed_;
 
 
@@ -196,18 +196,22 @@ void StaticWalkPlanner::step_plan(GeneralizedPose& gen_pose)
         spline(p_i, p_f, phi_2/delta_t,
                gen_pose.base_pos, gen_pose.base_vel, gen_pose.base_acc);
 
-        std::vector<std::string> contactFeet = all_feet_names_;
+        gen_pose.contact_feet_names = all_feet_names_;
 
         // The swing feet quantities are empty lists since no feet are in swing phase.
-        // gen_pose.feet_acc = {};
-        // gen_pose.feet_vel = {};
-        // gen_pose.feet_pos = {};
+        gen_pose.feet_acc = {};
+        gen_pose.feet_vel = {};
+        gen_pose.feet_pos = {};
     }
 
     /* ========================== Swing Foot Phase ========================== */
 
     // After the base has been moved to the new position that guarantees static stability, move the foot.
     else {
+        gen_pose.feet_acc.resize(3);
+        gen_pose.feet_vel.resize(3);
+        gen_pose.feet_pos.resize(3);
+
         /* ========================== Base Movement ========================= */
 
         // The desired base position, velocity, and acceleration are computed by calculating the initial and final position of the base, and by allocating the appropriate time requirements for this movement.
@@ -226,10 +230,9 @@ void StaticWalkPlanner::step_plan(GeneralizedPose& gen_pose)
                gen_pose.base_pos, gen_pose.base_vel, gen_pose.base_acc);
 
         // Obtain the list of feet in contact with the terrain by removing the swing_foot_id foot. This assures that the list has the correct order and is consistent with the other parts of the code.
-        std::vector<std::string> contact_feet = all_feet_names_;
-        contact_feet.erase(
-            contact_feet.begin()
-            + static_cast<int>(std::find(contact_feet.begin(), contact_feet.end(), gait_pattern_[swing_foot_id]) - contact_feet.begin())
+        gen_pose.contact_feet_names = all_feet_names_;
+        gen_pose.contact_feet_names.erase(
+            std::find(gen_pose.contact_feet_names.begin(), gen_pose.contact_feet_names.end(), gait_pattern_[swing_foot_id])
         );
 
         /* ==================== Horizontal Foot Movement ==================== */
@@ -239,10 +242,10 @@ void StaticWalkPlanner::step_plan(GeneralizedPose& gen_pose)
         // Leg initial and final horizontal position
         Vector3d leg_init_pos {abs_legs_pos(swing_foot_id, 0),
                                abs_legs_pos(swing_foot_id, 1),
-                               0};
+                               0.};
         Vector3d leg_end_pos {abs_legs_pos(swing_foot_id, 0) + step_length_,
                               abs_legs_pos(swing_foot_id, 1),
-                              0};
+                              0.};
 
         // Horizontal part of the desired position, velocity, and acceleration of the swing feet
         spline(leg_init_pos, leg_end_pos, phi_2/delta_T,
@@ -250,9 +253,9 @@ void StaticWalkPlanner::step_plan(GeneralizedPose& gen_pose)
 
         /* ===================== Vertical Foot Movement ===================== */
 
-        VectorXd r_s_ddot_des_2;
-        VectorXd r_s_dot_des_2;
-        VectorXd r_s_des_2;
+        Vector3d r_s_ddot_des_2;
+        Vector3d r_s_dot_des_2;
+        Vector3d r_s_des_2;
 
         // Raise the foot during the first half
         if (4*phi - swing_foot_id < (1 - step_duty_factor_)/2 + step_duty_factor_) {
@@ -302,7 +305,7 @@ void StaticWalkPlanner::step_plan(GeneralizedPose& gen_pose)
 
 void StaticWalkPlanner::spline(
     Eigen::Ref<Vector3d> p_i, Eigen::Ref<Vector3d> p_f, double t,
-    Eigen::Ref<Vector3d> p_t, Eigen::Ref<Vector3d> v_t, Eigen::Ref<Vector3d> a_t
+    Eigen::Ref<VectorXd> p_t, Eigen::Ref<VectorXd> v_t, Eigen::Ref<VectorXd> a_t
 ) {
     // Local time of transition phase and its derivatives
     double f_t, f_t_dot, f_t_ddot;

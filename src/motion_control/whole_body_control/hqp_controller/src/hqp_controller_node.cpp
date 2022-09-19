@@ -3,7 +3,7 @@
 #include "rclcpp/rclcpp.hpp"
 
 #include "gazebo_msgs/msg/link_states.hpp"
-#include "generalized_pose_msgs/msg/desired_generalized_pose.hpp"
+#include "generalized_pose_msgs/msg/generalized_pose.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -55,7 +55,7 @@ class MinimalSubscriber : public rclcpp::Node
             link_state_subscription_ = this->create_subscription<gazebo_msgs::msg::LinkStates>(
                 link_states_topic_name, 10, std::bind(&MinimalSubscriber::link_states_callback, this, _1));
 
-            desired_generalized_pose_subscription_ = this->create_subscription<generalized_pose_msgs::msg::DesiredGeneralizedPose>(
+            desired_generalized_pose_subscription_ = this->create_subscription<generalized_pose_msgs::msg::GeneralizedPose>(
                 desired_generalized_state_topic_name, 10, std::bind(&MinimalSubscriber::desired_generalized_pose_callback, this, _1));
         }
 
@@ -108,7 +108,7 @@ class MinimalSubscriber : public rclcpp::Node
                          ang.x, ang.y, ang.z;
         }
 
-        void desired_generalized_pose_callback(const generalized_pose_msgs::msg::DesiredGeneralizedPose::SharedPtr msg)
+        void desired_generalized_pose_callback(const generalized_pose_msgs::msg::GeneralizedPose::SharedPtr msg)
         {
             gen_pose.base_acc << msg->base_acc.x, msg->base_acc.y, msg->base_acc.z;
             gen_pose.base_vel << msg->base_vel.x, msg->base_vel.y, msg->base_vel.z;
@@ -126,7 +126,7 @@ class MinimalSubscriber : public rclcpp::Node
 
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_states_subscription_;
         rclcpp::Subscription<gazebo_msgs::msg::LinkStates>::SharedPtr link_state_subscription_;
-        rclcpp::Subscription<generalized_pose_msgs::msg::DesiredGeneralizedPose>::SharedPtr desired_generalized_pose_subscription_;
+        rclcpp::Subscription<generalized_pose_msgs::msg::GeneralizedPose>::SharedPtr desired_generalized_pose_subscription_;
 
         /// @brief Number of robot joints
         int nj;
@@ -214,8 +214,8 @@ int main(int argc, char* argv[])
     wbc.set_kp_s_pos(150 * Eigen::Vector3d(1,1,1));
     wbc.set_kd_s_pos( 30 * Eigen::Vector3d(1,1,1));
 
-    wbc.set_Kp_terr(1000 * Eigen::Vector3d(1,1,1));
-    wbc.set_Kd_terr(1000 * Eigen::Vector3d(1,1,1));
+    wbc.set_kp_terr(1000 * Eigen::Vector3d(1,1,1));
+    wbc.set_kd_terr(1000 * Eigen::Vector3d(1,1,1));
 
 
     /* ============= Instantite The Subscriber And The Publisher ============ */

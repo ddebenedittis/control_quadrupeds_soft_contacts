@@ -7,7 +7,7 @@
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
 
-#include "generalized_pose_msgs/msg/desired_generalized_pose.hpp"
+#include "generalized_pose_msgs/msg/generalized_pose.hpp"
 
 #include <string>
 #include <vector>
@@ -46,7 +46,7 @@ class SWPController : public controller_interface::ControllerInterface {
 
         static_walk_planner::GeneralizedPose gen_pose_;
 
-        std::shared_ptr<rclcpp::Publisher<generalized_pose_msgs::msg::DesiredGeneralizedPose>> gen_pose_publisher_ = nullptr;
+        std::shared_ptr<rclcpp::Publisher<generalized_pose_msgs::msg::GeneralizedPose>> gen_pose_publisher_ = nullptr;
 };
 
 } // namespace static_walk_planner

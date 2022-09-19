@@ -63,7 +63,7 @@ set(PROJECT_DEPENDENCIES
     whole_body_controller
 )
 
-add_library(${PROJECT_NAME} src/hqp_controller.cpp)
+add_library(${PROJECT_NAME} SHARED src/hqp_controller.cpp)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -79,16 +79,15 @@ ament_export_dependencies(${PROJECT_DEPENDENCIES})
 
 install(
     DIRECTORY include/
-    DESTINATION include/${PROJECT_NAME}
+    DESTINATION include
 )
 
 install(
     TARGETS ${PROJECT_NAME}
     EXPORT ${PROJECT_NAME}_targets
-    LIBRARY DESTINATION lib/${PROJECT_NAME}
-    ARCHIVE DESTINATION lib/${PROJECT_NAME}
-    RUNTIME DESTINATION lib/${PROJECT_NAME}
-    INCLUDES DESTINATION include/${PROJECT_NAME}
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
 )
 
 
@@ -119,16 +118,12 @@ target_include_directories(${NODE_NAME} PUBLIC
 
 ament_target_dependencies(${NODE_NAME} PUBLIC ${NODE_DEPENDENCIES})
 
-ament_export_targets(${NODE_NAME}_targets HAS_LIBRARY_TARGET)
-ament_export_dependencies(${NODE_DEPENDENCIES})
+# ament_export_targets(${NODE_NAME}_targets HAS_LIBRARY_TARGET)
+# ament_export_dependencies(${NODE_DEPENDENCIES})
 
 install(
     TARGETS ${NODE_NAME}
-    EXPORT ${NODE_NAME}_targets
-    LIBRARY DESTINATION lib/${PROJECT_NAME}
-    ARCHIVE DESTINATION lib/${PROJECT_NAME}
-    RUNTIME DESTINATION lib/${PROJECT_NAME}
-    INCLUDES DESTINATION include/${PROJECT_NAME}
+    DESTINATION lib/${PROJECT_NAME}
 )
 
 

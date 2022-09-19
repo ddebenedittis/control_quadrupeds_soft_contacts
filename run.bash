@@ -25,6 +25,7 @@ docker run \
     -v ${PWD}/install:${PWD}/install \
     -v ${PWD}/log:${PWD}/log \
     -v ${PWD}/src:${PWD}/src \
+    -v ${PWD}/.vscode:${PWD}/.vscode \
     --runtime=nvidia \
     --privileged \
     --env="HISTFILE=/home/.bash_history" \

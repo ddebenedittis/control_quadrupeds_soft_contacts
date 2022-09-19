@@ -88,6 +88,9 @@ class StaticWalkPlanner {
         /// @brief Desired base height
         double h_base_des_ = 0.47;
 
+        /// @brief Initial base height
+        double h_base_init = 0.6;
+
         /// @brief Time normalized stride phase
         double phi_ = 0;
 
@@ -127,7 +130,7 @@ class StaticWalkPlanner {
         ///@param[out] a_t 
         void spline(
             Eigen::Ref<Eigen::Vector3d> p_i, Eigen::Ref<Eigen::Vector3d> p_f, double t,
-            Eigen::Ref<Eigen::Vector3d> p_t, Eigen::Ref<Eigen::Vector3d> v_t, Eigen::Ref<Eigen::Vector3d> a_t
+            Eigen::Ref<Eigen::VectorXd> p_t, Eigen::Ref<Eigen::VectorXd> v_t, Eigen::Ref<Eigen::VectorXd> a_t
         );
 };
 

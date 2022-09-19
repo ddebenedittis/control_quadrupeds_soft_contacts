@@ -56,8 +56,8 @@ int main()
     wbc.set_kp_s_pos(150 * Eigen::Vector3d(1,1,1));
     wbc.set_kd_s_pos( 30 * Eigen::Vector3d(1,1,1));
 
-    wbc.set_Kp_terr(1000 * Eigen::Vector3d(1,1,1));
-    wbc.set_Kd_terr(1000 * Eigen::Vector3d(1,1,1));
+    wbc.set_kp_terr(1000 * Eigen::Vector3d(1,1,1));
+    wbc.set_kd_terr(1000 * Eigen::Vector3d(1,1,1));
 
     q << -4.00332046e-06,  6.52628557e-06,  6.31907932e-01, -3.91157384e-05,
           1.05449352e-04, -4.40777218e-07,  9.99999994e-01, -1.32374422e-02,

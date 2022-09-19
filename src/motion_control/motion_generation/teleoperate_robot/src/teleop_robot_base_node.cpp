@@ -4,7 +4,7 @@
 
 #include "gazebo_msgs/msg/link_states.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
-#include "generalized_pose_msgs/msg/desired_generalized_pose.hpp"
+#include "generalized_pose_msgs/msg/generalized_pose.hpp"
 
 #include <array>
 #include <memory.h>
@@ -104,7 +104,7 @@ private:
     std::array<double, 3> r_b_des;  ///< @brief Desired base position
     std::array<double, 4> q_des;    ///< @brief Desired base orientation
 
-    rclcpp::Publisher<generalized_pose_msgs::msg::DesiredGeneralizedPose>::SharedPtr des_gen_pose_pub_;
+    rclcpp::Publisher<generalized_pose_msgs::msg::GeneralizedPose>::SharedPtr des_gen_pose_pub_;
 
     rclcpp::Subscription<gazebo_msgs::msg::LinkStates>::SharedPtr base_pose_sub_;
 };
@@ -124,7 +124,7 @@ TeleopRobot::TeleopRobot()
     this->get_parameter("scale_angular", a_scale_);
     this->get_parameter("scale_linear", l_scale_);
 
-    des_gen_pose_pub_ = this->create_publisher<generalized_pose_msgs::msg::DesiredGeneralizedPose>(
+    des_gen_pose_pub_ = this->create_publisher<generalized_pose_msgs::msg::GeneralizedPose>(
         "robot/desired_generalized_pose", 1);
 
     base_pose_sub_ = this->create_subscription<gazebo_msgs::msg::LinkStates>(
@@ -332,7 +332,7 @@ int TeleopRobot::keyLoop()
 
 
         // Initialize the message and set its parts.
-        generalized_pose_msgs::msg::DesiredGeneralizedPose gen_pose;
+        generalized_pose_msgs::msg::GeneralizedPose gen_pose;
         
         gen_pose.base_acc.x = r_b_ddot_des[0];
         gen_pose.base_acc.y = r_b_ddot_des[1];

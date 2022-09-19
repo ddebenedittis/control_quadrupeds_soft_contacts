@@ -38,7 +38,7 @@ find_package(quadprog REQUIRED)
 #                                 ADD LIBRARIES                                 
 # ==============================================================================
 
-add_library(${PROJECT_NAME} src/hierarchical_qp.cpp)
+add_library(${PROJECT_NAME} SHARED src/hierarchical_qp.cpp)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -59,10 +59,9 @@ install(
 install(
     TARGETS ${PROJECT_NAME}
     EXPORT ${PROJECT_NAME}_targets
-    LIBRARY DESTINATION lib/${PROJECT_NAME}
-    ARCHIVE DESTINATION lib/${PROJECT_NAME}
-    RUNTIME DESTINATION lib/${PROJECT_NAME}
-    INCLUDES DESTINATION include/${PROJECT_NAME}
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
 )
 
 

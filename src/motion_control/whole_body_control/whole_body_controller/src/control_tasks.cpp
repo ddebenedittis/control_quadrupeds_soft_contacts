@@ -254,8 +254,8 @@ void ControlTasks::task_contact_constraints_soft_kv(
     // b = [ - Kd d_k1 / dt ]                           soft contact constraint 
     //     [ - Jc_dot * v + 2 d_k1/dt^2 - d_k2/dt^2 ]   - deformation_ddot = contact_point_acceleration
 
-    MatrixXd Kp = tile(Kp_terr, nc).asDiagonal();
-    MatrixXd Kd = tile(Kd_terr, nc).asDiagonal();
+    MatrixXd Kp = tile(kp_terr, nc).asDiagonal();
+    MatrixXd Kd = tile(kd_terr, nc).asDiagonal();
 
     A.block( 0,    nv, nF, nF) = MatrixXd::Identity(nF, nF);
     A.block( 0, nv+nF, nd, nd) = - Kp - Kd / dt;
