@@ -18,10 +18,11 @@
     <depend>pluginlib</depend>
     <depend>rclcpp_lifecycle</depend>
 
-    <depend>std_msgs</depend>
     <depend>gazebo_msgs</depend>
-    <depend>sensor_msgs</depend>
     <depend>generalized_pose_msgs</depend>
+    <depend>geometry_msgs</depend>
+    <depend>sensor_msgs</depend>
+    <depend>std_msgs</depend>
 
     <depend>whole_body_controller</depend>
 

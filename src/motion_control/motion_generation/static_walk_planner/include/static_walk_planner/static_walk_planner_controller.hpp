@@ -2,12 +2,16 @@
 
 #include "static_walk_planner/static_walk_planner.hpp"
 
+#include "Eigen/Core"
+
 #include "controller_interface/controller_interface.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
 
 #include "generalized_pose_msgs/msg/generalized_pose.hpp"
+#include "geometry_msgs/msg/pose.hpp"
+#include "geometry_msgs/msg/twist.hpp"
 
 #include <string>
 #include <vector>
@@ -46,7 +50,16 @@ class SWPController : public controller_interface::ControllerInterface {
 
         static_walk_planner::GeneralizedPose gen_pose_;
 
+        rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr estimated_pose_subscription_ = nullptr;
+        rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr estimated_twist_subscription_ = nullptr;
+        Eigen::VectorXd q_;
+        Eigen::VectorXd q_init_;
+
         std::shared_ptr<rclcpp::Publisher<generalized_pose_msgs::msg::GeneralizedPose>> gen_pose_publisher_ = nullptr;
+
+        int counter_ = 2000;
+
+
 };
 
 } // namespace static_walk_planner

@@ -38,6 +38,7 @@ find_package(rclcpp_lifecycle REQUIRED)
 find_package(pluginlib REQUIRED)
 
 find_package(generalized_pose_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 
 
@@ -55,6 +56,7 @@ set(PROJECT_DEPENDENCIES
     pluginlib
     
     generalized_pose_msgs
+    geometry_msgs
 )
 
 add_library(${PROJECT_NAME} SHARED

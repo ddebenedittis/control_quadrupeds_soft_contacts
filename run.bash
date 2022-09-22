@@ -26,6 +26,9 @@ docker run \
     -v ${PWD}/log:${PWD}/log \
     -v ${PWD}/src:${PWD}/src \
     -v ${PWD}/.vscode:${PWD}/.vscode \
+    -v ${PWD}/.git:${PWD}/.git \
+    -v ${PWD}/.gitignore:${PWD}/.gitignore \
+    -v ${PWD}/.gitmodules:${PWD}/.gitmodules \
     --runtime=nvidia \
     --privileged \
     --env="HISTFILE=/home/.bash_history" \

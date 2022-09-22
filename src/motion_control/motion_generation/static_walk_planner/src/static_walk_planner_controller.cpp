@@ -31,10 +31,15 @@ SWPController::SWPController()
 CallbackReturn SWPController::on_init()
 {
     try {
+        auto_declare<bool>("use_estimator", bool());
+        auto_declare<int>("initialization_counter", int());
+
         auto_declare<double>("sample_time", double());
         auto_declare<double>("init_phase", double());
+
         auto_declare<std::vector<std::string>>("all_feet_names", std::vector<std::string>());
         auto_declare<std::vector<std::string>>("gait_pattern", std::vector<std::string>());
+
         auto_declare<double>("cycle_duration", double());
         auto_declare<double>("step_duty_factor", double());
         auto_declare<double>("step_length", double());
@@ -81,6 +86,10 @@ InterfaceConfiguration SWPController::state_interface_configuration() const
 
 CallbackReturn SWPController::on_configure(const rclcpp_lifecycle::State& previous_state)
 {
+    bool use_estimator = get_node()->get_parameter("use_estimator").as_bool();
+
+    counter_ = get_node()->get_parameter("initialization_counter").as_int();
+
     planner_.dt_ = get_node()->get_parameter("sample_time").as_double();
     if (planner_.dt_ <= 0) {
         RCLCPP_ERROR(get_node()->get_logger(),"'sample_time' parameter is <= 0.");
@@ -170,6 +179,25 @@ CallbackReturn SWPController::on_configure(const rclcpp_lifecycle::State& previo
 
     /* ====================================================================== */
 
+    if  (use_estimator == true) {
+        estimated_pose_subscription_ = get_node()->create_subscription<geometry_msgs::msg::Pose>(
+            "/state_estimator/pose", 1,
+            [this](const geometry_msgs::msg::Pose::SharedPtr msg) -> void
+            {
+                q_ << msg->position.x, msg->position.y, msg->position.z,
+                      msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w;
+            }
+        );
+    }
+
+    q_.resize(7);
+    q_init_.resize(7);
+
+    q_ << 0,0,0, 0,0,0,1;
+    q_ << 0,0,0, 0,0,0,1;
+
+    /* ====================================================================== */
+
     gen_pose_publisher_ = get_node()->create_publisher<generalized_pose_msgs::msg::GeneralizedPose>(
         "/robot/desired_generalized_pose", rclcpp::SystemDefaultsQoS()
     );
@@ -199,9 +227,16 @@ CallbackReturn SWPController::on_deactivate(const rclcpp_lifecycle::State& previ
 
 controller_interface::return_type SWPController::update(const rclcpp::Time& time, const rclcpp::Duration& period)
 {
-    planner_.step(gen_pose_);
+    if (counter_ > 0) {
+        counter_--;
+        if (counter_ == 0) {
+            q_init_ = q_;
+        }
+    } else {
+        planner_.step(gen_pose_);
 
-    publish_gen_pose();
+        publish_gen_pose();
+    }
 
     return controller_interface::return_type::OK;
 }
@@ -221,18 +256,18 @@ void SWPController::publish_gen_pose()
     msg.base_vel.y = gen_pose_.base_vel[1];
     msg.base_vel.z = gen_pose_.base_vel[2];
 
-    msg.base_pos.x = gen_pose_.base_pos[0];
-    msg.base_pos.y = gen_pose_.base_pos[1];
+    msg.base_pos.x = gen_pose_.base_pos[0] + q_init_(0);
+    msg.base_pos.y = gen_pose_.base_pos[1] + q_init_(1);
     msg.base_pos.z = gen_pose_.base_pos[2];
 
     msg.base_angvel.x = gen_pose_.base_angvel[0];
     msg.base_angvel.y = gen_pose_.base_angvel[1];
     msg.base_angvel.z = gen_pose_.base_angvel[2];
 
-    msg.base_quat.x = gen_pose_.base_quat[0];
-    msg.base_quat.y = gen_pose_.base_quat[1];
-    msg.base_quat.z = gen_pose_.base_quat[2];
-    msg.base_quat.w = gen_pose_.base_quat[3];
+    msg.base_quat.x = q_init_(3);
+    msg.base_quat.y = q_init_(4);
+    msg.base_quat.z = q_init_(5);
+    msg.base_quat.w = q_init_(6);
 
     msg.feet_acc = std::vector<double>(gen_pose_.feet_acc.data(), gen_pose_.feet_acc.data() + gen_pose_.feet_acc.size());
     msg.feet_vel = std::vector<double>(gen_pose_.feet_vel.data(), gen_pose_.feet_vel.data() + gen_pose_.feet_vel.size());

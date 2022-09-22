@@ -35,7 +35,7 @@ class PoseEstimatorNode(Node):
             JointState,
             "/joint_states",
             self.joint_state_callback,
-            1)        
+            1)
         self.joint_state_subscription   # prevent unused variable warning
 
         self.link_states_subscription = self.create_subscription(
@@ -65,14 +65,20 @@ class PoseEstimatorNode(Node):
         self.q_b = np.zeros(7)
         self.v_b = np.zeros(6)
         
-        self.q_j = np.zeros(12)         # joints position
-        self.v_j = np.zeros(12)         # joints velocity
-        self.a_b = np.array([])         # base acceleration in body frame
-        self.w_b = np.array([])         # base angular velocity in body frame
+        self.q_j = np.zeros(12)             # joints position
+        self.v_j = np.zeros(12)             # joints velocity
+        self.a_b = np.array([0.,0.,9.81])   # base acceleration in body frame
+        self.w_b = np.array([0.,0.,0.])     # base angular velocity in body frame
         
-        self.contact_feet_names = []    # names of the feet in contact with the ground
+        # names of the feet in contact with the ground
+        self.contact_feet_names = [
+            'LF_FOOT',
+            'RF_FOOT',
+            'LH_FOOT',
+            'RH_FOOT',
+            ]        
         
-        self.time = 0                   # time of last message from the imu
+        self.time = 0                       # time of last message from the imu
         
         
         # ============================= Publisher ============================ #
@@ -124,7 +130,7 @@ class PoseEstimatorNode(Node):
         ang = msg.twist[base_id].angular
 
         # Save the base pose and twists as numpy arrays
-        self.q_b = np.array([pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w])
+        self.q_b = np.array([pos.x, pos.y, pos.z, orient.w, orient.x, orient.y, orient.z])
         self.v_b = np.array([lin.x, lin.y, lin.z, ang.x, ang.y, ang.z])
 
 
@@ -136,6 +142,7 @@ class PoseEstimatorNode(Node):
         self.w_b = np.array([ang_vel.x, ang_vel.y, ang_vel.z])
         
         self.time = msg.header.stamp.nanosec / 10**9
+        # self.time = int(str(msg.header.stamp.nanosec)[:-6]) / 10^3
         
         
     def gen_pose_callback(self, msg):
@@ -143,7 +150,7 @@ class PoseEstimatorNode(Node):
         self.contact_feet_names = msg.contact_feet
         
     
-    def publish_pose_twist(self, p, q, v):
+    def publish_pose_twist(self, p, q, v, omega):
         # Publish the pose
         pose_msg = Pose()
 
@@ -151,10 +158,10 @@ class PoseEstimatorNode(Node):
         pose_msg.position.y = p[1]
         pose_msg.position.z = p[2]
 
-        pose_msg.orientation.x = q[0]
-        pose_msg.orientation.y = q[1]
-        pose_msg.orientation.z = q[2]
-        pose_msg.orientation.w = q[3]
+        pose_msg.orientation.x = q[1]
+        pose_msg.orientation.y = q[2]
+        pose_msg.orientation.z = q[3]
+        pose_msg.orientation.w = q[0]
 
         self._pose_publisher.publish(pose_msg)
 
@@ -164,17 +171,23 @@ class PoseEstimatorNode(Node):
         twist_msg.linear.x = v[0]
         twist_msg.linear.y = v[1]
         twist_msg.linear.z = v[2]
+        
+        twist_msg.angular.x = omega[0]
+        twist_msg.angular.y = omega[1]
+        twist_msg.angular.z = omega[2]
 
         self._twist_publisher.publish(twist_msg)
         
         
-    def timer_callback(self):
+    def timer_callback(self):        
         self.filter.predict(self.w_b, self.a_b, self.time)
 
         self.filter.fuse_odo(self.q_j, self.v_j, self.contact_feet_names.copy())
         
-        self.publish_pose_twist(self.filter._state[10:13], self.filter._state[0:4], self.filter._state[13:16])
+        omega = self.w_b - self.filter._state[4:7]
         
+        self.publish_pose_twist(self.filter._state[10:13], self.filter._state[0:4], self.filter._state[13:16], omega)
+                
         # Get the yaw, pitch, and roll angles from the orientation quaternion and print them.
         # q = quaternion.from_float_array(filter._state[0:4])
         # yaw = atan2(2.0*(q.y*q.z + q.w*q.x), q.w*q.w - q.x*q.x - q.y*q.y + q.z*q.z)
@@ -212,6 +225,7 @@ def main(args=None):
         
     node.filter.decimation_factor = 5
     node.filter._state[12] = 0.6
+    # node.filter._state[0:4] = np.array([0, -0.707, 0.707, 0])
     node.filter._flag_fuse_odo_pos = True
     node.filter.update_private_properties()
         

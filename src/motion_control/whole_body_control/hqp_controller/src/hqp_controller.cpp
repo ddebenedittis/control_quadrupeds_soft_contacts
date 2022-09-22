@@ -5,6 +5,10 @@
 
 
 
+#define QUEUE_SIZE 1
+
+
+
 namespace hqp_controller {
 
 using controller_interface::interface_configuration_type;
@@ -33,6 +37,10 @@ CallbackReturn HQPController::on_init()
         auto_declare<double>("sample_time", double());
 
         auto_declare<std::vector<std::string>>("joints", std::vector<std::string>());
+
+        auto_declare<bool>("use_estimator", bool());
+
+        auto_declare<int>("initialization_counter", int());
 
         auto_declare<double>("tau_max", double());
         auto_declare<double>("mu", double());
@@ -109,6 +117,14 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& previo
         return CallbackReturn::ERROR;
     }
 
+
+    bool use_estimator = get_node()->get_parameter("use_estimator").as_bool();
+
+
+    counter_ = get_node()->get_parameter("initialization_counter").as_int();
+
+
+    /* ====================================================================== */
 
     wbc = wbc::WholeBodyController(robot_name, dt);
 
@@ -199,28 +215,56 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& previo
     }
     wbc.set_kd_terr(Eigen::Vector3d::Map(get_node()->get_parameter("kd_terr").as_double_array().data()));
 
-    joint_state_subscription_ = get_node()->create_subscription<gazebo_msgs::msg::LinkStates>(
-        "/gazebo/link_states", rclcpp::SystemDefaultsQoS(),
-        [this](const gazebo_msgs::msg::LinkStates::SharedPtr msg) -> void
-        {
-            int base_id = 1;
 
-            geometry_msgs::msg::Point pos = msg->pose[base_id].position;
-            geometry_msgs::msg::Quaternion orient = msg->pose[base_id].orientation;
+    /* ====================================================================== */
 
-            geometry_msgs::msg::Vector3 lin = msg->twist[base_id].linear;
-            geometry_msgs::msg::Vector3 ang = msg->twist[base_id].angular;
+    if (use_estimator == false) {
+        // Use the simulated data of Gazebo.
 
-            q_.head(7) << pos.x, pos.y, pos.z,
-                          orient.x, orient.y, orient.z, orient.w;
+        joint_state_subscription_ = get_node()->create_subscription<gazebo_msgs::msg::LinkStates>(
+            "/gazebo/link_states", QUEUE_SIZE,
+            [this](const gazebo_msgs::msg::LinkStates::SharedPtr msg) -> void
+            {
+                int base_id = 1;
 
-            v_.head(6) << lin.x, lin.y, lin.z,
-                          ang.x, ang.y, ang.z;
-        }
-    );
+                geometry_msgs::msg::Point pos = msg->pose[base_id].position;
+                geometry_msgs::msg::Quaternion orient = msg->pose[base_id].orientation;
+
+                geometry_msgs::msg::Vector3 lin = msg->twist[base_id].linear;
+                geometry_msgs::msg::Vector3 ang = msg->twist[base_id].angular;
+
+                q_.head(7) << pos.x, pos.y, pos.z,
+                            orient.x, orient.y, orient.z, orient.w;
+
+                v_.head(6) << lin.x, lin.y, lin.z,
+                            ang.x, ang.y, ang.z;
+            }
+        );
+    } else {
+        // Use the state estimator measurements.
+
+        estimated_pose_subscription_ = get_node()->create_subscription<geometry_msgs::msg::Pose>(
+            "/state_estimator/pose", QUEUE_SIZE,
+            [this](const geometry_msgs::msg::Pose::SharedPtr msg) -> void
+            {
+                q_.head(7) << msg->position.x, msg->position.y, msg->position.z,
+                            msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w;
+            }
+        );
+
+        estimated_twist_subscription_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
+            "/state_estimator/twist", QUEUE_SIZE,
+            [this](const geometry_msgs::msg::Twist::SharedPtr msg) -> void
+            {
+                v_.head(6) << msg->linear.x, msg->linear.y, msg->linear.z,
+                            msg->angular.x, msg->angular.y, msg->angular.z;
+            }
+        );
+    }
+    
 
     desired_generalized_pose_subscription_ = get_node()->create_subscription<generalized_pose_msgs::msg::GeneralizedPose>(
-        "/robot/desired_generalized_pose", rclcpp::SystemDefaultsQoS(),
+        "/robot/desired_generalized_pose", QUEUE_SIZE,
         [this](const generalized_pose_msgs::msg::GeneralizedPose::SharedPtr msg) -> void
         {
             des_gen_pose_.base_acc << msg->base_acc.x, msg->base_acc.y, msg->base_acc.z;
@@ -261,26 +305,40 @@ CallbackReturn HQPController::on_deactivate(const rclcpp_lifecycle::State& previ
 /* ================================= Update ================================= */
 
 controller_interface::return_type HQPController::update(
-    const rclcpp::Time& time, const rclcpp::Duration& period
+    const rclcpp::Time& timee, const rclcpp::Duration& period
 ) {
-    for (uint i=0; i<joint_names_.size(); i++) {
-        q_(i+7) = state_interfaces_[2*i].get_value();
-        v_(i+6) = state_interfaces_[2*i+1].get_value();
-    }
+    if (counter_ > 0) {
+        counter_--;
 
-    if (des_gen_pose_.contact_feet_names.size() + des_gen_pose_.feet_pos.size()/3 != 4) {
-        return controller_interface::return_type::OK;
-    }
+        // PID for the state estimator initialization
+        for (uint i=0; i<joint_names_.size(); i++) {
+            command_interfaces_[i].set_value(
+                - 100 * state_interfaces_[2*i].get_value()
+                - 10 * state_interfaces_[2*i+1].get_value()
+            );
+        }
+    } else {
+        // WBC
 
-    wbc::GeneralizedPose des_gen_pose_copy = des_gen_pose_;
-    
-    wbc.step(q_, v_, des_gen_pose_copy);
+        for (uint i=0; i<joint_names_.size(); i++) {
+            q_(i+7) = state_interfaces_[2*i].get_value();
+            v_(i+6) = state_interfaces_[2*i+1].get_value();
+        }
 
-    tau_ = wbc.get_tau_opt();
+        if (des_gen_pose_.contact_feet_names.size() + des_gen_pose_.feet_pos.size()/3 != 4) {
+            return controller_interface::return_type::OK;
+        }
 
-    // Send effort command
-    for (uint i=0; i<joint_names_.size(); i++) {
-        command_interfaces_[i].set_value(tau_(i));
+        wbc::GeneralizedPose des_gen_pose_copy = des_gen_pose_;
+        
+        wbc.step(q_, v_, des_gen_pose_copy);
+
+        tau_ = wbc.get_tau_opt();
+
+        // Send effort command
+        for (uint i=0; i<joint_names_.size(); i++) {
+            command_interfaces_[i].set_value(tau_(i));
+        }
     }
 
     return controller_interface::return_type::OK;

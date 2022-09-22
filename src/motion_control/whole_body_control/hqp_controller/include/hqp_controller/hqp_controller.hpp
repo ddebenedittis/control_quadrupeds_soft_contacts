@@ -9,6 +9,8 @@
 
 #include "gazebo_msgs/msg/link_states.hpp"
 #include "generalized_pose_msgs/msg/generalized_pose.hpp"
+#include "geometry_msgs/msg/pose.hpp"
+#include "geometry_msgs/msg/twist.hpp"
 
 #include <string>
 #include <vector>
@@ -53,7 +55,13 @@ class HQPController : public controller_interface::ControllerInterface {
 
         rclcpp::Subscription<gazebo_msgs::msg::LinkStates>::SharedPtr joint_state_subscription_ = nullptr;
 
+        rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr estimated_pose_subscription_ = nullptr;
+        rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr estimated_twist_subscription_ = nullptr;
+
         rclcpp::Subscription<generalized_pose_msgs::msg::GeneralizedPose>::SharedPtr desired_generalized_pose_subscription_ = nullptr;
+
+        /// @brief  Counter to give the state estimator some time to be initialized. Before the counter is zero, a PD controller is used to keep the robot in q0.
+        int counter_ = 2000;
 };
 
 } // namespace hqp_controller
