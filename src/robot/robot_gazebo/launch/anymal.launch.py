@@ -50,16 +50,16 @@ def generate_launch_description():
         #     output = 'screen'
         # ),
         
-        Node(
-            package='pose_estimator',
-            executable='pose_estimator_node',
-            parameters=[
-                {'use_sim_time': use_sim_time},
-                {'robot_name': 'anymal_c'}
-            ],
-            emulate_tty=True,
-            output='screen'
-        ),
+        # Node(
+        #     package='pose_estimator',
+        #     executable='pose_estimator_node',
+        #     parameters=[
+        #         {'use_sim_time': use_sim_time},
+        #         {'robot_name': 'anymal_c'}
+        #     ],
+        #     emulate_tty=True,
+        #     output='screen'
+        # ),
         
         Node(
             package = 'controller_manager',

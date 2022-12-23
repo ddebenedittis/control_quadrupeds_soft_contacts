@@ -53,6 +53,9 @@ class HQPController : public controller_interface::ControllerInterface {
 
         Eigen::VectorXd tau_;
 
+        double PD_proportional_;
+        double PD_derivative_;
+
         rclcpp::Subscription<gazebo_msgs::msg::LinkStates>::SharedPtr joint_state_subscription_ = nullptr;
 
         rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr estimated_pose_subscription_ = nullptr;

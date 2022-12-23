@@ -1,6 +1,6 @@
-# Quadruped Control Soft Contacts
+# Control Quadrupeds Soft Contacts
 
-Whole-Body Controller with soft contacts constraints implemented in C++.
+Control of quadrupedal robots with soft contact constraints.
 
 ## Table of Contents
 - [Installation with Docker](#installation-with-docker)
@@ -10,11 +10,13 @@ Whole-Body Controller with soft contacts constraints implemented in C++.
 - [Author](#author)
 
 ## Installation with Docker
+Install [Docker Community Edition](https://docs.docker.com/engine/install/ubuntu/) (ex Docker Engine) with post-installation steps for Linux and [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) (nvidia-docker2).
+
 Clone the repo:
 ```shell
-git clone --recursive https://github.com/ddebenedittis/quadruped_control_soft_contacts
+git clone --recursive https://github.com/ddebenedittis/control_quadrupeds_soft_contacts
 ```
-Build the docker image (have docker installed and able to manage Docker as a non-root user (see post-installation steps for Linux)) (-r option to update the underlying images):
+Build the docker image (-r option to update the underlying images):
 ```shell
 ./build.sh
 ```

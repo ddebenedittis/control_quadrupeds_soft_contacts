@@ -240,11 +240,11 @@ void StaticWalkPlanner::step_plan(GeneralizedPose& gen_pose)
         // The desired position, velocity, and acceleration of the swing feet are obtained by considering two motions: an horizontal motion from the initial foot position to the final foot position (equal to init_foot_pos + step_vector) and a vertical motion that first raises and than lowers the foot.
 
         // Leg initial and final horizontal position
-        Vector3d leg_init_pos {abs_legs_pos(swing_foot_id, 0),
-                               abs_legs_pos(swing_foot_id, 1),
+        Vector3d leg_init_pos {abs_legs_pos.coeff(swing_foot_id, 0),
+                               abs_legs_pos.coeff(swing_foot_id, 1),
                                0.};
-        Vector3d leg_end_pos {abs_legs_pos(swing_foot_id, 0) + step_length_,
-                              abs_legs_pos(swing_foot_id, 1),
+        Vector3d leg_end_pos {abs_legs_pos.coeff(swing_foot_id, 0) + step_length_,
+                              abs_legs_pos.coeff(swing_foot_id, 1),
                               0.};
 
         // Horizontal part of the desired position, velocity, and acceleration of the swing feet
@@ -263,11 +263,11 @@ void StaticWalkPlanner::step_plan(GeneralizedPose& gen_pose)
 
             delta_T = (1 - step_duty_factor_) / 2;
 
-            leg_init_pos << abs_legs_pos(swing_foot_id, 0),
-                            abs_legs_pos(swing_foot_id, 1),
+            leg_init_pos << abs_legs_pos.coeff(swing_foot_id, 0),
+                            abs_legs_pos.coeff(swing_foot_id, 1),
                             0;
-            leg_end_pos <<  abs_legs_pos(swing_foot_id, 0),
-                            abs_legs_pos(swing_foot_id, 1),
+            leg_end_pos <<  abs_legs_pos.coeff(swing_foot_id, 0),
+                            abs_legs_pos.coeff(swing_foot_id, 1),
                             step_height_;
 
             spline(leg_init_pos, leg_end_pos, phi_2/delta_T,
@@ -279,11 +279,11 @@ void StaticWalkPlanner::step_plan(GeneralizedPose& gen_pose)
 
             delta_T = (1 - step_duty_factor_) / 2;
 
-            leg_init_pos << abs_legs_pos(swing_foot_id, 0),
-                            abs_legs_pos(swing_foot_id, 1),
+            leg_init_pos << abs_legs_pos.coeff(swing_foot_id, 0),
+                            abs_legs_pos.coeff(swing_foot_id, 1),
                             step_height_;
-            leg_end_pos <<  abs_legs_pos(swing_foot_id, 0) + step_length_,
-                            abs_legs_pos(swing_foot_id, 1),
+            leg_end_pos <<  abs_legs_pos.coeff(swing_foot_id, 0) + step_length_,
+                            abs_legs_pos.coeff(swing_foot_id, 1),
                             - desired_foot_penetration_;
 
             spline(leg_init_pos, leg_end_pos, phi_2/delta_T,

@@ -1,3 +1,4 @@
+# To use GUI
 XAUTH=/tmp/.docker.xauth
 if [ ! -f $XAUTH ]
 then
@@ -13,26 +14,31 @@ fi
 
 xhost +
 docker run \
+    # Share the host’s network stack and interfaces. Allows multiple containers to interact with each other.
     --net=host \
+    # Interactive processes (like a shell).
     -it \
+    # Clean up the container after exit.
     --rm \
+    # Use GUI and NVIDIA
     --env="DISPLAY=$DISPLAY" \
     --env="QT_X11_NO_MITSHM=1" \
     --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
     --env="XAUTHORITY=$XAUTH" \
     --volume="$XAUTH:$XAUTH" \
-    -v ${PWD}/build:${PWD}/build \
-    -v ${PWD}/install:${PWD}/install \
-    -v ${PWD}/log:${PWD}/log \
-    -v ${PWD}/src:${PWD}/src \
-    -v ${PWD}/.vscode:${PWD}/.vscode \
-    -v ${PWD}/.git:${PWD}/.git \
-    -v ${PWD}/.gitignore:${PWD}/.gitignore \
-    -v ${PWD}/.gitmodules:${PWD}/.gitmodules \
     --runtime=nvidia \
     --privileged \
+    # Mount the folders in this directory
+    -v ${PWD}:${PWD} \
+    # Preserve bash history (for autocomplete).
     --env="HISTFILE=/home/.bash_history" \
     --env="HISTFILESIZE=$HISTFILESIZE" \
     -v ~/.bash_history:/home/.bash_history \
+    # Audio support in Docker
+    --device /dev/snd \
+    -e PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native \
+    -v ${XDG_RUNTIME_DIR}/pulse/native:${XDG_RUNTIME_DIR}/pulse/native \
+    --group-add $(getent group audio | cut -d: -f3) \
+    #
     qcsc \
     bash

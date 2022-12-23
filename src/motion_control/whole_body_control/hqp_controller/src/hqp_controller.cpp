@@ -42,6 +42,9 @@ CallbackReturn HQPController::on_init()
 
         auto_declare<int>("initialization_counter", int());
 
+        auto_declare<double>("PD_proportional", double());
+        auto_declare<double>("PD_derivative", double());
+
         auto_declare<double>("tau_max", double());
         auto_declare<double>("mu", double());
         auto_declare<double>("Fn_max", double());
@@ -122,6 +125,12 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& previo
 
 
     counter_ = get_node()->get_parameter("initialization_counter").as_int();
+
+
+    /* ====================================================================== */
+
+    PD_proportional_ = get_node()->get_parameter("PD_proportional").as_double();
+    PD_derivative_ = get_node()->get_parameter("PD_derivative").as_double();
 
 
     /* ====================================================================== */
@@ -310,11 +319,13 @@ controller_interface::return_type HQPController::update(
     if (counter_ > 0) {
         counter_--;
 
-        // PID for the state estimator initialization
+        // ! ATTENTION: deactivate the PD for SOLO, and activate it for ANYmal.
+        // TODO: understand what condition is q0 for solo
+        // PD for the state estimator initialization
         for (uint i=0; i<joint_names_.size(); i++) {
             command_interfaces_[i].set_value(
-                - 100 * state_interfaces_[2*i].get_value()
-                - 10 * state_interfaces_[2*i+1].get_value()
+                - PD_proportional_ * state_interfaces_[2*i].get_value()
+                - PD_derivative_ * state_interfaces_[2*i+1].get_value()
             );
         }
     } else {

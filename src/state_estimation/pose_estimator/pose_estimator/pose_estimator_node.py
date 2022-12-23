@@ -76,7 +76,7 @@ class PoseEstimatorNode(Node):
             'RF_FOOT',
             'LH_FOOT',
             'RH_FOOT',
-            ]        
+            ]
         
         self.time = 0                       # time of last message from the imu
         
@@ -141,8 +141,7 @@ class PoseEstimatorNode(Node):
         self.a_b = np.array([acc.x, acc.y, acc.z])
         self.w_b = np.array([ang_vel.x, ang_vel.y, ang_vel.z])
         
-        self.time = msg.header.stamp.nanosec / 10**9
-        # self.time = int(str(msg.header.stamp.nanosec)[:-6]) / 10^3
+        self.time = msg.header.stamp.nanosec / 10**9 + msg.header.stamp.sec
         
         
     def gen_pose_callback(self, msg):
@@ -193,7 +192,6 @@ class PoseEstimatorNode(Node):
         # yaw = atan2(2.0*(q.y*q.z + q.w*q.x), q.w*q.w - q.x*q.x - q.y*q.y + q.z*q.z)
         # pitch = asin(-2.0*(q.x*q.z - q.w*q.y))
         # roll = atan2(2.0*(q.x*q.y + q.w*q.z), q.w*q.w + q.x*q.x - q.y*q.y - q.z*q.z)
-        # print(roll, " - ", pitch, " - ", yaw)
         
         
         

@@ -7,7 +7,8 @@
     <maintainer email="davide.debenedittis@gmail.com">Davide De Benedittis</maintainer>
     <license>TODO: License declaration</license>
 
-    <author>Davide De Benedittis</author>
+    <url>https://github.com/ddebenedittis/control_quadrupeds_soft_contacts</url>
+    <author email="davide.debenedittis@gmail.com">Davide De Benedittis</author>
 
     <buildtool_depend>ament_cmake</buildtool_depend>
 

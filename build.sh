@@ -11,7 +11,7 @@ shift "$(( OPTIND - 1 ))"
 
 mkdir -p build install log .vscode
 
-docker pull osrf/ros:galactic-desktop
+docker pull osrf/ros:humble-desktop
 
 MYUID="$(id -u $USER)"
 MYGID="$(id -g $USER)"
@@ -20,7 +20,7 @@ if [ "$REBUILD" -eq 1 ]; then
   docker build \
   --no-cache \
   --build-arg BASE_IMAGE=osrf/ros \
-  --build-arg BASE_TAG=galactic-desktop \
+  --build-arg BASE_TAG=humble-desktop \
   --build-arg MYUID=${UID} \
   --build-arg MYGID=${GID} \
   --build-arg USER=${USER} \
@@ -29,7 +29,7 @@ if [ "$REBUILD" -eq 1 ]; then
 else
   docker build \
   --build-arg BASE_IMAGE=osrf/ros \
-  --build-arg BASE_TAG=galactic-desktop \
+  --build-arg BASE_TAG=humble-desktop \
   --build-arg MYUID=${UID} \
   --build-arg MYGID=${GID} \
   --build-arg USER=${USER} \

@@ -127,7 +127,7 @@ class KalmanFilter:
         self._measurement_covariance = np.diag(np.concatenate((
             self.acc_noise * np.ones(3),
             self.enc_noise * self.leg_length * np.ones(1),
-            self.enc_noise * self.leg_length * np.ones(1)/10
+            self.enc_noise * self.leg_length * np.ones(1)/20
         )))
         
         
@@ -386,17 +386,20 @@ class KalmanFilter:
         if contact_feet_names == self._last_contact_feet_names:
             pass
         else:
+            new_touchdown_positions = np.zeros((len(contact_feet_names), 3))
+            
             for i in range(len(contact_feet_names)):
                 if contact_feet_names[i] in self._last_contact_feet_names:
                     # This foot was already in contact with the terrain
-                    self._touchdown_positions[i,:] = self._touchdown_positions[
+                    new_touchdown_positions[i,:] = self._touchdown_positions[
                         self._last_contact_feet_names.index(contact_feet_names[i]),:]
                 else:
-                    # This is a foot which just entered in contact with the terrain
-                    self._touchdown_positions[i,:] = R_nb @ B_r_fb[i,:] + self._state[10:13]
-                    self._touchdown_positions[i,2] = 0
+                    # This foot just entered in contact with the terrain
+                    new_touchdown_positions[i,:] = R_nb @ B_r_fb[i,:] + self._state[10:13]
+                    new_touchdown_positions[i,2] = 0
                     
             self._last_contact_feet_names = contact_feet_names
+            self._touchdown_positions = new_touchdown_positions
         
     
     

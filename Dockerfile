@@ -1,4 +1,4 @@
-FROM osrf/ros:galactic-desktop
+FROM osrf/ros:humble-desktop
 
 # nvidia-container-runtime
 ENV NVIDIA_VISIBLE_DEVICES \
@@ -20,18 +20,18 @@ RUN apt-get update && apt-get install -qqy \
     gnupg2 \
     curl \
     python3-pip \
-    ros-galactic-ros2-control \
-    ros-galactic-ros2-controllers \
-    ros-galactic-gazebo-ros-pkgs \
-    ros-galactic-gazebo-ros2-control \
-    ros-galactic-xacro \
+    ros-humble-ros2-control \
+    ros-humble-ros2-controllers \
+    ros-humble-gazebo-ros-pkgs \
+    ros-humble-gazebo-ros2-control \
+    ros-humble-xacro \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Pinocchio
 RUN echo "deb [arch=amd64] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -cs) robotpkg" | sudo tee /etc/apt/sources.list.d/robotpkg.list
 RUN curl http://robotpkg.openrobots.org/packages/debian/robotpkg.key | sudo apt-key add -
 RUN apt-get update && apt-get install -qqy \
-    robotpkg-py38-pinocchio \
+    robotpkg-py310-pinocchio \
     && rm -rf /var/lib/apt/lists/*
 
 # Set env variables for Pinocchio
