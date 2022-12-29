@@ -22,18 +22,18 @@ Build the docker image (-r option to update the underlying images):
 ```
 Run the container:
 ```shell
-./run.sh
+./run.bash
 ```
 Build the ROS workspace:
 ```shell
-colcon build --symlink-install -DCMAKE_BUILD_TYPE=Release && source install/setup.bash
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release && source install/setup.bash
 ```
 
 ## Dependencies
 
 - `git`
 - `Eigen`
-- `ROS2 Galactic`, and the following ROS2 packages: `ros2-control`, `ros2-controllers`, `gazebo-ros-pkgs`, `gazebo-ros2-control`, `xacro`
+- `ROS2 Galactic`, and the following ROS2 packages: `ros2-control`, `ros2-controllers`, `gazebo-ros-pkgs`, `gazebo-ros2-control`, `xacro`, `joint-state-publisher`, `joint-state-publisher-gui`
 - [`Pinocchio`](https://github.com/stack-of-tasks/pinocchio)
 - `numpy`, `scipy`, `numpy_quaternion`, [`quadprog`](https://github.com/quadprog/quadprog)
 

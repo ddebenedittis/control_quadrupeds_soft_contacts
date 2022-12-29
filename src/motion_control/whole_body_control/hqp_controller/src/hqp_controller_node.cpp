@@ -81,7 +81,7 @@ class MinimalSubscriber : public rclcpp::Node
             
             std::vector<std::string>::iterator it;
 
-            for(unsigned int i = 0; i < nj; i++) {
+            for(int i = 0; i < nj; i++) {
                 it = find(joint_names.begin(), joint_names.end(), msg->name[i]);
 
                 q(7 + static_cast<int>(it - joint_names.begin())) = msg->position[i];

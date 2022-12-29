@@ -99,7 +99,7 @@ InterfaceConfiguration HQPController::state_interface_configuration() const
 
 /* ============================== On_configure ============================== */
 
-CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& previous_state)
+CallbackReturn HQPController::on_configure([[maybe_unused]] const rclcpp_lifecycle::State& previous_state)
 {
     std::string robot_name = get_node()->get_parameter("robot_name").as_string();
     if (robot_name.empty()) {
@@ -297,7 +297,7 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& previo
 
 /* =============================== On_activate ============================== */
 
-CallbackReturn HQPController::on_activate(const rclcpp_lifecycle::State& previous_state)
+CallbackReturn HQPController::on_activate([[maybe_unused]] const rclcpp_lifecycle::State& previous_state)
 {
     return CallbackReturn::SUCCESS;
 }
@@ -305,7 +305,7 @@ CallbackReturn HQPController::on_activate(const rclcpp_lifecycle::State& previou
 
 /* ============================== On_deactivate ============================= */
 
-CallbackReturn HQPController::on_deactivate(const rclcpp_lifecycle::State& previous_state)
+CallbackReturn HQPController::on_deactivate([[maybe_unused]] const rclcpp_lifecycle::State& previous_state)
 {
     return CallbackReturn::SUCCESS;
 }
@@ -314,7 +314,7 @@ CallbackReturn HQPController::on_deactivate(const rclcpp_lifecycle::State& previ
 /* ================================= Update ================================= */
 
 controller_interface::return_type HQPController::update(
-    const rclcpp::Time& timee, const rclcpp::Duration& period
+    [[maybe_unused]] const rclcpp::Time& time, [[maybe_unused]] const rclcpp::Duration& period
 ) {
     if (counter_ > 0) {
         counter_--;

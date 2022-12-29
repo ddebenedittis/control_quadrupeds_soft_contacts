@@ -68,11 +68,9 @@ RobotModel::RobotModel(const std::string& robot_name)
 {
     // Location of the file containing some info on the robots
     std::string file_path = ament_index_cpp::get_package_share_directory("robot_model") + std::string{"/robots/all_robots.yaml"};
-    char file_path_char[file_path.length() + 1];
-    strcpy(file_path_char, file_path.c_str());
 
     // Parse the yaml file
-    std::string contents = file_get_contents<std::string>(file_path_char);
+    std::string contents = file_get_contents<std::string>(file_path.c_str());
     ryml::Tree tree = ryml::parse_in_arena(ryml::to_csubstr(contents)); // immutable (csubstr) overload
 
     ryml::NodeRef root = tree.rootref();

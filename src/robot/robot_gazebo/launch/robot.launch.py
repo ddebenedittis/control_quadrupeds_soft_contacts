@@ -9,9 +9,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
 
-    package_name = LaunchConfiguration('package_name', default='anymal_c_simple_description')
-
-    package_share_path = FindPackageShare(package_name)
+    package_share_path = FindPackageShare('anymal_c_simple_description')
 
     xacro_file_path = PathJoinSubstitution([
         package_share_path,

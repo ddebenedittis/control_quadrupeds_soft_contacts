@@ -1,4 +1,7 @@
-FROM osrf/ros:humble-desktop
+ARG BASE_IMAGE=osrf/ros
+ARG BASE_TAG=humble-desktop
+
+FROM ${BASE_IMAGE}:${BASE_TAG}
 
 # nvidia-container-runtime
 ENV NVIDIA_VISIBLE_DEVICES \
@@ -20,10 +23,12 @@ RUN apt-get update && apt-get install -qqy \
     gnupg2 \
     curl \
     python3-pip \
-    ros-humble-ros2-control \
-    ros-humble-ros2-controllers \
     ros-humble-gazebo-ros-pkgs \
     ros-humble-gazebo-ros2-control \
+    ros-humble-joint-state-publisher \
+    ros-humble-joint-state-publisher-gui \
+    ros-humble-ros2-control \
+    ros-humble-ros2-controllers \
     ros-humble-xacro \
     && rm -rf /var/lib/apt/lists/*
 
@@ -49,7 +54,7 @@ RUN pip3 install \
     quadprog \
     --upgrade
 
-# Create a new user
+# Create the same user as the host itself. (By default Docker creates the container as root, which is not recommended.)
 ARG UID=1000
 ARG GID=1000
 ARG USER=ros

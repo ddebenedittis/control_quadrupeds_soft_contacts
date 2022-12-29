@@ -10,3 +10,9 @@
 [submodule "src/robot/robots/anymal_c_simple_description"]
 	path = src/robot/robots/anymal_c_simple_description
 	url = https://github.com/ddebenedittis/anymal_c_simple_description
+[submodule "src/robot/robots/softfoot_thing"]
+	path = src/robot/robots/softfoot_thing
+	url = https://github.com/ddebenedittis/softfoot_thing
+[submodule "src/robot/robots/anymal_c_softfoot_q_description"]
+	path = src/robot/robots/anymal_c_softfoot_q_description
+	url = https://github.com/ddebenedittis/anymal_c_softfoot_q_description

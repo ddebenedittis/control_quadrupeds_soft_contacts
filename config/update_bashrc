@@ -1,4 +1,5 @@
 # Adding all the necessary ros sourcing
 echo "" >> ~/.bashrc
-echo "## ROS" >> ~/.bashrc
+echo "## ROS 2" >> ~/.bashrc
 echo 'source /opt/ros/$ROS_DISTRO/setup.bash' >> ~/.bashrc
+echo 'source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash' >> ~/.bashrc
