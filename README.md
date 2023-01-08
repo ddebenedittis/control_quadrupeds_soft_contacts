@@ -56,21 +56,29 @@ colcon build --symlink-install
 
 - ANYmal C static walk simulation:
 ```shell
-ros2 launch robot_gazebo anymal.launch.py
+ros2 launch robot_gazebo anymal.launch.py [terrain_type:={rigid,soft_mattress}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 - SOLO12 static walk simulation:
 ```shell
-ros2 launch robot_gazebo solo.launch.py
+ros2 launch robot_gazebo solo.launch.py [terrain_type:={rigid,soft_mattress}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 - ANYmal C with SoftFoot-Qs static walk simulation:
 ```shell
-ros2 launch robot_gazebo anymal_c_softfoot_q.launch.py
+ros2 launch robot_gazebo anymal_c_softfoot_q.launch.py [terrain_type:={rigid,soft_mattress}] [save_csv:={False,True}] [reset:={False,True}]
 ```
+
+With the `terrain_type` parameter, the robot walks on a soft and deformable mattress.
+
+With `save_csv:=True`, some data is logged and saved in several .csv files in the `log` folder. This data can be plotted with `plot.py` in the `logger_gazebo` package.
+
+The `reset:=True` parameter must be used in another terminal when there is an already running simulation. The simulation will be restarted. The time is not reset to avoid problems with the controllers.
+
+Other parameters, such as `contact_constraint_type: {soft_kv, rigid}`, must be changed directly in the specific robot config .yaml file.
 
 
 ### Add a new robot model
 
-Add a new robot model in the `all_robots.yaml` file located in `src/robot/robot_model/robots/`. Pay attention to the order of the feet names (should be Left Front, Right Front, Left Hind, Right Hind).
+Add a new robot model in the `all_robots.yaml` file located in `src/robot/robot_model/robots/`. Pay attention to the order of the feet' names (should be Left Front, Right Front, Left Hind, Right Hind).
 
 Add a new robot description package. It is recommended to place it in `src/robot/robots/`. The package should have both a .urdf file and a .xacro file, which needs to be augmented with the necessary ros2 plugins etc (see, for example, `anymal_c_simple_description/urdf/anymal_gazebo.xacro`).
 
