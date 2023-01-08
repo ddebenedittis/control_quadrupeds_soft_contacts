@@ -10,9 +10,9 @@ if(NOT CMAKE_C_STANDARD)
     set(CMAKE_C_STANDARD 99)
 endif()
 
-# Default to C++17
+# Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
-    set(CMAKE_CXX_STANDARD 17)
+    set(CMAKE_CXX_STANDARD 14)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -89,42 +89,6 @@ install(
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin
-)
-
-
-
-# ==============================================================================
-#                                ADD EXECUTABLES                                
-# ==============================================================================
-
-set(NODE_DEPENDENCIES
-    rclcpp
-
-    gazebo_msgs
-    generalized_pose_msgs
-    sensor_msgs
-    std_msgs
-
-    whole_body_controller
-)
-
-set(NODE_NAME ${PROJECT_NAME}_node)
-
-add_executable(${NODE_NAME} src/hqp_controller_node.cpp)
-
-target_include_directories(${NODE_NAME} PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
-)
-
-ament_target_dependencies(${NODE_NAME} PUBLIC ${NODE_DEPENDENCIES})
-
-# ament_export_targets(${NODE_NAME}_targets HAS_LIBRARY_TARGET)
-# ament_export_dependencies(${NODE_DEPENDENCIES})
-
-install(
-    TARGETS ${NODE_NAME}
-    DESTINATION lib/${PROJECT_NAME}
 )
 
 

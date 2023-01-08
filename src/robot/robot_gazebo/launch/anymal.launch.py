@@ -2,16 +2,30 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
+from launch.substitutions import LaunchConfiguration, PythonExpression
 
 def generate_launch_description():
-
-    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+    
+    contact_constraint_type = LaunchConfiguration('contact_constraint_type', default="'soft_kv'")
+    
+    terrain_type = LaunchConfiguration('terrain_type', default='rigid')
+    
+    save_csv = LaunchConfiguration('save_csv', default='False')
+    
+    reset = LaunchConfiguration('reset', default='False')
+    
+    # ======================================================================== #
 
     return LaunchDescription([
+        
+        DeclareLaunchArgument('contact_constraint_type', default_value="'soft_kv'"),
+
+        DeclareLaunchArgument('terrain_type', default_value='rigid'),
+        
+        DeclareLaunchArgument('save_csv', default_value='False'),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -22,56 +36,26 @@ def generate_launch_description():
                 'xacro_file_path': os.path.join('urdf', 'anymal.xacro'),
                 'config_file_path': os.path.join('config', 'anymal_controller_effort.yaml'),
                 'world_file_path': os.path.join('worlds', 'anymal.world'),
-            }.items()
+                'contact_constraint_type': contact_constraint_type,
+                'terrain_type': terrain_type,
+                'save_csv': save_csv,
+            }.items(),
+            condition=IfCondition(PythonExpression(['not ', reset]))
         ),
         
-        # Node(
-        #     package='planners_python',
-        #     executable='planner_static_walk_node',
-        #     parameters=[{'use_sim_time': use_sim_time}],
-        #     output='screen'
-        # ),
-        
-        # Node(
-        #     package='hqp_controller',
-        #     executable='hqp_controller_node',
-        #     parameters=[
-        #         {'use_sim_time': use_sim_time},
-        #         {'robot_name': 'anymal_c'}
-        #     ],
-        #     output='screen'
-        # ),
-        
-        # Node(
-        #     package = 'controller_manager',
-        #     executable = 'spawner',
-        #     arguments = ['effort_controller', '--controller-manager', '/controller_manager'],
-        #     parameters=[{'use_sim_time': use_sim_time}],
-        #     output = 'screen'
-        # ),
-        
-        # Node(
-        #     package='pose_estimator',
-        #     executable='pose_estimator_node',
-        #     parameters=[
-        #         {'use_sim_time': use_sim_time},
-        #         {'robot_name': 'anymal_c'}
-        #     ],
-        #     emulate_tty=True,
-        #     output='screen'
-        # ),
-        
-        Node(
-            package = 'controller_manager',
-            executable = 'spawner',
-            arguments = ['planner', '--controller-manager', '/controller_manager'],
-            parameters=[{'use_sim_time': use_sim_time}],
-        ),
-        
-        Node(
-            package = 'controller_manager',
-            executable = 'spawner',
-            arguments = ['whole_body_controller', '--controller-manager', '/controller_manager'],
-            parameters=[{'use_sim_time': use_sim_time}],
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(get_package_share_directory('robot_gazebo'), 'launch', 'reset_robot.launch.py')
+            ),
+            launch_arguments = {
+                'package_name': 'anymal_c_simple_description',
+                'xacro_file_path': os.path.join('urdf', 'anymal.xacro'),
+                'config_file_path': os.path.join('config', 'anymal_controller_effort.yaml'),
+                'world_file_path': os.path.join('worlds', 'anymal.world'),
+                'contact_constraint_type': contact_constraint_type,
+                'terrain_type': terrain_type,
+                'save_csv': save_csv,
+            }.items(),
+            condition=IfCondition(reset)
         ),
     ])

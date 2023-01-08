@@ -13,6 +13,8 @@ int main()
 
     float dt = 1./400.;
 
+    string contact_constraint_type = "soft_kv";
+
     wbc::PrioritizedTasks prio_tasks(robot_name, dt);
 
     cout << "PrioritizedTasks constructed successfully\n";

@@ -45,15 +45,26 @@ class StaticWalkPlanner {
 
         /// @brief Template for a planner. Outputs a constant pose.
         /// @param[out] gen_pose 
-        void step_template(GeneralizedPose& gen_pose);
+        void step_template(GeneralizedPose& /*gen_pose*/);
 
         /// @brief Step of a planner that makes the robot raise a foot.
         /// @param[out] gen_pose 
-        void step_raise_foot(GeneralizedPose& gen_pose);
+        void step_raise_foot(GeneralizedPose& /*gen_pose*/);
 
         /// @brief Step of a planner that implement a simple static walk.
         /// @param[out] gen_pose 
         void step(GeneralizedPose& gen_pose);
+
+        /// @brief
+        void reset() {
+            phi_ = 0;
+            init_com_position_.setZero();
+        };
+
+        void reset(Eigen::Vector3d init_com_position) {
+            phi_ = 0;
+            this->init_com_position_ = init_com_position;
+        }
 
         /// @brief Planner sample time
         double dt_ = 1 / 200;
@@ -95,11 +106,7 @@ class StaticWalkPlanner {
         double phi_ = 0;
 
         /// @brief Coordinates x and y of the center of mass at the start of the gait cycle
-        std::pair<double, double> init_com_position_ = {0, 0};
-
-        /// @brief Completed whole gait cycles
-        // TODO: remove, it's ugly
-        int cycles_completed_ = 0;
+        Eigen::Vector3d init_com_position_ = {0, 0, 0};
 
         /// @brief Absolute x and y coordinates of the feet relative to the COM in body frame. (The legs are symmetric)
         std::pair<double, double> abs_leg_pos_ = {0.4, 0.3};

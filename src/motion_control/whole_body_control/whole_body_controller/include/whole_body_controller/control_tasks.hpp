@@ -6,6 +6,14 @@
 
 namespace wbc {
 
+/* ========================================================================== */
+/*                             CONSTRAINTTYPE ENUM                            */
+/* ========================================================================== */
+
+enum class ContactConstraintType {soft_kv, rigid, invalid};
+
+
+
 /// @class @brief Implements all the tasks that are used for the the hierarchical optimization problem.
 /// @details The ControlTasks class provides methods to compute the matrices A, b, C, d that define the tasks used in the control problem. These tasks are specified in no specific order.
 /// This class is intended to be used with prioritized_tasks. This second class organizes the various control tasks by merging them in a single task of a certain priority. The priority order of the control tasks can be specified by means of the attribute prioritized_tasks_list.
@@ -17,7 +25,9 @@ class ControlTasks {
         /// @param[in] q
         /// @param[in] v
         /// @param[in] contact_feet_names
-        void reset(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const std::vector<std::string>& contact_feet_names);
+        void reset(
+            const Eigen::VectorXd& q, const Eigen::VectorXd& v,
+            const std::vector<std::string>& contact_feet_names, ContactConstraintType contact_constraint_type);
 
         /// @brief Compute the matrices A and b that enforce the dynamic consistency with the Equations of Motion of the floating base.
         /// @param[out] A
@@ -114,6 +124,10 @@ class ControlTasks {
         const Eigen::MatrixXd& get_M()  { return M; }
         const Eigen::VectorXd& get_h()  { return h; }
         const Eigen::MatrixXd& get_Jc() { return Jc; }
+
+        const Eigen::VectorXd get_feet_position() { return robot_model.get_feet_position(); }
+
+        const std::vector<std::string>& get_generic_feet_names() const {return robot_model.get_generic_feet_names();}
 
         const std::vector<std::string>& get_all_feet_names() const {return robot_model.get_all_feet_names();}
 

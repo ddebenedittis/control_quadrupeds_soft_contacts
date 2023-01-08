@@ -24,11 +24,28 @@ class WholeBodyController {
 
         Eigen::VectorXd& get_tau_opt() {return tau_opt;}
 
+        Eigen::VectorXd& get_f_c_opt() {return f_c_opt;}
+
         Eigen::VectorXd& get_d_des_opt() {return d_des_opt;}
+
+        const Eigen::VectorXd get_feet_position() { return prioritized_tasks.get_feet_position(); }
+
+        const std::vector<std::string>& get_generic_feet_names() const {return prioritized_tasks.get_generic_feet_names();}
 
         const std::vector<std::string>& get_all_feet_names() {return prioritized_tasks.get_all_feet_names();}
 
         int get_nv() {return prioritized_tasks.get_nv();}
+
+        void set_contact_constraint_type(const std::string& contact_constraint_type)
+        {
+            if (contact_constraint_type == "soft_kv") {
+                this->prioritized_tasks.set_contact_constraint_type(ContactConstraintType::soft_kv);
+            } else if (contact_constraint_type == "rigid") {
+                this->prioritized_tasks.set_contact_constraint_type(ContactConstraintType::rigid);
+            } else {
+                this->prioritized_tasks.set_contact_constraint_type(ContactConstraintType::invalid);
+            }
+        }
 
         void set_tau_max(const double tau_max) {prioritized_tasks.set_tau_max(tau_max);}
         void set_mu(const double mu) {prioritized_tasks.set_mu(mu);}
@@ -56,11 +73,15 @@ class WholeBodyController {
 
         hopt::HierarchicalQP hierarchical_qp;
 
-        Eigen::VectorXd x_opt;
+        Eigen::VectorXd x_opt;      /// @brief Optimal optimization vector
 
-        Eigen::VectorXd tau_opt;
+        Eigen::VectorXd tau_opt;    /// @brief Optimal joint torques
 
-        Eigen::VectorXd d_des_opt;
+        Eigen::VectorXd f_c_opt;    /// @brief Optimal contact forces
+
+        Eigen::VectorXd d_des_opt;  /// @brief Optimal desired feet deformations
+
+        ContactConstraintType contact_constraint_type;
 };
 
 }

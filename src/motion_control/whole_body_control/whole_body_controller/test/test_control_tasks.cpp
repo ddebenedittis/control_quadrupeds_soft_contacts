@@ -23,7 +23,7 @@ int main()
 
     std::cout << "Construction successful\n";
 
-    control_tasks.reset(q, v, contact_feet_names);
+    control_tasks.reset(q, v, contact_feet_names, wbc::ContactConstraintType::soft_kv);
 
     std::cout << "Reset successful\n";
 

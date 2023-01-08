@@ -1,0 +1,44 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+    <model name="soft_mattress">
+        <pose>0 0 0.05 0 0 0</pose>
+        <static>true</static>
+        <link name="mattress">
+            <collision name="collision">
+                <geometry>
+                    <box>
+                    <size>20 20 0.1</size>
+                    </box>
+                </geometry>
+                <surface>
+                    <friction>
+                        <ode>
+                            <mu>100</mu>
+                            <mu2>50</mu2>
+                        </ode>
+                    </friction>
+                    <contact>
+                        <ode>
+                            <kp>1e5</kp>
+                            <kd>2e1</kd>
+                        </ode>
+                    </contact>
+                </surface>
+            </collision>
+            <visual name="visual">
+                <geometry>
+                    <box>
+                    <size>20 20 0.1</size>
+                    </box>
+                </geometry>
+                <material>
+                    <script>
+                        <uri>file://media/materials/scripts/gazebo.material</uri>
+                        <name>Gazebo/Grass</name>
+                    </script>
+                </material>
+                <transparency>0.0</transparency>
+            </visual>
+        </link>
+    </model>
+</sdf>    

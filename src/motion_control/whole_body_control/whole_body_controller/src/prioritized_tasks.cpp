@@ -4,15 +4,17 @@
 
 namespace wbc {
 
-PrioritizedTasks::PrioritizedTasks(std::string robot_name, float dt)
+PrioritizedTasks::PrioritizedTasks(const std::string& robot_name, float dt)
 : control_tasks(robot_name, dt)
 {
     compute_prioritized_tasks_vector();
 }
 
-void PrioritizedTasks::reset(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const std::vector<std::string>& contact_feet_names)
+void PrioritizedTasks::reset(
+    const Eigen::VectorXd& q, const Eigen::VectorXd& v,
+    const std::vector<std::string>& contact_feet_names)
 {
-    control_tasks.reset(q, v, contact_feet_names);
+    control_tasks.reset(q, v, contact_feet_names, this->contact_constraint_type);
 }
 
 void PrioritizedTasks::compute_task_p(
@@ -101,17 +103,28 @@ void PrioritizedTasks::compute_task_p(
                 ne += ne_temp;
                 break;
             case TasksNames::ContactConstraints:
-                ne_temp = 2 * control_tasks.get_nF();
-                ni_temp = 2 * control_tasks.get_nF();
+                if (contact_constraint_type == ContactConstraintType::soft_kv) {
+                    ne_temp = 2 * control_tasks.get_nF();
+                    ni_temp = 2 * control_tasks.get_nF();
 
-                control_tasks.task_contact_constraints_soft_kv(
-                    A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
-                    C.middleRows(ni, ni_temp), d.segment(ni, ni_temp),
-                    d_k1, d_k2
-                );
+                    control_tasks.task_contact_constraints_soft_kv(
+                        A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
+                        C.middleRows(ni, ni_temp), d.segment(ni, ni_temp),
+                        d_k1, d_k2
+                    );
 
-                ne += ne_temp;
-                ni += ni_temp;
+                    ne += ne_temp;
+                    ni += ni_temp;
+                } else if (contact_constraint_type == ContactConstraintType::rigid) {
+                    ne_temp = control_tasks.get_nF();
+
+                    control_tasks.task_contact_constraints_rigid(
+                        A.middleRows(ne, ne_temp), b.segment(ne, ne_temp)
+                    );
+
+                    ne += ne_temp;
+                }
+
                 break;
             case TasksNames::EnergyAndForcesOptimization:
                 ne_temp = (control_tasks.get_nv() - 6) + 2 * control_tasks.get_nF();
@@ -155,8 +168,12 @@ std::vector<int> PrioritizedTasks::get_task_dimension(int priority)
                 ne += 12 - 3 * control_tasks.get_nc();
                 break;
             case TasksNames::ContactConstraints:
-                ne += 2 * control_tasks.get_nF();
-                ni += 2 * control_tasks.get_nF();
+                if (contact_constraint_type == ContactConstraintType::soft_kv) {
+                    ne += 2 * control_tasks.get_nF();
+                    ni += 2 * control_tasks.get_nF();
+                } else if (contact_constraint_type == ContactConstraintType::rigid) {
+                    ne += control_tasks.get_nF();
+                }
                 break;
             case TasksNames::EnergyAndForcesOptimization:
                 ne += control_tasks.get_nv() - 6 + 2 * control_tasks.get_nF();

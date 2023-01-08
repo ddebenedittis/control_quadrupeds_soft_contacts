@@ -7,6 +7,7 @@
 namespace wbc {
 
 
+
 /* ========================================================================== */
 /*                           GENERALIZEDPOSE STRUCT                           */
 /* ========================================================================== */
@@ -64,9 +65,11 @@ enum class TasksNames {
 class PrioritizedTasks {
     public:
         /// @brief Construct a new PrioritizedTasks class.
-        PrioritizedTasks(std::string robot_name, float dt);
+        PrioritizedTasks(const std::string& robot_name, float dt);
 
-        void reset(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const std::vector<std::string>& contact_feet_names);
+        void reset(
+            const Eigen::VectorXd& q, const Eigen::VectorXd& v,
+            const std::vector<std::string>& contact_feet_names);
 
         /// @brief Compute the matrices A, b, C, d that represents the task.
         /// @param[in] priority
@@ -89,13 +92,20 @@ class PrioritizedTasks {
         int get_nF() {return control_tasks.get_nF();}
         int get_nd() {return control_tasks.get_nd();}
 
-        const Eigen::MatrixXd& get_M()  { return control_tasks.get_M(); }
-        const Eigen::VectorXd& get_h()  { return control_tasks.get_h(); }
-        const Eigen::MatrixXd& get_Jc() { return control_tasks.get_Jc(); }
+        const Eigen::MatrixXd& get_M()  {return control_tasks.get_M();}
+        const Eigen::VectorXd& get_h()  {return control_tasks.get_h();}
+        const Eigen::MatrixXd& get_Jc() {return control_tasks.get_Jc();}
+
+        const Eigen::VectorXd get_feet_position() { return control_tasks.get_feet_position(); }
+
+        const std::vector<std::string>& get_generic_feet_names() const {return control_tasks.get_generic_feet_names();}
 
         const std::vector<std::string>& get_all_feet_names() const {return control_tasks.get_all_feet_names();}
 
         int get_max_priority() {return *max_element(tasks_vector.begin(), tasks_vector.end());}
+
+        auto get_contact_constraint_type() {return this->contact_constraint_type;}
+        void set_contact_constraint_type(ContactConstraintType contact_constraint_type) {this->contact_constraint_type = contact_constraint_type;}
 
         void set_tau_max(const double tau_max) {control_tasks.set_tau_max(tau_max);}
         void set_mu(const double mu) {control_tasks.set_mu(mu);}
@@ -134,6 +144,9 @@ class PrioritizedTasks {
 
         /// @brief Auxiliary vector that is used to compute the various tasks matrices.
         std::vector<int> tasks_vector;
+
+        /// @brief
+        ContactConstraintType contact_constraint_type = ContactConstraintType::soft_kv;
 };
 
 } // namespace wbc

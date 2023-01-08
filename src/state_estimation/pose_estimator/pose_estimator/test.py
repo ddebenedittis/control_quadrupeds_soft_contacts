@@ -16,7 +16,7 @@ def main():
     qj = np.zeros(12)
     qj_dot = np.zeros(12)
     qj_dot[2] = 1
-    kalman_filter.fuse_odo(qj, qj_dot, ["LF_FOOT"])
+    kalman_filter.fuse_odo(qj, qj_dot, ["LF"])
     
     print(kalman_filter._state)
 

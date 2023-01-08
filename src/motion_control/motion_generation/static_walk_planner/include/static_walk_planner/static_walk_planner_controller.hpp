@@ -30,13 +30,13 @@ class SWPController : public controller_interface::ControllerInterface {
         controller_interface::InterfaceConfiguration state_interface_configuration() const override;
 
         controller_interface::return_type update(
-            const rclcpp::Time& time, const rclcpp::Duration& period
+            const rclcpp::Time& time, const rclcpp::Duration& /*period*/
         ) override;
 
         CallbackReturn on_init() override;
-        CallbackReturn on_configure(const rclcpp_lifecycle::State& previous_state) override;
-        CallbackReturn on_activate(const rclcpp_lifecycle::State& previous_state) override;
-        CallbackReturn on_deactivate(const rclcpp_lifecycle::State& previous_state) override;
+        CallbackReturn on_configure(const rclcpp_lifecycle::State& /*previous_state*/) override;
+        CallbackReturn on_activate(const rclcpp_lifecycle::State& /*previous_state*/) override;
+        CallbackReturn on_deactivate(const rclcpp_lifecycle::State& /*previous_state*/) override;
         // CallbackReturn on_cleanup(const rclcpp_lifecycle::State& previous_state) override;
         // CallbackReturn on_error(const rclcpp_lifecycle::State& previous_state) override;
         // CallbackReturn on_shutdown(const rclcpp_lifecycle::State& previous_state) override;
@@ -57,9 +57,10 @@ class SWPController : public controller_interface::ControllerInterface {
 
         std::shared_ptr<rclcpp::Publisher<generalized_pose_msgs::msg::GeneralizedPose>> gen_pose_publisher_ = nullptr;
 
-        int counter_ = 2000;
+        /// @brief Initialization time to give the state estimator some time to get better estimates. During this time, a PD controller is used to keep the robot in q0 and the planner is paused.
+        double init_time_ = 1;
 
-
+        double last_time_ = 0;
 };
 
 } // namespace static_walk_planner

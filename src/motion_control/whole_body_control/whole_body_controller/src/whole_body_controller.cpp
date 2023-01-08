@@ -11,7 +11,9 @@ namespace wbc {
 WholeBodyController::WholeBodyController(std::string robot_name, float dt)
 : prioritized_tasks(robot_name, dt),
   deformations_history_manager(prioritized_tasks.get_all_feet_names()),
-  hierarchical_qp(prioritized_tasks.get_max_priority()) {}
+  hierarchical_qp(prioritized_tasks.get_max_priority()),
+  f_c_opt(12),
+  d_des_opt(12) {}
 
 
 /* ========================================================================== */
@@ -20,9 +22,15 @@ WholeBodyController::WholeBodyController(std::string robot_name, float dt)
 
 void WholeBodyController::step(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const GeneralizedPose& gen_pose)
 {
-    deformations_history_manager.initialize_deformations_after_planning(gen_pose.contact_feet_names);
+    std::pair<Eigen::VectorXd, Eigen::VectorXd> defs_pair;
 
-    auto defs_pair = deformations_history_manager.get_deformations_history();
+    if (prioritized_tasks.get_contact_constraint_type() != ContactConstraintType::rigid) {
+        deformations_history_manager.initialize_deformations_after_planning(gen_pose.contact_feet_names);
+
+        defs_pair = deformations_history_manager.get_deformations_history();
+    } else {
+        defs_pair = std::make_pair(Eigen::VectorXd::Zero(0), Eigen::VectorXd::Zero(0));
+    }
 
     Eigen::MatrixXd A;
     Eigen::VectorXd b;
@@ -55,9 +63,34 @@ void WholeBodyController::step(const Eigen::VectorXd& q, const Eigen::VectorXd& 
     int nF = prioritized_tasks.get_nF();
     int nd = prioritized_tasks.get_nd();
 
-    d_des_opt = x_opt.segment(nv + nF, nd);
+    Eigen::VectorXd f_c_opt_var = x_opt.segment(nv, nF);
+    Eigen::VectorXd d_des_opt_var = x_opt.segment(nv + nF, nd);
 
-    deformations_history_manager.update_deformations_after_optimization(d_des_opt);
+    {
+        auto generic_feet_names = get_generic_feet_names();
+        std::string generic_foot_name;
+
+        f_c_opt.setZero();
+        d_des_opt.setZero();
+
+        for (int i=0; i<static_cast<int>(gen_pose.contact_feet_names.size()); i++) {
+            generic_foot_name = gen_pose.contact_feet_names[i];
+
+            auto it = std::find(generic_feet_names.begin(), generic_feet_names.end(), generic_foot_name);
+
+            int index = std::distance(generic_feet_names.begin(), it);
+
+            f_c_opt.segment(3*index,3) = f_c_opt_var.segment(3*i, 3);
+            
+            if (prioritized_tasks.get_contact_constraint_type() != ContactConstraintType::rigid) {
+                d_des_opt.segment(3*index,3) = d_des_opt_var.segment(3*i, 3);
+            }
+        }
+    }
+
+    if (prioritized_tasks.get_contact_constraint_type() != ContactConstraintType::rigid) {
+        deformations_history_manager.update_deformations_after_optimization(d_des_opt_var);
+    }
 
     compute_torques();
 }

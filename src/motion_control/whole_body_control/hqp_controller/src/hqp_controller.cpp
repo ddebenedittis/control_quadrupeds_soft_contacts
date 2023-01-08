@@ -19,6 +19,48 @@ using hardware_interface::HW_IF_EFFORT;
 
 
 
+HQPPublisher::HQPPublisher()
+: Node("HQP_publisher")
+{
+    torques_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
+        "/logging/optimal_torques", 1);
+
+    forces_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
+        "/logging/optimal_forces", 1);
+
+    deformations_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
+        "/logging/optimal_deformations", 1);
+
+    feet_position_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
+        "/logging/feet_position", 1);
+}
+
+void HQPPublisher::publish_all(
+    const Eigen::VectorXd& torques, const Eigen::VectorXd& forces,
+    const Eigen::VectorXd& deformations, const Eigen::VectorXd& feet_position)
+{
+    // Convert the torques to a ROS message and publish it
+    auto torques_message = std_msgs::msg::Float64MultiArray();
+    torques_message.data = std::vector<double>(torques.data(), torques.data() + torques.size());
+    torques_publisher_->publish(torques_message);
+
+    // Same for the optimal contact forces
+    auto forces_message = std_msgs::msg::Float64MultiArray();
+    forces_message.data = std::vector<double>(forces.data(), forces.data() + forces.size());
+    forces_publisher_->publish(forces_message);
+
+    // Same for the optimal feet deformations
+    auto deformations_message = std_msgs::msg::Float64MultiArray();
+    deformations_message.data = std::vector<double>(deformations.data(), deformations.data() + deformations.size());
+    deformations_publisher_->publish(deformations_message);
+
+    auto feet_position_message = std_msgs::msg::Float64MultiArray();
+    feet_position_message.data = std::vector<double>(feet_position.data(), feet_position.data() + feet_position.size());
+    feet_position_publisher_->publish(feet_position_message);
+}
+
+
+
 /* ========================================================================== */
 /*                                HQPCONTROLLER                               */
 /* ========================================================================== */
@@ -40,11 +82,14 @@ CallbackReturn HQPController::on_init()
 
         auto_declare<bool>("use_estimator", bool());
 
-        auto_declare<int>("initialization_counter", int());
+        auto_declare<double>("initialization_time", double());
 
         auto_declare<double>("PD_proportional", double());
         auto_declare<double>("PD_derivative", double());
 
+        auto_declare<bool>("logging", bool());
+
+        auto_declare<std::string>("contact_constraint_type", std::string());
         auto_declare<double>("tau_max", double());
         auto_declare<double>("mu", double());
         auto_declare<double>("Fn_max", double());
@@ -99,7 +144,7 @@ InterfaceConfiguration HQPController::state_interface_configuration() const
 
 /* ============================== On_configure ============================== */
 
-CallbackReturn HQPController::on_configure([[maybe_unused]] const rclcpp_lifecycle::State& previous_state)
+CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*previous_state*/)
 {
     std::string robot_name = get_node()->get_parameter("robot_name").as_string();
     if (robot_name.empty()) {
@@ -124,13 +169,18 @@ CallbackReturn HQPController::on_configure([[maybe_unused]] const rclcpp_lifecyc
     bool use_estimator = get_node()->get_parameter("use_estimator").as_bool();
 
 
-    counter_ = get_node()->get_parameter("initialization_counter").as_int();
+    init_time_ = get_node()->get_parameter("initialization_time").as_double();
 
 
     /* ====================================================================== */
 
     PD_proportional_ = get_node()->get_parameter("PD_proportional").as_double();
     PD_derivative_ = get_node()->get_parameter("PD_derivative").as_double();
+
+
+    /* ====================================================================== */
+
+    logging_ = get_node()->get_parameter("logging").as_bool();
 
 
     /* ====================================================================== */
@@ -148,29 +198,36 @@ CallbackReturn HQPController::on_configure([[maybe_unused]] const rclcpp_lifecyc
     des_gen_pose_.feet_vel.resize(0);
     des_gen_pose_.feet_acc.resize(0);
 
-    wbc.set_tau_max(get_node()->get_parameter("tau_max").as_double());
+
+    if (get_node()->get_parameter("contact_constraint_type").as_string().empty()) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'contact_constraint_type' parameter is empty");
+        return CallbackReturn::ERROR;
+    }
+    wbc.set_contact_constraint_type(get_node()->get_parameter("contact_constraint_type").as_string());
+
     if (get_node()->get_parameter("tau_max").as_double() <= 0) {
         RCLCPP_ERROR(get_node()->get_logger(),"'tau_max' parameter is <= 0");
         return CallbackReturn::ERROR;
     }
+    wbc.set_tau_max(get_node()->get_parameter("tau_max").as_double());
     
-    wbc.set_mu(get_node()->get_parameter("mu").as_double());
     if (get_node()->get_parameter("mu").as_double() <= 0) {
         RCLCPP_ERROR(get_node()->get_logger(),"'mu' parameter is <= 0");
         return CallbackReturn::ERROR;
     }
+    wbc.set_mu(get_node()->get_parameter("mu").as_double());
     
-    wbc.set_Fn_max(get_node()->get_parameter("Fn_max").as_double());
     if (get_node()->get_parameter("Fn_max").as_double() <= 0) {
         RCLCPP_ERROR(get_node()->get_logger(),"'Fn_max' parameter is <= 0");
         return CallbackReturn::ERROR;
     }
+    wbc.set_Fn_max(get_node()->get_parameter("Fn_max").as_double());
     
-    wbc.set_Fn_min(get_node()->get_parameter("Fn_min").as_double());
     if (get_node()->get_parameter("Fn_min").as_double() <= 0) {
         RCLCPP_ERROR(get_node()->get_logger(),"'Fn_min' parameter is <= 0");
         return CallbackReturn::ERROR;
     }
+    wbc.set_Fn_min(get_node()->get_parameter("Fn_min").as_double());
 
 
     if (get_node()->get_parameter("kp_b_pos").as_double_array().size() != 3) {
@@ -291,13 +348,21 @@ CallbackReturn HQPController::on_configure([[maybe_unused]] const rclcpp_lifecyc
         }
     );
 
+
+    /* ====================================================================== */
+
+    if (logging_ == true) {
+        logger_ = std::make_shared<HQPPublisher>();
+    }
+
+
     return CallbackReturn::SUCCESS;
 }
 
 
 /* =============================== On_activate ============================== */
 
-CallbackReturn HQPController::on_activate([[maybe_unused]] const rclcpp_lifecycle::State& previous_state)
+CallbackReturn HQPController::on_activate(const rclcpp_lifecycle::State& /*previous_state*/)
 {
     return CallbackReturn::SUCCESS;
 }
@@ -305,7 +370,7 @@ CallbackReturn HQPController::on_activate([[maybe_unused]] const rclcpp_lifecycl
 
 /* ============================== On_deactivate ============================= */
 
-CallbackReturn HQPController::on_deactivate([[maybe_unused]] const rclcpp_lifecycle::State& previous_state)
+CallbackReturn HQPController::on_deactivate(const rclcpp_lifecycle::State& /*previous_state*/)
 {
     return CallbackReturn::SUCCESS;
 }
@@ -314,11 +379,11 @@ CallbackReturn HQPController::on_deactivate([[maybe_unused]] const rclcpp_lifecy
 /* ================================= Update ================================= */
 
 controller_interface::return_type HQPController::update(
-    [[maybe_unused]] const rclcpp::Time& time, [[maybe_unused]] const rclcpp::Duration& period
+    const rclcpp::Time& time, const rclcpp::Duration& /*period*/
 ) {
-    if (counter_ > 0) {
-        counter_--;
+    double time_double = static_cast<double>(time.seconds()) + static_cast<double>(time.nanoseconds()) * std::pow(10, -9);
 
+    if (time_double < init_time_) {
         // ! ATTENTION: deactivate the PD for SOLO, and activate it for ANYmal.
         // TODO: understand what condition is q0 for solo
         // PD for the state estimator initialization
@@ -349,6 +414,12 @@ controller_interface::return_type HQPController::update(
         // Send effort command
         for (uint i=0; i<joint_names_.size(); i++) {
             command_interfaces_[i].set_value(tau_(i));
+        }
+
+        if (logging_ == true) {
+            logger_->publish_all(
+                tau_, wbc.get_f_c_opt(),
+                wbc.get_d_des_opt(), wbc.get_feet_position());
         }
     }
 

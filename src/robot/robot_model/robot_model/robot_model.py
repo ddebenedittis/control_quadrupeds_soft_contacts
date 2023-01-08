@@ -23,6 +23,7 @@ class RobotModel:
         
         full_urdf_path = get_package_share_directory(pkg_name) + urdf_path
         
+        self.generic_feet_names = ["LF", "RF", "LH", "RH"]
         self.feet_names = doc[robot_name]["feet_names"]
         self.ankle_feet_displacement = doc[robot_name]["ankle_feet_displacement"]
         
@@ -32,6 +33,17 @@ class RobotModel:
         self._model = pin.buildModelFromUrdf(full_urdf_path, pin.JointModelFreeFlyer())
         
         self._data = self._model.createData()
+        
+        
+    def generic_to_specific_feet_names(self, generic_feet_names):
+        specific_feet_names = [None] * len(generic_feet_names)
+        
+        for i in range(len(generic_feet_names)):
+            specific_feet_names[i] = self.feet_names[
+                self.generic_feet_names.index(generic_feet_names[i])
+            ]
+            
+        return specific_feet_names
         
         
     def compute_feet_pos_vel(self, qj, qj_dot, contact_feet_names):
@@ -48,6 +60,8 @@ class RobotModel:
         
         B_r_fb = np.zeros((len(contact_feet_names), 3))
         B_v_fb = np.zeros((len(contact_feet_names), 3))
+        
+        contact_feet_names = self.generic_to_specific_feet_names(contact_feet_names)
         
         for i in range(len(contact_feet_names)):
             frame_id = self._model.getFrameId(contact_feet_names[i])

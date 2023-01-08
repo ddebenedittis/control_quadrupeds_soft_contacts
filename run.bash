@@ -38,5 +38,7 @@ docker run \
     `# Enable SharedMemory between host and container.` \
     `# https://answers.ros.org/question/370595/ros2-foxy-nodes-cant-communicate-through-docker-container-border/` \
     -v /dev/shm:/dev/shm \
+    `# Logging.` \
+    -v /home/$USER/.ros:/home/$USER/.ros \
     ${IMAGE_NAME} \
     bash

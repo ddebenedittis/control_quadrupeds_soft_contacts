@@ -22,7 +22,7 @@ StaticWalkPlanner::StaticWalkPlanner() {}
 /*                                STEP_TEMPLATE                               */
 /* ========================================================================== */
 
-void StaticWalkPlanner::step_template(GeneralizedPose& gen_pose)
+void StaticWalkPlanner::step_template(GeneralizedPose& /*gen_pose*/)
 {
 
 }
@@ -33,7 +33,7 @@ void StaticWalkPlanner::step_template(GeneralizedPose& gen_pose)
 /*                               STEP_RAISE_FOOT                              */
 /* ========================================================================== */
 
-void StaticWalkPlanner::step_raise_foot(GeneralizedPose& gen_pose)
+void StaticWalkPlanner::step_raise_foot(GeneralizedPose& /*gen_pose*/)
 {
 
 }
@@ -77,7 +77,7 @@ void StaticWalkPlanner::step(GeneralizedPose& gen_pose)
     // If the phase is greater than one, reset it to 0 (plus the init_phase_).
     if (phi_ - init_phase_ > 1) {
         phi_ -= 1;
-        cycles_completed_ += 1;
+        init_com_position_(0) += step_length_;
     }
 }
 
@@ -171,11 +171,11 @@ void StaticWalkPlanner::step_plan(GeneralizedPose& gen_pose)
     double phi = phi_ - init_phase_;
 
     // Id of the foot in swing phase (id in the gait_pattern_ vector)
-    double swing_foot_id = floor(4 * phi);
+    int swing_foot_id = floor(4 * phi);
 
     // Update the position of the base and of the legs to take into account how much the robot has walked.
-    r_b_osc = r_b_osc + MatrixXd::Ones(4, 1) * step.transpose() * (swing_foot_id/4 + cycles_completed_);
-    abs_legs_pos.row(swing_foot_id) += step.head(2) * cycles_completed_;
+    r_b_osc += MatrixXd::Ones(4, 1) * (step.transpose() * (swing_foot_id/4.) + init_com_position_.transpose());
+    abs_legs_pos.row(swing_foot_id) += init_com_position_.head(2);
 
 
     /* =========================== Move COG Phase =========================== */
@@ -308,7 +308,7 @@ void StaticWalkPlanner::spline(
     Eigen::Ref<VectorXd> p_t, Eigen::Ref<VectorXd> v_t, Eigen::Ref<VectorXd> a_t
 ) {
     // Local time of transition phase and its derivatives
-    double f_t, f_t_dot, f_t_ddot;
+    double f_t=0, f_t_dot=0, f_t_ddot=0;
 
     if (spline_order_ == 5) {
         f_t = pow(t, 3) * (10 - 15 * t + 6 * pow(t,2));

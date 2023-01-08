@@ -212,7 +212,7 @@ void RobotModel::get_Jc_dot_times_v(Eigen::VectorXd& Jc_dot_times_v)
     for (size_t i = 0; i < contact_feet_names.size(); i++) {
         pinocchio::FrameIndex frame_id = model.getFrameId(contact_feet_names[i]);
 
-        Jc_dot_times_v.segment(0+3*i, 3) = pinocchio::getFrameAcceleration(model, data, frame_id, pinocchio::LOCAL_WORLD_ALIGNED).linear();
+        Jc_dot_times_v.segment(0+3*i, 3) = pinocchio::getFrameClassicalAcceleration(model, data, frame_id, pinocchio::LOCAL_WORLD_ALIGNED).linear();
     }
 }
 
@@ -223,7 +223,7 @@ void RobotModel::get_Jb_dot_times_v(Eigen::VectorXd& Jb_dot_times_v)
 {
     pinocchio::FrameIndex base_id = 1;
 
-    Jb_dot_times_v = pinocchio::getAcceleration(model, data, base_id, pinocchio::LOCAL_WORLD_ALIGNED).toVector();
+    Jb_dot_times_v = pinocchio::getClassicalAcceleration(model, data, base_id, pinocchio::LOCAL_WORLD_ALIGNED).toVector();
 }
 
 
@@ -234,7 +234,7 @@ void RobotModel::get_Js_dot_times_v(Eigen::VectorXd& Js_dot_times_v)
     for (size_t i = 0; i < swing_feet_names.size(); i++) {
         pinocchio::FrameIndex frame_id = model.getFrameId(swing_feet_names[i]);
 
-        Js_dot_times_v.segment(0+3*i, 3) = pinocchio::getFrameAcceleration(model, data, frame_id, pinocchio::LOCAL_WORLD_ALIGNED).linear();
+        Js_dot_times_v.segment(0+3*i, 3) = pinocchio::getFrameClassicalAcceleration(model, data, frame_id, pinocchio::LOCAL_WORLD_ALIGNED).linear();
     }
 }
 
@@ -258,6 +258,22 @@ void RobotModel::get_r_s(Eigen::VectorXd& r_s)
 
         r_s.segment(3*i, 3) = data.oMf[frame_id].translation() + feet_displacement;
     }
+}
+
+
+/* ============================ get_feet_position =========================== */
+
+Eigen::VectorXd RobotModel::get_feet_position()
+{
+    Eigen::VectorXd feet_position(12);
+
+    for (size_t i = 0; i < feet_names.size(); i++) {
+        pinocchio::FrameIndex frame_id = model.getFrameId(feet_names[i]);
+
+        feet_position.segment(3*i, 3) = data.oMf[frame_id].translation() + feet_displacement;
+    }
+
+    return feet_position;
 }
 
 

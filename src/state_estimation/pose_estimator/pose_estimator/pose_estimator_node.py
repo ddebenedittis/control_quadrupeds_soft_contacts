@@ -71,12 +71,7 @@ class PoseEstimatorNode(Node):
         self.w_b = np.array([0.,0.,0.])     # base angular velocity in body frame
         
         # names of the feet in contact with the ground
-        self.contact_feet_names = [
-            'LF_FOOT',
-            'RF_FOOT',
-            'LH_FOOT',
-            'RH_FOOT',
-            ]
+        self.contact_feet_names = ['LF', 'RF', 'LH', 'RH']
         
         self.time = 0                       # time of last message from the imu
         

@@ -31,11 +31,15 @@
         </gui>
 
         <physics type='ode'>
-            <!-- <ode>
-                <solver>
-                <type>world</type>
-                </solver>
-            </ode> -->
+            <ode>
+                <!-- <solver>
+                    <type>world</type>
+                </solver> -->
+                <constraints>
+                    <!-- <contact_max_correcting_vel>100</contact_max_correcting_vel>
+                    <contact_surface_layer>0.001</contact_surface_layer> -->
+                </constraints>
+            </ode>
             <real_time_update_rate>500</real_time_update_rate>   <!-- 1000 is normal speed -->
         </physics>
 

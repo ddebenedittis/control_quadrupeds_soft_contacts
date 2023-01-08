@@ -45,7 +45,9 @@ ControlTasks::ControlTasks(const std::string& robot_name, float dt)
 
 /* ================================== reset ================================= */
 
-void ControlTasks::reset(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const std::vector<std::string>& contact_feet_names)
+void ControlTasks::reset(
+    const Eigen::VectorXd& q, const Eigen::VectorXd& v,
+    const std::vector<std::string>& contact_feet_names, ContactConstraintType contact_constraint_type)
 {
     // Update the joints position and velocity vector
     this->q = q;
@@ -57,7 +59,13 @@ void ControlTasks::reset(const Eigen::VectorXd& q, const Eigen::VectorXd& v, con
 
     nc = static_cast<int>(contact_feet_names.size());
     nF = 3 * nc;
-    nd = nF;
+    
+    if (contact_constraint_type == ContactConstraintType::soft_kv) {
+        nd = nF;
+    } else if (contact_constraint_type == ContactConstraintType::rigid) {
+        nd = 0;
+    }
+    
 
     // Initialize these matrices with all zeros (required by Pinocchio library)
     Jc = Eigen::MatrixXd::Zero(3*nc, nv);

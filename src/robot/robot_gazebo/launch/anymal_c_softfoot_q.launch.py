@@ -18,7 +18,7 @@ def generate_launch_description():
     reset = LaunchConfiguration('reset', default='False')
     
     # ======================================================================== #
-
+    
     return LaunchDescription([
         
         DeclareLaunchArgument('contact_constraint_type', default_value="'soft_kv'"),
@@ -32,11 +32,11 @@ def generate_launch_description():
                 os.path.join(get_package_share_directory('robot_gazebo'), 'launch', 'robot.launch.py')
             ),
             launch_arguments = {
-                'package_name': 'solo_description',
-                'xacro_file_path': os.path.join('xacro', 'solo12.urdf.xacro'),
-                'config_file_path': os.path.join('config', 'solo_controller_effort.yaml'),
-                'world_file_path': os.path.join('worlds', 'solo.world'),
-                'height': '0.34',
+                'package_name': 'anymal_c_softfoot_q_description',
+                'xacro_file_path': os.path.join('robot', 'anymal_c_softfoot_q.urdf.xacro'),
+                'config_file_path': os.path.join('config', 'anymal_c_softfoot_q_controller_effort.yaml'),
+                'world_file_path': os.path.join('worlds', 'anymal.world'),
+                'height': '0.62',
                 'contact_constraint_type': contact_constraint_type,
                 'terrain_type': terrain_type,
                 'save_csv': save_csv,
@@ -49,11 +49,11 @@ def generate_launch_description():
                 os.path.join(get_package_share_directory('robot_gazebo'), 'launch', 'reset_robot.launch.py')
             ),
             launch_arguments = {
-                'package_name': 'solo_description',
-                'xacro_file_path': os.path.join('xacro', 'solo12.urdf.xacro'),
-                'config_file_path': os.path.join('config', 'solo_controller_effort.yaml'),
-                'world_file_path': os.path.join('worlds', 'solo.world'),
-                'height': '0.34',
+                'package_name': 'anymal_c_softfoot_q_description',
+                'xacro_file_path': os.path.join('robot', 'anymal_c_softfoot_q.urdf.xacro'),
+                'config_file_path': os.path.join('config', 'anymal_c_softfoot_q_controller_effort.yaml'),
+                'world_file_path': os.path.join('worlds', 'anymal.world'),
+                'height': '0.62',
                 'contact_constraint_type': contact_constraint_type,
                 'terrain_type': terrain_type,
                 'save_csv': save_csv,

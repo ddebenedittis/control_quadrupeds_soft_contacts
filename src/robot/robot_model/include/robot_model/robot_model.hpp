@@ -4,6 +4,7 @@
 
 #include <Eigen/Core>
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -75,16 +76,38 @@ class RobotModel {
         /// @warning Compute_EOM must have been previously called.
         void get_r_s(Eigen::VectorXd& r_s);
 
+        /// @brief
+        /// @warning Compute_EOM must have been previously called.
+        Eigen::VectorXd get_feet_position();
+
         pinocchio::Model& get_model() { return model; }
         
         pinocchio::Data& get_data() { return data; }
 
+        const std::vector<std::string>& get_generic_feet_names() const {return generic_feet_names;}
+
         const std::vector<std::string>& get_all_feet_names() const {return feet_names;}
 
         void set_feet_names(const std::vector<std::string>& contact_feet_names) {
-            this->contact_feet_names = contact_feet_names;
+            this->contact_feet_names = generic_to_specific_feet_names(contact_feet_names);
+
             set_swing_feet_names();
         }
+
+        std::vector<std::string> generic_to_specific_feet_names(std::vector<std::string> generic) {
+            for (int i=0; i<static_cast<int>(generic.size()); i++) {
+                auto it = std::find(this->generic_feet_names.begin(), this->generic_feet_names.end(), generic[i]);
+
+                int index = std::distance(this->generic_feet_names.begin(), it);
+
+                generic[i] = this->feet_names[index];
+            }
+
+            return generic;
+        }
+
+
+
 
     /* ====================================================================== */
 
@@ -98,6 +121,9 @@ class RobotModel {
         pinocchio::Data data;
 
         std::string urdf_path;
+
+        /// @brief
+        std::vector<std::string> generic_feet_names = {"LF", "RF", "LH", "RH"};
 
         /// @brief The names of all the robot feet.
         std::vector<std::string> feet_names;
