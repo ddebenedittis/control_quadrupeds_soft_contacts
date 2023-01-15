@@ -27,3 +27,8 @@
 - Created a logging package, that saves a csv of the history some relevant quantities. For this, hqp_controller must publish some messages (set logging to true in the .yaml config file of the specific robot).
 - The simulation can be restarted without closing gazebo now.
 - Corrected some bugs
+
+upcoming
+------------------
+- Moved the config .yaml files from the respective robot_description package to the robot_control package.
+- Fixed some minor warnings in the quadprog package.

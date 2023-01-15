@@ -56,11 +56,11 @@ colcon build --symlink-install
 
 - ANYmal C static walk simulation:
 ```shell
-ros2 launch robot_gazebo anymal.launch.py [terrain_type:={rigid,soft_mattress}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo anymal_c.launch.py [terrain_type:={rigid,soft_mattress}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 - SOLO12 static walk simulation:
 ```shell
-ros2 launch robot_gazebo solo.launch.py [terrain_type:={rigid,soft_mattress}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo solo12.launch.py [terrain_type:={rigid,soft_mattress}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 - ANYmal C with SoftFoot-Qs static walk simulation:
 ```shell
@@ -84,7 +84,7 @@ Add a new robot description package. It is recommended to place it in `src/robot
 
 Generate a new launch file similar to the ones already present in `src/robot/robot_gazebo/`.
 
-Create a new `effort_controller.yaml` file, similar to the ones already present in the other robot packages. Edit at least the `robot_name` field and the `joints` fields (according to the names of the joints of your robot).
+Create a new `effort_controller.yaml` file, similar to the ones already present in `robot_control/config`. Edit at least the `robot_name` field and the `joints` fields (according to the names of the joints of your robot).
 
 
 ## Author
