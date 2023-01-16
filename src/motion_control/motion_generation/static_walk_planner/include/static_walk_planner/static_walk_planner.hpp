@@ -102,6 +102,9 @@ class StaticWalkPlanner {
         /// @brief Initial base height
         double h_base_init = 0.6;
 
+        /// @brief Height of the terrain
+        double terrain_height = 0;
+
         /// @brief Time normalized stride phase
         double phi_ = 0;
 

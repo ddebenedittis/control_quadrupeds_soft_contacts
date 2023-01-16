@@ -274,7 +274,7 @@ void ControlTasks::task_contact_constraints_soft_kv(
     robot_model.get_Jc_dot_times_v(Jc_dot_times_v);
 
     b.head(nF) = - Kd * d_k1 / dt;
-    b.tail(nF) = - Jc_dot_times_v + 2 * d_k1 / (dt*dt) - d_k2 / (dt*dt);
+    b.tail(nF) = - Jc_dot_times_v + 2 * d_k1 / (dt*dt) - d_k2 / (dt*dt) - kc_v.asDiagonal() * Jc * v;
 
 
     // c = [ ... ]   ∈ 2*nF x (nv+nF+nd)
@@ -303,7 +303,7 @@ void ControlTasks::task_contact_constraints_rigid(Ref<MatrixXd> A, Ref<VectorXd>
 
     A.leftCols(nv) = Jc;
 
-    b = - Jc_dot_times_v;
+    b = - Jc_dot_times_v - kc_v.asDiagonal() * Jc * v;
 }
 
 

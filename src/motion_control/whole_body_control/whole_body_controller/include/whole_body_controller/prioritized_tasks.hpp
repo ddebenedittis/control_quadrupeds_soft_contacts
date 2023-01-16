@@ -124,6 +124,8 @@ class PrioritizedTasks {
         void set_kp_terr(const Eigen::Ref<const Eigen::Vector3d>& kp_terr) {control_tasks.set_kp_terr(kp_terr);}
         void set_kd_terr(const Eigen::Ref<const Eigen::Vector3d>& kd_terr) {control_tasks.set_kd_terr(kd_terr);}
 
+        void set_kc_v(const Eigen::Ref<const Eigen::Vector3d>& kc_v) {control_tasks.set_kc_v(kc_v);}
+
     private:
         /// @brief Get the number of rows of the equality and inequality matrices (A and C) of a whole task of priority p (which may be composed by several elementary control tasks).
         std::vector<int> get_task_dimension(int priority);

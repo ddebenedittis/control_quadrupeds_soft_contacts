@@ -103,6 +103,7 @@ CallbackReturn HQPController::on_init()
         auto_declare<std::vector<double>>("kd_s_pos", std::vector<double>());
         auto_declare<std::vector<double>>("kp_terr", std::vector<double>());
         auto_declare<std::vector<double>>("kd_terr", std::vector<double>());
+        auto_declare<std::vector<double>>("kc_v", std::vector<double>());
     }
     catch(const std::exception& e) {
         fprintf(stderr,"Exception thrown during init stage with message: %s \n", e.what());
@@ -280,6 +281,12 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
         return CallbackReturn::ERROR;
     }
     wbc.set_kd_terr(Eigen::Vector3d::Map(get_node()->get_parameter("kd_terr").as_double_array().data()));
+
+    if (get_node()->get_parameter("kc_v").as_double_array().size() != 3) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'kc_v' parameter does not have three elements");
+        return CallbackReturn::ERROR;
+    }
+    wbc.set_kc_v(Eigen::Vector3d::Map(get_node()->get_parameter("kc_v").as_double_array().data()));
 
 
     /* ====================================================================== */

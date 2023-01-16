@@ -39,32 +39,6 @@ joint_state_broadcaster:
             - effort
 
 
-effort_controller:
-    ros__parameters:
-        joints:
-            - LF_HAA
-            - LF_HFE
-            - LF_KFE
-            - LH_HAA
-            - LH_HFE
-            - LH_KFE
-            - RF_HAA
-            - RF_HFE
-            - RF_KFE
-            - RH_HAA
-            - RH_HFE
-            - RH_KFE
-        command_interfaces:
-            - effort
-        state_interfaces:
-            - position
-            - velocity
-            - effort
-
-        state_publish_rate:  200.0 # Defaults to 50
-        action_monitor_rate: 200.0 # Defaults to 20
-
-
 imu_sensor_broadcaster:
     ros__parameters:
         sensor_name: imu_sensor
@@ -140,6 +114,11 @@ whole_body_controller:
             - 1000.
             - 1000.
 
+        kc_v:
+            - 0.
+            - 0.
+            - 0.
+
 
 planner:
     ros__parameters:
@@ -160,6 +139,7 @@ planner:
         desired_foot_penetration: 0.05
         desired_base_height: 0.47
         initial_base_height: 0.6
+        terrain_height: 0.0
         initial_position:
             - 0.
             - 0.

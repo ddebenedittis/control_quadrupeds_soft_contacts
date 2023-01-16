@@ -64,6 +64,8 @@ class WholeBodyController {
         void set_kp_terr(const Eigen::Ref<const Eigen::Vector3d>& kp_terr) {prioritized_tasks.set_kp_terr(kp_terr);}
         void set_kd_terr(const Eigen::Ref<const Eigen::Vector3d>& kd_terr) {prioritized_tasks.set_kd_terr(kd_terr);}
 
+        void set_kc_v(const Eigen::Ref<const Eigen::Vector3d>& kc_v) {prioritized_tasks.set_kc_v(kc_v);}
+
     private:
         void compute_torques();
 

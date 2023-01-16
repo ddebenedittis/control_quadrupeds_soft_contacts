@@ -32,3 +32,8 @@ upcoming
 ------------------
 - Moved the config .yaml files from the respective robot_description package to the robot_control package.
 - Fixed some minor warnings in the quadprog package.
+- Added the terrain height to the planner parameters.
+- Modified the contact model (both the rigid and the soft contact model):
+  Jc u_dot + Jc_dot u = - k_c_v Jc u + ... 
+  This term is proportional to the velocity of the contact point.
+- The hierarchical_qp prints an error when the constraints are inconsistent or when the G matrix is not positive definite.

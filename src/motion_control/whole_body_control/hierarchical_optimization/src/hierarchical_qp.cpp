@@ -4,6 +4,8 @@
 // #include <Eigen/SVD>
 #include "quadprog/quadprog.hpp"
 
+#include <iostream>
+
 
 
 namespace hopt {
@@ -203,13 +205,19 @@ void HierarchicalQP::solve_qp(
     // VectorXd ce0 = VectorXd::Zero(0);
     
     // /*EiquadprogFast_status status = */qp.solve_quadprog(
-    /*int result = */solve_quadprog(
+    int result = solve_quadprog(
         G,
         g0,
         CI,
         ci0,
         xi_opt
     );
+
+    if (result == 1) {
+        std::cerr << "At priority " << priority << ", constraints are inconsistent, no solution." << '\n' << std::endl;
+    } else if (result == 2) {
+        std::cerr << "At priority " << priority << ", matrix G is not positive definite." << '\n' << std::endl;
+    }
 
     // Project the new solution in the null space of the higher priority contraints.
     sol_ += Z_ * xi_opt.head(A_cols);

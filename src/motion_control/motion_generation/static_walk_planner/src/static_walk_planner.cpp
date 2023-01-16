@@ -64,6 +64,16 @@ void StaticWalkPlanner::step(GeneralizedPose& gen_pose)
     }
 
     /* ====================================================================== */
+    
+    // Take into account the terrain height
+    
+    gen_pose.base_pos[2] += terrain_height;
+    
+    for (int i=0; i<4-static_cast<int>(gen_pose.contact_feet_names.size()); i++) {
+        gen_pose.feet_pos[3*i+2] += terrain_height;
+    }
+
+    /* ====================================================================== */
 
     // Base angular quantities
     gen_pose.base_quat << 0, 0, 0, 1;

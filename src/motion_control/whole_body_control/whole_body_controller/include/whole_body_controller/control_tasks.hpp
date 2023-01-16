@@ -148,6 +148,8 @@ class ControlTasks {
         void set_kp_terr(const Eigen::Ref<const Eigen::Vector3d>& kp_terr) {this->kp_terr = kp_terr;}
         void set_kd_terr(const Eigen::Ref<const Eigen::Vector3d>& kd_terr) {this->kd_terr = kd_terr;}
 
+        void set_kc_v(const Eigen::Ref<const Eigen::Vector3d>& kc_v) {this->kc_v = kc_v;}
+
     private:
         robot_wrapper::RobotModel robot_model;
 
@@ -184,6 +186,8 @@ class ControlTasks {
 
         Eigen::Vector3d kp_terr = {1, 1, 1};        ///< @brief Stiffness of the soft foot in the three directions
         Eigen::Vector3d kd_terr = {1, 1, 1};        ///< @brief Damping of the soft foot in the three directions
+
+        Eigen::Vector3d kc_v = {0, 0, 0};          ///< @brief Contact task: Jc * u_dot + Jc_dot * u = d_ddot - Kc_v * Jc * u, where Kc_v is the diagonal matrix whose diagonal is kc_v.
 };
 
 } // namespace wbc

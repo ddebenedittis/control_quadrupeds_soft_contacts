@@ -46,6 +46,7 @@ CallbackReturn SWPController::on_init()
         auto_declare<double>("desired_foot_penetration", double());
         auto_declare<double>("desired_base_height", double());
         auto_declare<double>("initial_base_height", double());
+        auto_declare<double>("terrain_height", double());
         auto_declare<std::vector<double>>("initial_position", std::vector<double>());
         auto_declare<std::vector<double>>("leg_position", std::vector<double>());
         auto_declare<std::vector<double>>("base_oscillation", std::vector<double>());
@@ -146,6 +147,12 @@ CallbackReturn SWPController::on_configure(const rclcpp_lifecycle::State& /*prev
     planner_.h_base_init = get_node()->get_parameter("initial_base_height").as_double();
     if (planner_.h_base_init <= 0) {
         RCLCPP_ERROR(get_node()->get_logger(),"'initial_base_height' parameter is <= 0.");
+        return CallbackReturn::ERROR;
+    }
+
+    planner_.terrain_height = get_node()->get_parameter("terrain_height").as_double();
+    if (planner_.h_base_init <= 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'terrain_height' parameter is <= 0.");
         return CallbackReturn::ERROR;
     }
 
