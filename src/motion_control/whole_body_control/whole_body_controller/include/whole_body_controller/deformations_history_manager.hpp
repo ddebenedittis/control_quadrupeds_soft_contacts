@@ -26,12 +26,19 @@ class DeformationsHistoryManager {
         /// @brief Get the deformations history vectors.
         /// @return std::pair<Eigen::VectorXd, Eigen::VectorXd> 
         std::pair<Eigen::VectorXd, Eigen::VectorXd> get_deformations_history();
+
+        int get_def_size() {return def_size;}
+
+        void set_def_size(int def_size) {this->def_size = def_size;}
     private:
         /// @brief The names of all the robot feet.
         std::vector<std::string> all_feet_names;
 
         /// @brief The names of the robot feet in contact with the terrain.
         std::vector<std::string> contact_feet_names;
+
+        /// @brief 
+        int def_size = 3;
 
         /// @brief The deformations at the previous optimization time step.
         /// @details The deformations must be stored in the same order as how the feet names are stred in all_feet_names (LF -> RF -> LH -> RH).

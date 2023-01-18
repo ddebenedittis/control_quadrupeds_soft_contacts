@@ -127,8 +127,11 @@ class PrioritizedTasks {
         void set_kc_v(const Eigen::Ref<const Eigen::Vector3d>& kc_v) {control_tasks.set_kc_v(kc_v);}
 
     private:
+        /// @brief 
+        std::pair<int,int> get_task_dimension(TasksNames task_name);
+
         /// @brief Get the number of rows of the equality and inequality matrices (A and C) of a whole task of priority p (which may be composed by several elementary control tasks).
-        std::vector<int> get_task_dimension(int priority);
+        std::pair<int,int> get_prioritized_task_dimension(int priority);
 
         /// @brief Compute the vector that specifies the priority for each control task.
         void compute_prioritized_tasks_vector();

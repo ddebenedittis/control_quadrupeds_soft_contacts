@@ -205,6 +205,7 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
         return CallbackReturn::ERROR;
     }
     wbc.set_contact_constraint_type(get_node()->get_parameter("contact_constraint_type").as_string());
+    int def_size = wbc.get_def_size();
 
     if (get_node()->get_parameter("tau_max").as_double() <= 0) {
         RCLCPP_ERROR(get_node()->get_logger(),"'tau_max' parameter is <= 0");
@@ -281,6 +282,10 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
         return CallbackReturn::ERROR;
     }
     wbc.set_kd_terr(Eigen::Vector3d::Map(get_node()->get_parameter("kd_terr").as_double_array().data()));
+
+    if (def_size == 1) {
+        RCLCPP_INFO(get_node()->get_logger(),"Only the last element of 'kp_terr' and 'kd_terr' parameter will be used");
+    }
 
     if (get_node()->get_parameter("kc_v").as_double_array().size() != 3) {
         RCLCPP_ERROR(get_node()->get_logger(),"'kc_v' parameter does not have three elements");

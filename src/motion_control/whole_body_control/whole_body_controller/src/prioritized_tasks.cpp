@@ -24,18 +24,18 @@ void PrioritizedTasks::compute_task_p(
     const GeneralizedPose& gen_pose,
     const Eigen::VectorXd& d_k1, const Eigen::VectorXd& d_k2
 ) {
-    std::vector<int> task_rows = get_task_dimension(priority);
+    std::pair<int,int> task_rows = get_prioritized_task_dimension(priority);
 
     int cols = control_tasks.get_nv() + control_tasks.get_nF() + control_tasks.get_nd();
 
-    A.resize(task_rows[0], cols);
+    A.resize(task_rows.first, cols);
     A.setZero();
-    b.resize(task_rows[0]);
+    b.resize(task_rows.first);
     b.setZero();
 
-    C.resize(task_rows[1], cols);
+    C.resize(task_rows.second, cols);
     C.setZero();
-    d.resize(task_rows[1]);
+    d.resize(task_rows.second);
     d.setZero();
 
     int ne = 0;
@@ -46,145 +46,132 @@ void PrioritizedTasks::compute_task_p(
 
     for (int i = 0; i < static_cast<int>(tasks_vector.size()); i++) {
         if (tasks_vector[i] == priority) {
+            auto n_temp = get_task_dimension(static_cast<TasksNames>(i));
+            ne_temp = n_temp.first;     // number of rows of the equality control task
+            ni_temp = n_temp.second;    // number of rows of the inequality control task
+
             switch (static_cast<TasksNames>(i))
             {
-            // ne_temp is the number of rows of the equality control task
-            // ni_temp is the number of rows of the inequality control task
-
             case TasksNames::FloatingBaseEOM:
-                ne_temp = 6;
-
                 control_tasks.task_floating_base_eom(A.middleRows(ne, ne_temp), b.segment(ne, ne_temp));
-
-                ne += ne_temp;
                 break;
             case TasksNames::TorqueLimits:
-                ni_temp = 2 * (control_tasks.get_nv() - 6);
-
                 control_tasks.task_torque_limits(C.middleRows(ni, ni_temp), d.segment(ni, ni_temp));
-
-                ni += ni_temp;
                 break;
             case TasksNames::FrictionAndFcModulation:
-                ni_temp = 6 * control_tasks.get_nc();
-
                 control_tasks.task_friction_Fc_modulation(C.middleRows(ni, ni_temp), d.segment(ni, ni_temp));
-
-                ni += ni_temp;
                 break;
             case TasksNames::LinearBaseMotionTracking:
-                ne_temp = 3;
-
                 control_tasks.task_linear_motion_tracking(
                     A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
                     gen_pose.base_acc, gen_pose.base_vel, gen_pose.base_pos
                 );
-
-                ne += ne_temp;
                 break;
             case TasksNames::AngularBaseMotionTracking:
-                ne_temp = 3;
-
                 control_tasks.task_angular_motion_tracking(
                     A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
                     gen_pose.base_angvel, gen_pose.base_quat
                 );
-
-                ne += ne_temp;
                 break;
             case TasksNames::SwingFeetMotionTracking:
-                ne_temp = 12 - 3 * control_tasks.get_nc();
-
                 control_tasks.task_swing_feet_tracking(
                     A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
                     gen_pose.feet_acc, gen_pose.feet_vel, gen_pose.feet_pos
                 );
-
-                ne += ne_temp;
                 break;
             case TasksNames::ContactConstraints:
                 if (contact_constraint_type == ContactConstraintType::soft_kv) {
-                    ne_temp = 2 * control_tasks.get_nF();
-                    ni_temp = 2 * control_tasks.get_nF();
-
                     control_tasks.task_contact_constraints_soft_kv(
                         A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
                         C.middleRows(ni, ni_temp), d.segment(ni, ni_temp),
                         d_k1, d_k2
                     );
-
-                    ne += ne_temp;
-                    ni += ni_temp;
+                } else if (contact_constraint_type == ContactConstraintType::soft_sim) {
+                    control_tasks.task_contact_constraints_soft_sim(
+                        A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
+                        C.middleRows(ni, ni_temp), d.segment(ni, ni_temp),
+                        d_k1, d_k2
+                    );
                 } else if (contact_constraint_type == ContactConstraintType::rigid) {
-                    ne_temp = control_tasks.get_nF();
-
                     control_tasks.task_contact_constraints_rigid(
                         A.middleRows(ne, ne_temp), b.segment(ne, ne_temp)
                     );
-
-                    ne += ne_temp;
                 }
 
                 break;
             case TasksNames::EnergyAndForcesOptimization:
-                ne_temp = (control_tasks.get_nv() - 6) + 2 * control_tasks.get_nF();
-
                 control_tasks.task_energy_forces_minimization(A.middleRows(ne, ne_temp), b.segment(ne, ne_temp));
-
-                ne += ne_temp;
                 break;
             case TasksNames::SEPARATOR:
                 break;
             }
+
+            ne += ne_temp;
+            ni += ni_temp;
         }
     }
 }
 
-std::vector<int> PrioritizedTasks::get_task_dimension(int priority)
+std::pair<int,int> PrioritizedTasks::get_task_dimension(TasksNames task_name)
+{
+    int ne = 0;
+    int ni = 0;
+
+    switch (task_name)
+    {
+    case TasksNames::FloatingBaseEOM:
+        ne = 6;
+        break;
+    case TasksNames::TorqueLimits:
+        ni = 2 * (control_tasks.get_nv() - 6);
+        break;
+    case TasksNames::FrictionAndFcModulation:
+        ni = 6 * control_tasks.get_nc();
+        break;
+    case TasksNames::LinearBaseMotionTracking:
+        ne = 3;
+        break;
+    case TasksNames::AngularBaseMotionTracking:
+        ne = 3;
+        break;
+    case TasksNames::SwingFeetMotionTracking:
+        ne = 12 - 3 * control_tasks.get_nc();
+        break;
+    case TasksNames::ContactConstraints:
+        if (contact_constraint_type == ContactConstraintType::soft_kv) {
+            ne = 2 * control_tasks.get_nF();
+            ni = 2 * control_tasks.get_nF();
+        } else if (contact_constraint_type == ContactConstraintType::soft_sim) {
+            ne = control_tasks.get_nc() + control_tasks.get_nF();
+            ni = 2 * control_tasks.get_nc();
+        } else if (contact_constraint_type == ContactConstraintType::rigid) {
+            ne = control_tasks.get_nF();
+        }
+        break;
+    case TasksNames::EnergyAndForcesOptimization:
+        ne = control_tasks.get_nv() - 6 + control_tasks.get_nF() + control_tasks.get_nd();
+        break;
+    case TasksNames::SEPARATOR:
+        break;
+    }
+
+    return std::make_pair(ne, ni);
+}
+
+std::pair<int,int> PrioritizedTasks::get_prioritized_task_dimension(int priority)
 {
     int ne = 0;
     int ni = 0;
 
     for (int i = 0; i < static_cast<int>(tasks_vector.size()); i++) {
         if (tasks_vector[i] == priority) {
-            switch (static_cast<TasksNames>(i))
-            {
-            case TasksNames::FloatingBaseEOM:
-                ne += 6;
-                break;
-            case TasksNames::TorqueLimits:
-                ni += 2 * (control_tasks.get_nv() - 6);
-                break;
-            case TasksNames::FrictionAndFcModulation:
-                ni += 6 * control_tasks.get_nc();
-                break;
-            case TasksNames::LinearBaseMotionTracking:
-                ne += 3;
-                break;
-            case TasksNames::AngularBaseMotionTracking:
-                ne += 3;
-                break;
-            case TasksNames::SwingFeetMotionTracking:
-                ne += 12 - 3 * control_tasks.get_nc();
-                break;
-            case TasksNames::ContactConstraints:
-                if (contact_constraint_type == ContactConstraintType::soft_kv) {
-                    ne += 2 * control_tasks.get_nF();
-                    ni += 2 * control_tasks.get_nF();
-                } else if (contact_constraint_type == ContactConstraintType::rigid) {
-                    ne += control_tasks.get_nF();
-                }
-                break;
-            case TasksNames::EnergyAndForcesOptimization:
-                ne += control_tasks.get_nv() - 6 + 2 * control_tasks.get_nF();
-                break;
-            case TasksNames::SEPARATOR:
-                break;
-            }
+            std::pair<int,int> n_temp = get_task_dimension(static_cast<TasksNames>(i));
+            ne += n_temp.first;
+            ni += n_temp.second;
         }
     }
 
-    return {ne, ni};
+    return std::make_pair(ne, ni);
 }
 
 void PrioritizedTasks::compute_prioritized_tasks_vector()

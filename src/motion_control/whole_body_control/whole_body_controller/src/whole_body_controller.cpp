@@ -73,6 +73,8 @@ void WholeBodyController::step(const Eigen::VectorXd& q, const Eigen::VectorXd& 
         f_c_opt.setZero();
         d_des_opt.setZero();
 
+        int def_size = deformations_history_manager.get_def_size();
+
         for (int i=0; i<static_cast<int>(gen_pose.contact_feet_names.size()); i++) {
             generic_foot_name = gen_pose.contact_feet_names[i];
 
@@ -83,7 +85,7 @@ void WholeBodyController::step(const Eigen::VectorXd& q, const Eigen::VectorXd& 
             f_c_opt.segment(3*index,3) = f_c_opt_var.segment(3*i, 3);
             
             if (prioritized_tasks.get_contact_constraint_type() != ContactConstraintType::rigid) {
-                d_des_opt.segment(3*index,3) = d_des_opt_var.segment(3*i, 3);
+                d_des_opt.segment(def_size*index, def_size) = d_des_opt_var.segment(def_size*i, def_size);
             }
         }
     }

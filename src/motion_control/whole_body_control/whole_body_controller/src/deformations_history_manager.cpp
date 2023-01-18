@@ -38,8 +38,8 @@ void DeformationsHistoryManager::initialize_deformations_after_planning(const st
     /* ====================================================================== */
 
     // Initialize the new deformations vectors.
-    Eigen::VectorXd d_k1_temp(3 * new_contact_feet_names.size());
-    Eigen::VectorXd d_k2_temp(3 * new_contact_feet_names.size());
+    Eigen::VectorXd d_k1_temp(def_size * new_contact_feet_names.size());
+    Eigen::VectorXd d_k2_temp(def_size * new_contact_feet_names.size());
 
     // Populate the new deformations vectors.
     for (int i = 0; i < static_cast<int>(new_contact_feet_names.size()); i++) {
@@ -48,15 +48,15 @@ void DeformationsHistoryManager::initialize_deformations_after_planning(const st
         if (iterator == contact_feet_names.end()) {
             // This foot has just entered in contact with the terrain, initialize its deformations to zero.
 
-            d_k1_temp.segment(3*i, 3) << 0, 0, 0;
-            d_k2_temp.segment(3*i, 3) << 0, 0, 0;
+            d_k1_temp.segment(def_size*i, def_size).setZero();
+            d_k2_temp.segment(def_size*i, def_size).setZero();
         } else {
             // This foot was already in contact with the terrain, maintain the history of its deformations.
 
-            int index = std::distance( contact_feet_names.begin(), iterator );
+            int index = std::distance(contact_feet_names.begin(), iterator);
             
-            d_k1_temp.segment(3*i, 3) = d_k1.segment(3*index, 3);
-            d_k2_temp.segment(3*i, 3) = d_k2.segment(3*index, 3);
+            d_k1_temp.segment(def_size*i, def_size) = d_k1.segment(def_size*index, def_size);
+            d_k2_temp.segment(def_size*i, def_size) = d_k2.segment(def_size*index, def_size);
         }
     }
 

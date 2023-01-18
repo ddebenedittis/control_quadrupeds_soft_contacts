@@ -36,14 +36,23 @@ class WholeBodyController {
 
         int get_nv() {return prioritized_tasks.get_nv();}
 
+        int get_def_size() {return deformations_history_manager.get_def_size();}
+
         void set_contact_constraint_type(const std::string& contact_constraint_type)
         {
             if (contact_constraint_type == "soft_kv") {
-                this->prioritized_tasks.set_contact_constraint_type(ContactConstraintType::soft_kv);
+                prioritized_tasks.set_contact_constraint_type(ContactConstraintType::soft_kv);
+                deformations_history_manager.set_def_size(3);
+                d_des_opt = Eigen::VectorXd::Zero(12);
             } else if (contact_constraint_type == "rigid") {
-                this->prioritized_tasks.set_contact_constraint_type(ContactConstraintType::rigid);
+                prioritized_tasks.set_contact_constraint_type(ContactConstraintType::rigid);
+                d_des_opt = Eigen::VectorXd::Zero(0);
+            } else if (contact_constraint_type == "soft_sim") {
+                prioritized_tasks.set_contact_constraint_type(ContactConstraintType::soft_sim);
+                deformations_history_manager.set_def_size(1);
+                d_des_opt = Eigen::VectorXd::Zero(4);
             } else {
-                this->prioritized_tasks.set_contact_constraint_type(ContactConstraintType::invalid);
+                prioritized_tasks.set_contact_constraint_type(ContactConstraintType::invalid);
             }
         }
 

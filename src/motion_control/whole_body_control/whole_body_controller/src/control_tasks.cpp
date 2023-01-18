@@ -62,6 +62,8 @@ void ControlTasks::reset(
     
     if (contact_constraint_type == ContactConstraintType::soft_kv) {
         nd = nF;
+    } else if (contact_constraint_type == ContactConstraintType::soft_sim) {
+        nd = nc;
     } else if (contact_constraint_type == ContactConstraintType::rigid) {
         nd = 0;
     }
@@ -264,6 +266,7 @@ void ControlTasks::task_contact_constraints_soft_kv(
 
     MatrixXd Kp = tile(kp_terr, nc).asDiagonal();
     MatrixXd Kd = tile(kd_terr, nc).asDiagonal();
+    MatrixXd Kc_v = tile(kc_v, nc).asDiagonal();
 
     A.block( 0,    nv, nF, nF) = MatrixXd::Identity(nF, nF);
     A.block( 0, nv+nF, nd, nd) = - Kp - Kd / dt;
@@ -274,7 +277,7 @@ void ControlTasks::task_contact_constraints_soft_kv(
     robot_model.get_Jc_dot_times_v(Jc_dot_times_v);
 
     b.head(nF) = - Kd * d_k1 / dt;
-    b.tail(nF) = - Jc_dot_times_v + 2 * d_k1 / (dt*dt) - d_k2 / (dt*dt) - kc_v.asDiagonal() * Jc * v;
+    b.tail(nF) = - Jc_dot_times_v + 2 * d_k1 / (dt*dt) - d_k2 / (dt*dt) - Kc_v * Jc * v;
 
 
     // c = [ ... ]   ∈ 2*nF x (nv+nF+nd)
@@ -288,6 +291,17 @@ void ControlTasks::task_contact_constraints_soft_kv(
     C.block(nd, nv+nF, nd, nd) = (Kp - Kd/dt) * C_temp;
 
     d.tail(nd) = C_temp * Kd * d_k1 / dt;
+
+    // C = [ ... ]   ∈ 2*nc x (nv+nF+nd)
+    // d = [ ... ]
+
+    // MatrixXd C_temp = MatrixXd::Zero(nc, nd);
+    // for (int i=0; i<nc; i++) {
+    //     C_temp(i, 3*i) = 1;
+    // }
+
+    // C.block( 0, nv+nF, nc, nd) = - C_temp;
+    // C.block(nc,    nv, nc, nF) = - C_temp;
 }
 
 
@@ -298,12 +312,14 @@ void ControlTasks::task_contact_constraints_rigid(Ref<MatrixXd> A, Ref<VectorXd>
     // A = [ Jc, 0 ]
     // b = [ - Jc_dot_times_v ]
 
+    MatrixXd Kc_v = tile(kc_v, nc).asDiagonal();
+
     VectorXd Jc_dot_times_v = VectorXd::Zero(nF);
     robot_model.get_Jc_dot_times_v(Jc_dot_times_v);
 
     A.leftCols(nv) = Jc;
 
-    b = - Jc_dot_times_v - kc_v.asDiagonal() * Jc * v;
+    b = - Jc_dot_times_v - Kc_v * Jc * v;
 }
 
 
@@ -358,6 +374,53 @@ void ControlTasks::task_contact_constraints_rigid(Ref<MatrixXd> A, Ref<VectorXd>
 
 //     d.tail(nd) = C_temp * Kd * d_k1 / dt;
 // }
+
+
+/* -------------------- task_contact_constraints_soft_sim ------------------- */
+
+void ControlTasks::task_contact_constraints_soft_sim(
+    Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b,
+    Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d,
+    const Eigen::VectorXd& d_k1, const Eigen::VectorXd& d_k2)
+{
+    // Fc_z = Kp d + Kd d_dot
+
+    // A = [  0, I, - Kp - Kd/dt ]                      soft contact constraint 
+    //     [ Jc, 0, I/dt^2       ]                      - deformation_ddot = contact_point_acceleration
+
+    // b = [ - Kd d_k1 / dt ]                           soft contact constraint 
+    //     [ - Jc_dot * v + 2 d_k1/dt^2 - d_k2/dt^2 ]   - deformation_ddot = contact_point_acceleration
+
+    MatrixXd C_temp = MatrixXd::Zero(nd, nF);
+    for (int i=0; i<nc; i++) {
+        C_temp(i, 3*i) = 1;
+    }
+
+    MatrixXd Kp = kp_terr(2) * MatrixXd::Identity(nc, nc);
+    MatrixXd Kd = kd_terr(2) * MatrixXd::Identity(nc, nc);
+    MatrixXd Kc_v = tile(kc_v, nc).asDiagonal();
+
+    A.block( 0,    nv, nd, nF) = C_temp;
+    A.block( 0, nv+nF, nd, nd) = - Kp - Kd / dt;
+    A.bottomLeftCorner(nF, nv) = Jc;
+    A.block(nd, nv+nF, nF, nd) = C_temp.transpose() / (dt*dt);
+
+    VectorXd Jc_dot_times_v = VectorXd::Zero(nF);
+    robot_model.get_Jc_dot_times_v(Jc_dot_times_v);
+
+    b.head(nd) = - Kd * d_k1 / dt;
+    b.tail(nF) = - Jc_dot_times_v + C_temp.transpose() * (2 * d_k1 / (dt*dt) - d_k2 / (dt*dt)) - Kc_v * Jc * v;
+
+
+    // c = [ ... ]   ∈ 2*nc x (nv+nF+nd)
+    // d = [ ... ]
+
+    C.block( 0, nv+nF, nc, nd) = - MatrixXd::Identity(nc, nd);
+    // C.block(nc, nv   , nc, nF) = - C_temp;
+
+    // To avoid unused parameter warning.
+    d.head(2*nc).setZero();
+}
 
 
 /* ===================== Task_energy_forces_optimization ==================== */

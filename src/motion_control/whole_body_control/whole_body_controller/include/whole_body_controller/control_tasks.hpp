@@ -10,7 +10,7 @@ namespace wbc {
 /*                             CONSTRAINTTYPE ENUM                            */
 /* ========================================================================== */
 
-enum class ContactConstraintType {soft_kv, rigid, invalid};
+enum class ContactConstraintType {soft_kv, soft_sim, rigid, invalid};
 
 
 
@@ -101,7 +101,20 @@ class ControlTasks {
         /// @param[out] d
         /// @param[in]  d_k1 Deformations of the feet in contact with the terrain at the previous time step.
         /// @param[in]  d_k2 Deformations of the feet in contact with the terrain at the second previous time step.
-        void task_contact_constraints_soft_hc(
+        // void task_contact_constraints_soft_hc(
+        //     Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b,
+        //     Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d,
+        //     const Eigen::VectorXd& d_k1, const Eigen::VectorXd& d_k2
+        // );
+
+        /// @brief Compute A, b, C, d that enforce the soft contact constraints, assuming a Kelving-Voight soft contact model only in the normal (z) direction.
+        /// @param[out] A 
+        /// @param[out] b 
+        /// @param[out] C 
+        /// @param[out] d 
+        /// @param[in]  d_k1 
+        /// @param[in]  d_k2 
+        void task_contact_constraints_soft_sim(
             Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b,
             Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d,
             const Eigen::VectorXd& d_k1, const Eigen::VectorXd& d_k2
@@ -127,8 +140,10 @@ class ControlTasks {
 
         const Eigen::VectorXd get_feet_position() { return robot_model.get_feet_position(); }
 
+        /// @brief Return the generic feet names. The generic feet names are the same for all quadrupedal robots: LF, RF, LH, and RH.
         const std::vector<std::string>& get_generic_feet_names() const {return robot_model.get_generic_feet_names();}
 
+        /// @brief Return the feet names of the specific robot. These are the names of the links used for computing the contact point.
         const std::vector<std::string>& get_all_feet_names() const {return robot_model.get_all_feet_names();}
 
         void set_tau_max(const double tau_max) {this->tau_max = tau_max;}
@@ -187,7 +202,7 @@ class ControlTasks {
         Eigen::Vector3d kp_terr = {1, 1, 1};        ///< @brief Stiffness of the soft foot in the three directions
         Eigen::Vector3d kd_terr = {1, 1, 1};        ///< @brief Damping of the soft foot in the three directions
 
-        Eigen::Vector3d kc_v = {0, 0, 0};          ///< @brief Contact task: Jc * u_dot + Jc_dot * u = d_ddot - Kc_v * Jc * u, where Kc_v is the diagonal matrix whose diagonal is kc_v.
+        Eigen::Vector3d kc_v = {0, 0, 0};           ///< @brief Contact task: Jc * u_dot + Jc_dot * u = d_ddot - Kc_v * Jc * u, where Kc_v is the diagonal matrix whose diagonal is kc_v repeated nc number of times.
 };
 
 } // namespace wbc

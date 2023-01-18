@@ -37,3 +37,7 @@ upcoming
   Jc u_dot + Jc_dot u = - k_c_v Jc u + ... 
   This term is proportional to the velocity of the contact point.
 - The hierarchical_qp prints an error when the constraints are inconsistent or when the G matrix is not positive definite.
+- Implemented the soft_sim contact model in the controller.
+  This is the contact model used in most physics engines (e.g. ODE and DART). It models the contact with a spring and damper in parallel and normal to the contact direction. Along the tangential directions, the rigid contact model is used (no slippage).
+  The controller is adapted to deal with deformations of different size.
+- Reorganized prioritized_tasks. Now it is necessary to specify the dimension of the tasks only in one place.
