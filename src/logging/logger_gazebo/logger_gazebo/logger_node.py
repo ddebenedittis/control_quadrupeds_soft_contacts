@@ -1,15 +1,20 @@
+import os
+
 import numpy as np
 import rclpy
 from rclpy.node import Node
 
 from gazebo_msgs.msg import LinkStates
+from gazebo_msgs.msg import ContactsState
 from generalized_pose_msgs.msg import GeneralizedPose
-from rosgraph_msgs.msg import Clock
 from std_msgs.msg import Float64MultiArray
 
+import logger_gazebo.plot as plot
 
 
-# Quaternion distance
+
+# ============================ Quaternion Distance =========================== #
+
 def q_dist(q1, q2):
     
     theta = np.arccos(2 * np.dot(q1, q2) - 1)
@@ -17,9 +22,8 @@ def q_dist(q1, q2):
     return theta
 
 
-
 # ============================================================================ #
-#                               POSEESTIMATORNODE                              #
+#                               LoggerSubscriber                               #
 # ============================================================================ #
 
 class LoggerSubscriber(Node):
@@ -61,35 +65,65 @@ class LoggerSubscriber(Node):
             "/gazebo/link_states",
             self.link_states_callback,
             1)
-        self.link_states_subscription   # prevent unused variable warning
         
         self.gen_pose_subscription = self.create_subscription(
             GeneralizedPose,
             "/robot/desired_generalized_pose",
             self.gen_pose_callback,
             1)
-        self.gen_pose_subscription      # prevent unused variable warning
+        
+        self.contact_sensor_LF_subscription = self.create_subscription(
+            ContactsState,
+            "/contact_force_sensors/LF",
+            self.contact_state_LF_callback,
+            1)
+        self.contact_sensor_RF_subscription = self.create_subscription(
+            ContactsState,
+            "/contact_force_sensors/RF",
+            self.contact_state_RF_callback,
+            1)
+        self.contact_sensor_LH_subscription = self.create_subscription(
+            ContactsState,
+            "/contact_force_sensors/LH",
+            self.contact_state_LH_callback,
+            1)
+        self.contact_sensor_RH_subscription = self.create_subscription(
+            ContactsState,
+            "/contact_force_sensors/RH",
+            self.contact_state_RH_callback,
+            1)
         
         
         # ================ Variables Saved By The Subscribers ================ #
         
+        # Output of the optimization problem solution
         self.optimal_torques = np.zeros(12)
         self.optimal_forces = np.zeros(12)
         self.optimal_deformations = np.zeros(12)
+        
+        # Computed and published by the whole-body controller
         self.feet_position = np.zeros((3,4))
 
+        # Base pose: q_b = [p_x, p_y, p_z, q_x, q_y, q_z, q_w]
         self.q_b = np.zeros(7); self.q_b[6] = 1
+        # Base velocity: v_b = [v_x, v_y, v_z, w_x, w_y, w_z]
         self.v_b = np.zeros(6)
         
+        # Planner output
         self.desired_base_pos = np.zeros(3)
         self.desired_base_quat = np.zeros(4); self.desired_base_quat[3] = 1
         self.desired_base_vel = np.zeros(3)
         self.contact_feet_names = []
         
-        self.time = 0.                      # time of last message from clock
+        # Contact sensor
+        self.contact_forces = np.zeros(12)
+        self.contact_positions = np.zeros(12)
+        self.depths = np.zeros(4)
         
         
         # =============================== Timer ============================== #
+        
+        # The locomotion data is saved inside the timer_callback.
         
         timer_period = 1/25
         self.timer = self.create_timer(timer_period, self.timer_callback)
@@ -104,15 +138,21 @@ class LoggerSubscriber(Node):
         # TODO: use contact forces informations to compute this quantity.
         self.saved_feet_pos = np.full((3,4), np.nan)
         
-        #
+        # Threshold before which the slippage is not computed
         self.threshold = 0.001
         
         
         # ============================= Csv Data ============================= #
         
+        # Approximate time over which data is saved. Approximate because it depends on the actual frequency of the timer_callback.
         time_horizon = 10
+        
+        # Number of datapoints 
         self.n = int(time_horizon / timer_period + 1)
+        # Current step
         self.i = 0
+        
+        # Vectors that save the locomotion data. These vectors, once filled, are saved as CSVs.
         
         self.time_vector = np.zeros(self.n)
         
@@ -120,16 +160,19 @@ class LoggerSubscriber(Node):
         self.optimal_forces_vector = np.zeros((self.n, 12))
         self.optimal_deformations_vector = np.zeros((self.n, 12))
         self.feet_position_vector = np.zeros((self.n, 12))
-        
-        self.forces_vector = np.zeros((self.n, 12))
-        self.deformations_vector = np.zeros(self.n)
-        
+                
         self.position_error_vector = np.zeros((self.n, 3))
         self.orientation_error_vector = np.zeros(self.n)
         self.velocity_error_vector = np.zeros((self.n, 3))
         
         self.slippage_vector = np.zeros(self.n)
+        
+        self.contact_forces_vector = np.zeros((self.n, 12))
+        self.contact_positions_vector = np.zeros((self.n, 12))
+        self.depths_vector = np.zeros((self.n, 4))
 
+
+    # =============================== Callbacks ============================== #
 
     def optimal_torques_callback(self, msg):
         self.optimal_torques = np.array(msg.data)
@@ -148,6 +191,7 @@ class LoggerSubscriber(Node):
 
 
     def link_states_callback(self, msg):
+        #! This assumes that there is only one link whose name ends with "base".
         for index in range(len(msg.name)):
             if msg.name[index][-4:] == "base":
                 break
@@ -171,20 +215,62 @@ class LoggerSubscriber(Node):
         self.desired_base_pos = np.array([msg.base_pos.x, msg.base_pos.y, msg.base_pos.z])
         self.desired_base_quat = np.array([msg.base_quat.x, msg.base_quat.y, msg.base_quat.z, msg.base_quat.w])
         self.desired_base_vel = np.array([msg.base_vel.x, msg.base_vel.y, msg.base_vel.z])
-                
+             
+        # These are generic feet names, independent on the particular quadrupedal robot. E.g. LF, RF, etc.
         self.contact_feet_names = msg.contact_feet
         
         
-    def compute_slippage(self, contact_feet_names, feet_pos):
+    def contact_state_callback(self, msg, foot_name):
+        i = self.generic_feet_names.index(foot_name)
+                
+        # Compute the average of all the elements of the message
+        self.contact_forces[0+3*i:3+3*i].fill(0)
+        self.contact_positions[0+3*i:3+3*i].fill(0)
+        self.depths[i] = 0
         
+        for contact_state in msg.states:
+            self.contact_forces[0+3*i:3+3*i] += np.array([
+                contact_state.total_wrench.force.x,
+                contact_state.total_wrench.force.y,
+                contact_state.total_wrench.force.z
+            ])
+            self.contact_positions[0+3*i:3+3*i] += np.array([
+                contact_state.contact_positions[0].x,
+                contact_state.contact_positions[0].y,
+                contact_state.contact_positions[0].z
+            ])
+            self.depths[i] += contact_state.depths[0]
+            
+        n = len(msg.states)
+        
+        if n > 0:
+            self.contact_forces[0+3*i:3+3*i] = self.contact_forces[0+3*i:3+3*i] / n
+            self.contact_positions[0+3*i:3+3*i] = self.contact_positions[0+3*i:3+3*i] / n
+            self.depths[i] = self.depths[i] / n
+        
+        
+    def contact_state_LF_callback(self, msg):
+        self.contact_state_callback(msg, "LF")
+        
+    def contact_state_RF_callback(self, msg):
+        self.contact_state_callback(msg, "RF")
+        
+    def contact_state_LH_callback(self, msg):
+        self.contact_state_callback(msg, "LH")
+        
+    def contact_state_RH_callback(self, msg):
+        self.contact_state_callback(msg, "RH")
+        
+        
+    def compute_slippage(self, contact_feet_names, feet_pos):
         # Shortened and ordered feet names
-        feet = self.generic_feet_names
+        feet_names = self.generic_feet_names
         
         # Initialize the slippage at this time step
         slippage = 0
         
         for i in range(4):
-            if feet[i] in contact_feet_names:
+            if feet_names[i] in contact_feet_names:
                 if np.isnan(self.saved_feet_pos[0,i]):
                     # The foot was not in contact the previous time step. Update its saved position.
                     self.saved_feet_pos[:,i] = feet_pos[:,i]
@@ -200,6 +286,12 @@ class LoggerSubscriber(Node):
         
     
     def timer_callback(self):
+        """
+        Fill the data if self.i < self.n. Then, save the data is some csv files and destroy the node. 
+        """
+        
+        # =========================== Save The Data ========================== #
+        
         self.i += 1
         
         self.time_vector[self.i] = self.get_clock().now().nanoseconds / 10**9
@@ -211,9 +303,22 @@ class LoggerSubscriber(Node):
         self.optimal_deformations_vector[self.i,:] = self.optimal_deformations
         self.slippage_vector[self.i] = self.slippage_vector[self.i-1] + self.compute_slippage(self.contact_feet_names, self.feet_position)
         
+        self.contact_forces_vector[self.i,:] = self.contact_forces
+        self.contact_positions_vector[self.i,:] = self.contact_positions
+        self.depths_vector[self.i,:] = self.depths
+        
+        
+        # ================= Save The Csv And Destroy The Node ================ #
         
         if self.i >= self.n - 1:
-            path = "/home/davide/Dropbox/phd/quadrupeds/control_quadrupeds_soft_contacts/log/"
+            path = "log/csv/"
+            
+            try:
+                os.makedirs(path)
+            except OSError:
+                print("Creation of the directories %s failed" % path)
+            else:
+                print("Successfully created the directories %s" % path)
             
             np.savetxt(path+"time.csv", self.time_vector, delimiter=",")
             np.savetxt(path+"position_error.csv", self.position_error_vector, delimiter=",")
@@ -224,10 +329,15 @@ class LoggerSubscriber(Node):
             np.savetxt(path+"optimal_deformations.csv", self.optimal_deformations_vector, delimiter=",")
             np.savetxt(path+"slippage.csv", self.slippage_vector, delimiter=",")
             
-            print("DONE")
+            np.savetxt(path+"contact_forces.csv", self.contact_forces_vector, delimiter=",")
+            np.savetxt(path+"contact_positions.csv", self.contact_positions_vector, delimiter=",")
+            np.savetxt(path+"depths.csv", self.depths_vector, delimiter=",")
             
+            print("DONE")
+            print("Saved the CSVs in %s" % os.getcwd() + path)
+                                                            
             self.destroy_node()
-        
+
 
 
 # ============================================================================ #

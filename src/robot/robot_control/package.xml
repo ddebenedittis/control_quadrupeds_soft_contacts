@@ -3,7 +3,7 @@
 <package format="3">
     <name>robot_control</name>
     <version>0.0.0</version>
-    <description>TODO: Package description</description>
+    <description>Config files for ROS 2 controllers in control_quadrupeds_soft_contacts</description>
     <maintainer email="davide.debenedittis@gmail.com">Davide De Benedittis</maintainer>
     <license>TODO: License declaration</license>
 

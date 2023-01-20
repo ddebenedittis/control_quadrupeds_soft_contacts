@@ -74,8 +74,7 @@ void HierarchicalQP::solve_qp(
     const MatrixXd& C,
     const VectorXd& d,
     const VectorXd& we,
-    const VectorXd& wi
-    )
+    const VectorXd& wi)
 {
     /* =================== Setup The Optimization Problem =================== */
 

@@ -3,7 +3,7 @@
 <package format="3">
     <name>generalized_pose_msgs</name>
     <version>0.0.0</version>
-    <description>TODO: Package description</description>
+    <description>Generalized pose messages package</description>
     <maintainer email="davide.debenedittis@gmail.com">Davide De Benedittis</maintainer>
     <license>TODO: License declaration</license>
 

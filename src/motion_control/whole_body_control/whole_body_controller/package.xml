@@ -3,7 +3,7 @@
 <package format="3">
     <name>whole_body_controller</name>
     <version>0.0.0</version>
-    <description>TODO: Package description</description>
+    <description>Whole-body controller based on hierarchical QP optimization</description>
     <maintainer email="davide.debenedittis@gmail.com">Davide De Benedittis</maintainer>
     <license>TODO: License declaration</license>
 

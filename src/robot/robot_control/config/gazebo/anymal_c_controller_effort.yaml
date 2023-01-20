@@ -1,5 +1,7 @@
 controller_manager:
     ros__parameters:
+        use_sim_time: true
+
         update_rate: 200
 
         effort_controller:
@@ -47,6 +49,8 @@ imu_sensor_broadcaster:
 
 whole_body_controller:
     ros__parameters:
+        use_sim_time: true
+
         robot_name: anymal_c
         sample_time: 0.0025
 
@@ -72,7 +76,7 @@ whole_body_controller:
             - RH_HFE
             - RH_KFE
 
-        contact_constraint_type: rigid
+        contact_constraint_type: soft_kv
         tau_max: 80.
         mu: 0.8
         Fn_max: 350.
@@ -122,6 +126,8 @@ whole_body_controller:
 
 planner:
     ros__parameters:
+        use_sim_time: true
+
         use_estimator: false            # ! Must be the same as the use_estimator in the whole_body_controller
         initialization_time: 1.         # ! Must be the same as the initialization_time in the whole_body_controller
         

@@ -3,7 +3,7 @@
 <package format="3">
     <name>hqp_controller</name>
     <version>0.0.0</version>
-    <description>TODO: Package description</description>
+    <description>ROS 2 controller: whole-body controller based on hierarchical QP optimization</description>
     <maintainer email="davide.debenedittis@gmail.com">Davide De Benedittis</maintainer>
     <license>TODO: License declaration</license>
 

@@ -46,37 +46,37 @@
 /* ========================================================================== */
 
 class KeyboardReader {
-    public:
-        KeyboardReader()
-        : kfd(0)
-        {
-            // Get the console in raw mode
-            tcgetattr(kfd, &cooked);
-            struct termios raw;
-            memcpy(&raw, &cooked, sizeof(struct termios));
-            raw.c_lflag &=~ (ICANON | ECHO);
-            // Setting a new line, then end of file
-            raw.c_cc[VEOL] = 1;
-            raw.c_cc[VEOF] = 2;
-            tcsetattr(kfd, TCSANOW, &raw);
+public:
+    KeyboardReader()
+    : kfd(0)
+    {
+        // Get the console in raw mode
+        tcgetattr(kfd, &cooked);
+        struct termios raw;
+        memcpy(&raw, &cooked, sizeof(struct termios));
+        raw.c_lflag &=~ (ICANON | ECHO);
+        // Setting a new line, then end of file
+        raw.c_cc[VEOL] = 1;
+        raw.c_cc[VEOF] = 2;
+        tcsetattr(kfd, TCSANOW, &raw);
+    }
+    
+    void readOne(char * c)
+    {
+        int rc = read(kfd, c, 1);
+        if (rc < 0) {
+            throw std::runtime_error("read failed");
         }
-        
-        void readOne(char * c)
-        {
-            int rc = read(kfd, c, 1);
-            if (rc < 0) {
-                throw std::runtime_error("read failed");
-            }
-        }
-        
-        void shutdown()
-        {
-            tcsetattr(kfd, TCSANOW, &cooked);
-        }
+    }
+    
+    void shutdown()
+    {
+        tcsetattr(kfd, TCSANOW, &cooked);
+    }
 
-    private:
-        int kfd;
-        struct termios cooked;
+private:
+    int kfd;
+    struct termios cooked;
 };
 
 
@@ -87,8 +87,7 @@ class KeyboardReader {
 
 using std::placeholders::_1;
 
-class TeleopRobot : public rclcpp::Node
-{
+class TeleopRobot : public rclcpp::Node {
 public:
     TeleopRobot();
 

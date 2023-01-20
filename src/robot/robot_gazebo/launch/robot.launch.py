@@ -71,7 +71,7 @@ def generate_launch_description():
             executable = 'spawn_entity.py',
             arguments = ['-topic', '/robot_description',
                          '-entity', 'anymal',
-                         '-x', '0', '-y', '0', '-z', PythonExpression([height, " + 0.1 if '", terrain_type, "' == 'soft_mattress' else ", height]),
+                         '-x', '0', '-y', '0', '-z', PythonExpression([height, " + 0.2 if '", terrain_type, "' == 'soft_mattress' else ", height]),
                          '-R', '0', '-P', '0', '-Y', '0'],
             parameters=[{'use_sim_time': use_sim_time}],
             output = 'screen'
