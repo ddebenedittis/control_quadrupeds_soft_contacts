@@ -26,6 +26,9 @@ using hardware_interface::HW_IF_EFFORT;
 HQPPublisher::HQPPublisher()
 : Node("HQP_publisher")
 {
+    joints_accelerations_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
+        "/logging/optimal_joints_accelerations", 1);
+
     torques_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
         "/logging/optimal_torques", 1);
 
@@ -35,15 +38,24 @@ HQPPublisher::HQPPublisher()
     deformations_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
         "/logging/optimal_deformations", 1);
 
-    feet_position_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
-        "/logging/feet_position", 1);
+    feet_positions_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
+        "/logging/feet_positions", 1);
+
+    feet_velocities_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
+        "/logging/feet_velocities", 1);
 }
 
 void HQPPublisher::publish_all(
-    const Eigen::VectorXd& torques, const Eigen::VectorXd& forces,
-    const Eigen::VectorXd& deformations, const Eigen::VectorXd& feet_position)
+    const Eigen::VectorXd& joints_accelerations, const Eigen::VectorXd& torques,
+    const Eigen::VectorXd& forces, const Eigen::VectorXd& deformations,
+    const Eigen::VectorXd& feet_positions, const Eigen::VectorXd& feet_velocities)
 {
-    // Convert the torques to a ROS message and publish it
+    // Convert the joints accelerations to a ROS message and publish it
+    auto joints_accelerations_message = std_msgs::msg::Float64MultiArray();
+    joints_accelerations_message.data = std::vector<double>(joints_accelerations.data(), joints_accelerations.data() + joints_accelerations.size());
+    joints_accelerations_publisher_->publish(joints_accelerations_message);
+
+    // Same for the optimal torques
     auto torques_message = std_msgs::msg::Float64MultiArray();
     torques_message.data = std::vector<double>(torques.data(), torques.data() + torques.size());
     torques_publisher_->publish(torques_message);
@@ -58,9 +70,13 @@ void HQPPublisher::publish_all(
     deformations_message.data = std::vector<double>(deformations.data(), deformations.data() + deformations.size());
     deformations_publisher_->publish(deformations_message);
 
-    auto feet_position_message = std_msgs::msg::Float64MultiArray();
-    feet_position_message.data = std::vector<double>(feet_position.data(), feet_position.data() + feet_position.size());
-    feet_position_publisher_->publish(feet_position_message);
+    auto feet_positions_message = std_msgs::msg::Float64MultiArray();
+    feet_positions_message.data = std::vector<double>(feet_positions.data(), feet_positions.data() + feet_positions.size());
+    feet_positions_publisher_->publish(feet_positions_message);
+
+    auto feet_velocities_message = std_msgs::msg::Float64MultiArray();
+    feet_velocities_message.data = std::vector<double>(feet_velocities.data(), feet_velocities.data() + feet_velocities.size());
+    feet_velocities_publisher_->publish(feet_velocities_message);
 }
 
 
@@ -87,6 +103,8 @@ CallbackReturn HQPController::on_init()
         auto_declare<bool>("use_estimator", bool());
 
         auto_declare<double>("initialization_time", double());
+
+        auto_declare<std::vector<double>>("qi", std::vector<double>());
 
         auto_declare<double>("PD_proportional", double());
         auto_declare<double>("PD_derivative", double());
@@ -178,6 +196,13 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
 
 
     /* ====================================================================== */
+
+    auto qi = get_node()->get_parameter("qi").as_double_array();
+    if (qi.size() != 12) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'qi' does not have 12 elements");
+        return CallbackReturn::ERROR;
+    }
+    qi_ = Eigen::VectorXd::Map(qi.data(), qi.size());
 
     PD_proportional_ = get_node()->get_parameter("PD_proportional").as_double();
     PD_derivative_ = get_node()->get_parameter("PD_derivative").as_double();
@@ -399,14 +424,16 @@ controller_interface::return_type HQPController::update(
 ) {
     double time_double = static_cast<double>(time.seconds()) + static_cast<double>(time.nanoseconds()) * std::pow(10, -9);
 
-    if (time_double < init_time_) {
-        // ! ATTENTION: deactivate the PD for SOLO, and activate it for ANYmal.
-        // TODO: understand what condition is q0 for solo
+    if (des_gen_pose_.contact_feet_names.size() + des_gen_pose_.feet_pos.size()/3 != 4) {
+        // The planner is not publishing messages yet. Interpolate from q0 to qi and than wait.
+
+        Eigen::VectorXd q = std::min(1., time_double / init_time_) * qi_;
+
         // PD for the state estimator initialization
         for (uint i=0; i<joint_names_.size(); i++) {
             command_interfaces_[i].set_value(
-                - PD_proportional_ * state_interfaces_[2*i].get_value()
-                - PD_derivative_ * state_interfaces_[2*i+1].get_value()
+                + PD_proportional_ * (q[i] - state_interfaces_[2*i].get_value())
+                + PD_derivative_ * (- state_interfaces_[2*i+1].get_value())
             );
         }
     } else {
@@ -415,10 +442,6 @@ controller_interface::return_type HQPController::update(
         for (uint i=0; i<joint_names_.size(); i++) {
             q_(i+7) = state_interfaces_[2*i].get_value();
             v_(i+6) = state_interfaces_[2*i+1].get_value();
-        }
-
-        if (des_gen_pose_.contact_feet_names.size() + des_gen_pose_.feet_pos.size()/3 != 4) {
-            return controller_interface::return_type::OK;
         }
 
         wbc::GeneralizedPose des_gen_pose_copy = des_gen_pose_;
@@ -434,8 +457,9 @@ controller_interface::return_type HQPController::update(
 
         if (logging_ == true) {
             logger_->publish_all(
-                tau_, wbc.get_f_c_opt(),
-                wbc.get_d_des_opt(), wbc.get_feet_position());
+                wbc.get_v_dot_opt(), tau_,
+                wbc.get_f_c_opt(), wbc.get_d_des_opt(),
+                wbc.get_feet_positions(), wbc.get_feet_velocities(v_));
         }
     }
 

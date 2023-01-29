@@ -134,11 +134,15 @@ public:
     
     const pinocchio::Data& get_data() { return robot_model.get_data(); }
 
+    double get_mass() { return robot_model.get_mass(); }
+
     const Eigen::MatrixXd& get_M()  { return M; }
     const Eigen::VectorXd& get_h()  { return h; }
     const Eigen::MatrixXd& get_Jc() { return Jc; }
 
-    const Eigen::VectorXd get_feet_position() { return robot_model.get_feet_position(); }
+    const Eigen::VectorXd get_feet_positions() { return robot_model.get_feet_positions(); }
+
+    const Eigen::VectorXd get_feet_velocities(const Eigen::VectorXd& v) { return robot_model.get_feet_velocities(v); }
 
     /// @brief Return the generic feet names. The generic feet names are the same for all quadrupedal robots: LF, RF, LH, and RH.
     const std::vector<std::string>& get_generic_feet_names() const {return robot_model.get_generic_feet_names();}

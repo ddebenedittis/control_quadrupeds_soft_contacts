@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pinocchio/algorithm/kinematics.hpp"
+#include "pinocchio/algorithm/center-of-mass.hpp"
 
 #include <Eigen/Core>
 
@@ -78,7 +79,14 @@ public:
 
     /// @brief
     /// @warning Compute_EOM must have been previously called.
-    Eigen::VectorXd get_feet_position();
+    Eigen::VectorXd get_feet_positions();
+
+    /// @brief 
+    /// @param[in] v Joint velocities
+    /// @warning Compute_EOM must have been previously called.
+    Eigen::VectorXd get_feet_velocities(const Eigen::VectorXd& v);
+
+    double get_mass() { return pinocchio::computeTotalMass(model); }
 
     pinocchio::Model& get_model() { return model; }
     

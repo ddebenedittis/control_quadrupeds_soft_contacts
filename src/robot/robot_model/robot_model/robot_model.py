@@ -46,15 +46,12 @@ class RobotModel:
         return specific_feet_names
         
         
-    def compute_feet_pos_vel(self, qj, qj_dot, contact_feet_names):
+    def compute_feet_pos_vel(self, q, u, contact_feet_names = ["LF", "RF", "LH", "RH"]):
         """
         Compute:
             B_r_fb : position of the feet with respect to the robot base, in base frame.
             B_v_fb : velocity of the feet with respect to the velocity of the robot base, in base frame.
         """
-        
-        q = np.concatenate((np.zeros(6), np.array([1]), qj))
-        u = np.concatenate((np.zeros(6), qj_dot))
         
         pin.forwardKinematics(self._model, self._data, q, u)
         

@@ -92,11 +92,15 @@ public:
     int get_nF() {return control_tasks.get_nF();}
     int get_nd() {return control_tasks.get_nd();}
 
+    double get_mass() {return control_tasks.get_mass();}
+
     const Eigen::MatrixXd& get_M()  {return control_tasks.get_M();}
     const Eigen::VectorXd& get_h()  {return control_tasks.get_h();}
     const Eigen::MatrixXd& get_Jc() {return control_tasks.get_Jc();}
 
-    const Eigen::VectorXd get_feet_position() { return control_tasks.get_feet_position(); }
+    const Eigen::VectorXd get_feet_positions() { return control_tasks.get_feet_positions(); }
+
+    const Eigen::VectorXd get_feet_velocities(const Eigen::VectorXd& v) { return control_tasks.get_feet_velocities(v); }
 
     const std::vector<std::string>& get_generic_feet_names() const {return control_tasks.get_generic_feet_names();}
 

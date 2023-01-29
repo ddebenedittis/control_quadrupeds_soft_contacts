@@ -30,6 +30,13 @@ public:
     int get_def_size() {return def_size;}
 
     void set_def_size(int def_size) {this->def_size = def_size;}
+
+    void set_deformations_history(const std::vector<std::string>& contact_feet_names, const Eigen::VectorXd& d_k1, const Eigen::VectorXd& d_k2)
+    {
+        this->contact_feet_names = contact_feet_names;
+        this->d_k1 = d_k1;
+        this->d_k2 = d_k2;
+    }
 private:
     /// @brief The names of all the robot feet.
     std::vector<std::string> all_feet_names;

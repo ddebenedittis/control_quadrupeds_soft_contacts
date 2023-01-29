@@ -11,11 +11,19 @@ namespace static_walk_planner {
 
 
 
+/// @brief 
+enum class FootTrajectoryType {
+    splines,
+    cycloid
+};
+
+
+
 /* ========================================================================== */
 /*                           GENERALIZEDPOSE STRUCT                           */
 /* ========================================================================== */
 
-// TODO: this same struct is defined here and in whole_body_controller/prioritized_tasks.hpp. Avoid this repetition.
+// TODO: this same struct is defined here and in whole_body_controller/prioritized_tasks.hpp. Avoid this repetition if possible.
 
 /// @brief Stores the generalized desired pose computed by a planner and used by the whole-body controller.
 struct GeneralizedPose {
@@ -37,6 +45,11 @@ struct GeneralizedPose {
     std::vector<std::string> contact_feet_names;
 };
 
+
+
+/* ========================================================================== */
+/*                              STATICWALKPLANNER                             */
+/* ========================================================================== */
 
 /// @class @brief 
 class StaticWalkPlanner {
@@ -66,11 +79,26 @@ class StaticWalkPlanner {
             this->init_com_position_ = init_com_position;
         }
 
+
+        int set_foot_trajectory_type(const std::string& type) {
+            if (type == "splines") {
+                foot_trajectory_type_ = FootTrajectoryType::splines;
+                return 0;
+            } else if (type == "cycloid") {
+                foot_trajectory_type_ = FootTrajectoryType::cycloid;
+                return 0;
+            } else {
+                return 1;
+            }
+        }
+
+
         /// @brief Planner sample time
         double dt_ = 1 / 200;
 
         /// @brief Initialization phase duration, expressed in full gait phase duration
         double init_phase_ = 0.2;
+
 
         /// @brief Names of the robot feet
         std::vector<std::string> all_feet_names_ = {"LF", "RF", "LH", "RH"};
@@ -78,11 +106,13 @@ class StaticWalkPlanner {
         /// @brief Gait pattern sequence
         std::vector<std::string> gait_pattern_ = {"LF", "RH", "RF", "LH"};
 
+
         /// @brief Time period between two consecutive footfalls of the same foot (eg: LF)
         double cycle_duration_ = 4;
 
-        /// @brief Time ratio of contact phase vs swing phase of a foot during its phase.
+        /// @brief Time ratio of contact phase vs contact phase + swing phase of a foot during its phase.
         double step_duty_factor_ = 0.7;
+
 
         /// @brief Lenght of a single step
         double step_length_ = 0.14;
@@ -93,17 +123,23 @@ class StaticWalkPlanner {
         /// @brief Desired foot penetration
         double desired_foot_penetration_ = 0.01;
 
+        /// @brief Phase delay
+        double step_horizontal_delay_ = 0.2;
+
+
         /// @brief Spline order for the generation of the swing feet trajectories
         int spline_order_ = 3;
+
 
         /// @brief Desired base height
         double h_base_des_ = 0.47;
 
         /// @brief Initial base height
-        double h_base_init = 0.6;
+        double h_base_init_ = 0.6;
+
 
         /// @brief Height of the terrain
-        double terrain_height = 0;
+        double terrain_height_ = 0;
 
         /// @brief Time normalized stride phase
         double phi_ = 0;
@@ -142,6 +178,19 @@ class StaticWalkPlanner {
             Eigen::Ref<Eigen::Vector3d> p_i, Eigen::Ref<Eigen::Vector3d> p_f, double t,
             Eigen::Ref<Eigen::VectorXd> p_t, Eigen::Ref<Eigen::VectorXd> v_t, Eigen::Ref<Eigen::VectorXd> a_t
         );
+
+        void foot_trajectory_spline(
+            Eigen::MatrixXd& abs_legs_pos, int swing_foot_id,
+            double phi, double phi_2, double delta_T,
+            GeneralizedPose& gen_pose
+        );
+
+        void foot_trajectory_cycloid(
+            Eigen::Ref<Eigen::Vector3d> p_i, double phi,
+            GeneralizedPose& gen_pose
+        );
+
+        FootTrajectoryType foot_trajectory_type_ = FootTrajectoryType::cycloid;
 };
 
 } // namespace static_walk_planner

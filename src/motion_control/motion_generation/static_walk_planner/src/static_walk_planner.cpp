@@ -67,10 +67,10 @@ void StaticWalkPlanner::step(GeneralizedPose& gen_pose)
     
     // Take into account the terrain height
     
-    gen_pose.base_pos[2] += terrain_height;
+    gen_pose.base_pos[2] += terrain_height_;
     
     for (int i=0; i<4-static_cast<int>(gen_pose.contact_feet_names.size()); i++) {
-        gen_pose.feet_pos[3*i+2] += terrain_height;
+        gen_pose.feet_pos[3*i+2] += terrain_height_;
     }
 
     /* ====================================================================== */
@@ -104,7 +104,7 @@ void StaticWalkPlanner::step_initialization_0(GeneralizedPose& gen_pose)
     // Base linear quantities.
     gen_pose.base_acc << 0, 0, 0;
     gen_pose.base_vel << 0, 0, 0;
-    gen_pose.base_pos << 0, 0, h_base_init;
+    gen_pose.base_pos << 0, 0, h_base_init_;
     gen_pose.base_pos += phi_ / (init_phase_ / 2) * (init_pos - gen_pose.base_pos);
 
     // Contact feet names.
@@ -156,7 +156,7 @@ void StaticWalkPlanner::step_plan(GeneralizedPose& gen_pose)
     //   LF      |      RF
     //           |
     //         2 | 4
-    //   --------|------
+    //   --------|--------
     //         3 | 1
     //           |
     //   LH      |      RH
@@ -245,65 +245,26 @@ void StaticWalkPlanner::step_plan(GeneralizedPose& gen_pose)
             std::find(gen_pose.contact_feet_names.begin(), gen_pose.contact_feet_names.end(), gait_pattern_[swing_foot_id])
         );
 
-        /* ==================== Horizontal Foot Movement ==================== */
+        /* ========================== Foot Movement ========================= */
 
-        // The desired position, velocity, and acceleration of the swing feet are obtained by considering two motions: an horizontal motion from the initial foot position to the final foot position (equal to init_foot_pos + step_vector) and a vertical motion that first raises and than lowers the foot.
+        if (foot_trajectory_type_ == FootTrajectoryType::splines) {
+            foot_trajectory_spline(
+                abs_legs_pos, swing_foot_id,
+                phi, phi_2, delta_T,
+                gen_pose
+            );
+        } else if (foot_trajectory_type_ == FootTrajectoryType::cycloid) {
+            Eigen::Vector3d p_i {abs_legs_pos.coeff(swing_foot_id, 0),
+                                 abs_legs_pos.coeff(swing_foot_id, 1),
+                                 0.};
 
-        // Leg initial and final horizontal position
-        Vector3d leg_init_pos {abs_legs_pos.coeff(swing_foot_id, 0),
-                               abs_legs_pos.coeff(swing_foot_id, 1),
-                               0.};
-        Vector3d leg_end_pos {abs_legs_pos.coeff(swing_foot_id, 0) + step_length_,
-                              abs_legs_pos.coeff(swing_foot_id, 1),
-                              0.};
-
-        // Horizontal part of the desired position, velocity, and acceleration of the swing feet
-        spline(leg_init_pos, leg_end_pos, phi_2/delta_T,
-               gen_pose.feet_pos, gen_pose.feet_vel, gen_pose.feet_acc);
-
-        /* ===================== Vertical Foot Movement ===================== */
-
-        Vector3d r_s_ddot_des_2;
-        Vector3d r_s_dot_des_2;
-        Vector3d r_s_des_2;
-
-        // Raise the foot during the first half
-        if (4*phi - swing_foot_id < (1 - step_duty_factor_)/2 + step_duty_factor_) {
-            phi_2 = 4*phi - swing_foot_id - step_duty_factor_;
-
-            delta_T = (1 - step_duty_factor_) / 2;
-
-            leg_init_pos << abs_legs_pos.coeff(swing_foot_id, 0),
-                            abs_legs_pos.coeff(swing_foot_id, 1),
-                            0;
-            leg_end_pos <<  abs_legs_pos.coeff(swing_foot_id, 0),
-                            abs_legs_pos.coeff(swing_foot_id, 1),
-                            step_height_;
-
-            spline(leg_init_pos, leg_end_pos, phi_2/delta_T,
-                    r_s_des_2, r_s_dot_des_2, r_s_ddot_des_2);
+            foot_trajectory_cycloid(
+                p_i, (4*phi - swing_foot_id - step_duty_factor_) / (1 - step_duty_factor_),
+                gen_pose
+            );
         }
-        // Lower the foot during the second half
-        else {
-            phi_2 = 4*phi - swing_foot_id - step_duty_factor_ - (1 - step_duty_factor_)/2;
-
-            delta_T = (1 - step_duty_factor_) / 2;
-
-            leg_init_pos << abs_legs_pos.coeff(swing_foot_id, 0),
-                            abs_legs_pos.coeff(swing_foot_id, 1),
-                            step_height_;
-            leg_end_pos <<  abs_legs_pos.coeff(swing_foot_id, 0) + step_length_,
-                            abs_legs_pos.coeff(swing_foot_id, 1),
-                            - desired_foot_penetration_;
-
-            spline(leg_init_pos, leg_end_pos, phi_2/delta_T,
-                    r_s_des_2, r_s_dot_des_2, r_s_ddot_des_2);
-        }
-
-        // Superimpose the vertical movement of the foot to the horizontal movement
-        gen_pose.feet_pos(2) += r_s_des_2(2);
-        gen_pose.feet_vel(2) += r_s_dot_des_2(2);
-        gen_pose.feet_acc(2) += r_s_ddot_des_2(2);
+        
+        
     }
 }
 
@@ -341,6 +302,131 @@ void StaticWalkPlanner::spline(
     v_t = - f_t_dot * p_i + f_t_dot * p_f;
 
     a_t = - f_t_ddot * p_i + f_t_ddot * p_f;
+}
+
+
+
+/* ========================================================================== */
+/*                           FOOT_TRAJECTORY_SPLINE                           */
+/* ========================================================================== */
+
+void StaticWalkPlanner::foot_trajectory_spline(
+    MatrixXd& abs_legs_pos, int swing_foot_id,
+    double phi, double phi_2, double delta_T,
+    GeneralizedPose& gen_pose
+) {
+    /* ==================== Horizontal Foot Movement ==================== */
+
+    // The desired position, velocity, and acceleration of the swing feet are obtained by considering two motions: an horizontal motion from the initial foot position to the final foot position (equal to init_foot_pos + step_vector) and a vertical motion that first raises and than lowers the foot.
+
+    // Leg initial and final horizontal position
+    Vector3d leg_init_pos {abs_legs_pos.coeff(swing_foot_id, 0),
+                           abs_legs_pos.coeff(swing_foot_id, 1),
+                           0.};
+    Vector3d leg_end_pos {abs_legs_pos.coeff(swing_foot_id, 0) + step_length_,
+                          abs_legs_pos.coeff(swing_foot_id, 1),
+                          0.};
+
+    // Horizontal part of the desired position, velocity, and acceleration of the swing feet
+    spline(leg_init_pos, leg_end_pos, phi_2/delta_T,
+            gen_pose.feet_pos, gen_pose.feet_vel, gen_pose.feet_acc);
+
+    /* ===================== Vertical Foot Movement ===================== */
+
+    Vector3d r_s_ddot_des_2;
+    Vector3d r_s_dot_des_2;
+    Vector3d r_s_des_2;
+
+    // Raise the foot during the first half
+    if (4*phi - swing_foot_id < (1 - step_duty_factor_)/2 + step_duty_factor_) {
+        phi_2 = 4*phi - swing_foot_id - step_duty_factor_;
+
+        delta_T = (1 - step_duty_factor_) / 2;
+
+        leg_init_pos << abs_legs_pos.coeff(swing_foot_id, 0),
+                        abs_legs_pos.coeff(swing_foot_id, 1),
+                        0;
+        leg_end_pos <<  abs_legs_pos.coeff(swing_foot_id, 0),
+                        abs_legs_pos.coeff(swing_foot_id, 1),
+                        step_height_;
+
+        spline(leg_init_pos, leg_end_pos, phi_2/delta_T,
+                r_s_des_2, r_s_dot_des_2, r_s_ddot_des_2);
+    }
+    // Lower the foot during the second half
+    else {
+        phi_2 = 4*phi - swing_foot_id - step_duty_factor_ - (1 - step_duty_factor_)/2;
+
+        delta_T = (1 - step_duty_factor_) / 2;
+
+        leg_init_pos << abs_legs_pos.coeff(swing_foot_id, 0),
+                        abs_legs_pos.coeff(swing_foot_id, 1),
+                        step_height_;
+        leg_end_pos <<  abs_legs_pos.coeff(swing_foot_id, 0) + step_length_,
+                        abs_legs_pos.coeff(swing_foot_id, 1),
+                        - desired_foot_penetration_;
+
+        spline(leg_init_pos, leg_end_pos, phi_2/delta_T,
+                r_s_des_2, r_s_dot_des_2, r_s_ddot_des_2);
+    }
+
+    // Superimpose the vertical movement of the foot to the horizontal movement
+    gen_pose.feet_pos(2) += r_s_des_2(2);
+    gen_pose.feet_vel(2) += r_s_dot_des_2(2);
+    gen_pose.feet_acc(2) += r_s_ddot_des_2(2);
+}
+
+
+
+/* ========================================================================== */
+/*                           FOOT_TRAJECTORY_CYCLOID                          */
+/* ========================================================================== */
+
+void StaticWalkPlanner::foot_trajectory_cycloid(
+    Eigen::Ref<Eigen::Vector3d> p_i, double phi,
+    GeneralizedPose& gen_pose
+) {
+    double T = cycle_duration_ / 4 * (1 - step_duty_factor_);
+    double t = phi * T;
+
+    // Compute the horizontal position, velocity and acceleration.
+    double phi_m = (phi - step_horizontal_delay_) / (1 - 2 * step_horizontal_delay_);
+    phi_m = std::min(std::max(phi_m, 0.), 1.);
+    double t_m = phi_m * T;
+
+    double x = + step_length_ * (t_m / T - 1 / (2 * M_PI) * sin(2 * M_PI * t_m / T));
+    double x_dot = step_length_ / T * (1 - cos(2 * M_PI * t_m / T));
+    double x_ddot = 2 * M_PI * step_length_ / std::pow(T, 2) * sin(2 * M_PI * t_m / T);
+
+    // Compute the vertical position, velocity and acceleration.
+    double z = 2 * step_height_ * (t/T - 1 / (4*M_PI) * sin(4 * M_PI * t / T));
+    double z_dot = 2 * step_height_ / T * (1 - cos(4 * M_PI * t / T));
+    double z_ddot = 2 * step_height_ / pow(T, 2) * 4 * M_PI * sin(4 * M_PI * t / T);
+
+    if (t > T/2) {
+        z = 2 * step_height_ - z;
+        z_dot = - z_dot;
+        z_ddot = - z_ddot;
+    }
+
+    // Update the instantaneous position, velocity and acceleration of the swing foot.
+    Vector3d p_t = Vector3d::Zero(3);
+    Vector3d v_t = Vector3d::Zero(3);
+    Vector3d a_t = Vector3d::Zero(3);
+
+    p_t = p_i;
+    p_t(0) += x;
+    p_t(2) += z;
+
+    v_t(0) += x_dot;
+    v_t(2) += z_dot;
+
+    a_t(0) += x_ddot;
+    a_t(2) += z_ddot;
+
+    gen_pose.feet_pos = p_t;
+    gen_pose.feet_vel = v_t;
+    gen_pose.feet_acc = a_t;
 }
 
 } // namespace static_walk_planner

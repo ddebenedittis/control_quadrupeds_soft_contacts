@@ -31,15 +31,18 @@ public:
     HQPPublisher();
 
     void publish_all(
-        const Eigen::VectorXd& torques, const Eigen::VectorXd& forces,
-        const Eigen::VectorXd& deformations, const Eigen::VectorXd& feet_position);
+        const Eigen::VectorXd& joints_accelerations, const Eigen::VectorXd& torques,
+        const Eigen::VectorXd& forces, const Eigen::VectorXd& deformations,
+        const Eigen::VectorXd& feet_positions, const Eigen::VectorXd& feet_velocities);
 
 private:
+    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr joints_accelerations_publisher_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr torques_publisher_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr forces_publisher_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr deformations_publisher_;
 
-    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr feet_position_publisher_;
+    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr feet_positions_publisher_;
+    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr feet_velocities_publisher_;
 };
 
 
@@ -99,6 +102,8 @@ protected:
 
     /// @brief Initialization time to give the state estimator some time to get better estimates. During this time, a PD controller is used to keep the robot in q0 and the planner is paused.
     double init_time_ = 1;
+
+    Eigen::VectorXd qi_;
 };
 
 } // namespace hqp_controller

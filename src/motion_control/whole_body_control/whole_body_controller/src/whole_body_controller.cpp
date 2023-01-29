@@ -13,7 +13,18 @@ WholeBodyController::WholeBodyController(std::string robot_name, float dt)
   deformations_history_manager(prioritized_tasks.get_all_feet_names()),
   hierarchical_qp(prioritized_tasks.get_max_priority()),
   f_c_opt(12),
-  d_des_opt(12) {}
+  d_des_opt(12)
+{
+    Eigen::VectorXd d_k = Eigen::VectorXd::Zero(prioritized_tasks.get_all_feet_names().size() * deformations_history_manager.get_def_size());
+    for (int i=0; i<static_cast<int>(prioritized_tasks.get_all_feet_names().size()); i++) {
+        d_k(2 + deformations_history_manager.get_def_size() * i) = prioritized_tasks.get_mass() * 9.81 / (4. * 1.);
+    }
+
+    deformations_history_manager.set_deformations_history(
+        prioritized_tasks.get_generic_feet_names(),
+        d_k, d_k
+    );
+}
 
 
 /* ========================================================================== */

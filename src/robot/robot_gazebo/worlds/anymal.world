@@ -1,27 +1,29 @@
 <?xml version="1.0" ?>
 <sdf version="1.6">
-  <!-- We use a custom world for the anymal so that the camera angle is initialized appropriately -->
+  <!-- We use a custom world for ANYmal so that the camera angle is initialized appropriately -->
 
     <world name="default">
         <plugin filename="libgazebo_ros_state.so" name="gazebo_ros_state">
             <ros>
                 <namespace>/gazebo</namespace>
-                <argument>model_states:=model_states</argument>
-                <argument>link_states:=link_states</argument>
             </ros>
             <update_rate>100</update_rate>
         </plugin>
-        
-        <include>
-            <uri>model://ground_plane</uri>
-        </include>
+
+        <scene>
+            <sky>
+                <clouds>
+                    <speed>12</speed>
+                </clouds>
+            </sky>
+        </scene>
 
         <!-- Global light source -->
         <include>
             <uri>model://sun</uri>
         </include>
 
-        <!-- Focus camera on anymal -->
+        <!-- Focus camera on ANYmal -->
         <!-- You can get the current camera pose with: file -> save world as -->
         <gui fullscreen='0'>
             <camera name='user_camera'>
@@ -40,7 +42,7 @@
                     <contact_surface_layer>0.001</contact_surface_layer> -->
                 </constraints>
             </ode>
-            <real_time_update_rate>500</real_time_update_rate>   <!-- 1000 is normal speed -->
+            <real_time_update_rate>1000</real_time_update_rate>   <!-- 1000 is normal speed -->
         </physics>
 
         <gravity>0 0 -9.81</gravity>

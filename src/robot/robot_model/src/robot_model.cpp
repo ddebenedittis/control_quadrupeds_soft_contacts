@@ -261,9 +261,9 @@ void RobotModel::get_r_s(Eigen::VectorXd& r_s)
 }
 
 
-/* ============================ get_feet_position =========================== */
+/* ============================ get_feet_positions =========================== */
 
-Eigen::VectorXd RobotModel::get_feet_position()
+Eigen::VectorXd RobotModel::get_feet_positions()
 {
     Eigen::VectorXd feet_position(12);
 
@@ -274,6 +274,27 @@ Eigen::VectorXd RobotModel::get_feet_position()
     }
 
     return feet_position;
+}
+
+
+/* =========================== get_feet_velocities ========================== */
+
+Eigen::VectorXd RobotModel::get_feet_velocities(const Eigen::VectorXd& v)
+{
+    Eigen::VectorXd feet_velocities(12);
+    Eigen::MatrixXd J_temp(6, model.nv);
+
+    for (int i=0; i<4; i++) {
+        pinocchio::FrameIndex frame_id = model.getFrameId(this->feet_names[i]);
+
+        J_temp.setZero();
+
+        pinocchio::getFrameJacobian(model, data, frame_id, pinocchio::LOCAL_WORLD_ALIGNED, J_temp);
+
+        feet_velocities.segment(0+3*i, 3) = J_temp.topRows(3) * v;
+    }
+
+    return feet_velocities;
 }
 
 

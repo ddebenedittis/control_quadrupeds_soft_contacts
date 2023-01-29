@@ -53,7 +53,7 @@ def generate_launch_description():
             cmd=['gazebo', '--verbose', '-s', 'libgazebo_ros_init.so', '-s', 'libgazebo_ros_factory.so', '--pause', world_file_path],
             additional_env={'__NV_PRIME_RENDER_OFFLOAD': '1',
                             '__GLX_VENDOR_LIBRARY_NAME': 'nvidia'},
-            output='screen'
+            output='screen',
         ),
 
         Node(
@@ -63,7 +63,7 @@ def generate_launch_description():
                 {'use_sim_time': use_sim_time},
                 {'robot_description': ParameterValue(Command(['xacro', ' ' ,xacro_file_path]), value_type=str)}
             ],
-            output = 'screen'
+            output = 'screen',
         ),
 
         Node(
@@ -71,10 +71,10 @@ def generate_launch_description():
             executable = 'spawn_entity.py',
             arguments = ['-topic', '/robot_description',
                          '-entity', 'anymal',
-                         '-x', '0', '-y', '0', '-z', PythonExpression([height, " + 0.2 if '", terrain_type, "' == 'soft_mattress' else ", height]),
+                         '-x', '0', '-y', '0', '-z', height,
                          '-R', '0', '-P', '0', '-Y', '0'],
             parameters=[{'use_sim_time': use_sim_time}],
-            output = 'screen'
+            output = 'screen',
         ),
 
         Node(
@@ -82,6 +82,7 @@ def generate_launch_description():
             executable = 'spawner',
             arguments = ['joint_state_broadcaster', '--controller-manager', '/controller_manager'],
             parameters=[{'use_sim_time': use_sim_time}],
+            output='screen',
         ),
 
         Node(
@@ -89,18 +90,30 @@ def generate_launch_description():
             executable = 'spawner',
             arguments = ['imu_sensor_broadcaster', '--controller-manager', '/controller_manager'],
             parameters=[{'use_sim_time': use_sim_time}],
-            output = 'screen'
+            output = 'screen',
         ),
         
         Node(
             condition=IfCondition(
                 PythonExpression([
-                    "'", terrain_type, "'", " == 'soft_mattress'"
+                    "'", terrain_type, "'", " == 'rigid'"
                 ])),
             package = 'gazebo_ros',
             executable = 'spawn_entity.py',
-            arguments = ['-entity', 'soft_mattress',
-                         '-file', PathJoinSubstitution([FindPackageShare("robot_gazebo"), os.path.join('objects', 'soft_mattress.sdf')])],
+            arguments = ['-entity', 'ground_plane',
+                         '-file', PathJoinSubstitution([FindPackageShare("robot_gazebo"), os.path.join('objects', 'rigid_terrain.sdf')])],
+            output = 'screen',
+        ),
+        
+        Node(
+            condition=IfCondition(
+                PythonExpression([
+                    "'", terrain_type, "'", " == 'soft'"
+                ])),
+            package = 'gazebo_ros',
+            executable = 'spawn_entity.py',
+            arguments = ['-entity', 'ground_plane',
+                         '-file', PathJoinSubstitution([FindPackageShare("robot_gazebo"), os.path.join('objects', 'soft_terrain.sdf')])],
             output = 'screen',
         ),
         
@@ -119,7 +132,7 @@ def generate_launch_description():
             condition=IfCondition(
                 PythonExpression([
                     save_csv, ' == True'
-                ])
+                ]),
             ),
             package='logger_gazebo',
             executable='logger_node',
@@ -136,6 +149,7 @@ def generate_launch_description():
             executable = 'spawner',
             arguments = ['planner', '--controller-manager', '/controller_manager'],
             parameters=[{'use_sim_time': use_sim_time},],
+            output='screen',
         ),
         
         Node(

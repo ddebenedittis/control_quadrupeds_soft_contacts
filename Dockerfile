@@ -32,6 +32,18 @@ RUN apt-get update && apt-get install -qqy \
     ros-humble-xacro \
     && rm -rf /var/lib/apt/lists/*
 
+# If $LATEX is 1, install the packages required to use plot.py in the container.
+ARG LATEX=0
+RUN if [ "${LATEX}" = "1" ] ; then \
+        apt-get update && apt-get install --no-install-recommends -qqy \
+        dvipng \
+        texlive-latex-extra \
+        texlive-fonts-recommended \
+        cm-super \
+        && rm -rf /var/lib/apt/lists/* ; \
+    fi
+
+
 # Install Pinocchio
 RUN echo "deb [arch=amd64] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -cs) robotpkg" | sudo tee /etc/apt/sources.list.d/robotpkg.list
 RUN curl http://robotpkg.openrobots.org/packages/debian/robotpkg.key | sudo apt-key add -

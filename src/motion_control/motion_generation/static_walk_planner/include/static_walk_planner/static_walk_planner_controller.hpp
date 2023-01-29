@@ -30,7 +30,7 @@ class SWPController : public controller_interface::ControllerInterface {
         controller_interface::InterfaceConfiguration state_interface_configuration() const override;
 
         controller_interface::return_type update(
-            const rclcpp::Time& time, const rclcpp::Duration& /*period*/
+            const rclcpp::Time& time, const rclcpp::Duration& period
         ) override;
 
         CallbackReturn on_init() override;

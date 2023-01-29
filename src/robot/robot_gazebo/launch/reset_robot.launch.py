@@ -75,7 +75,7 @@ def generate_launch_description():
             {'use_sim_time': use_sim_time},
             {'robot_description': ParameterValue(Command(['xacro', ' ' ,xacro_file_path]), value_type=str)}
         ],
-        output = 'screen'
+        output = 'screen',
     )
     
     spawn_robot = Node(
@@ -83,10 +83,10 @@ def generate_launch_description():
         executable = 'spawn_entity.py',
         arguments = ['-topic', '/robot_description',
                         '-entity', 'anymal',
-                        '-x', '0', '-y', '0', '-z', PythonExpression([height, " + 0.1 if '", terrain_type, "' == 'soft_mattress' else ", height]),
+                        '-x', '0', '-y', '0', '-z', height,
                         '-R', '0', '-P', '0', '-Y', '0'],
         parameters=[{'use_sim_time': use_sim_time}],
-        output = 'screen'
+        output = 'screen',
     )
     
     joint_state_broadcaster_spawner = Node(
@@ -101,7 +101,7 @@ def generate_launch_description():
         executable = 'spawner',
         arguments = ['imu_sensor_broadcaster', '--controller-manager', '/controller_manager'],
         parameters=[{'use_sim_time': use_sim_time}],
-        output = 'screen'
+        output = 'screen',
     )
     
     planner_spawner = Node(
@@ -174,18 +174,6 @@ def generate_launch_description():
         ),
         
         deactivate_controllers,
-        
-        Node(
-            condition=IfCondition(
-                PythonExpression([
-                    "'", terrain_type, "'", " == 'soft_mattress'"
-                ])),
-            package = 'gazebo_ros',
-            executable = 'spawn_entity.py',
-            arguments = ['-entity', 'soft_mattress',
-                         '-file', PathJoinSubstitution([FindPackageShare("robot_gazebo"), os.path.join('objects', 'soft_mattress.sdf')])],
-            output = 'screen',
-        ),
         
         # Node(
         #     package='pose_estimator',

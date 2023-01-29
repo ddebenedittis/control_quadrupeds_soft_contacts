@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'logger_node = logger_gazebo.logger_node:main'
+            'logger_node = logger_gazebo.logger_node:main',
+            'plot = logger_gazebo.plot:main'
         ],
     },
 )

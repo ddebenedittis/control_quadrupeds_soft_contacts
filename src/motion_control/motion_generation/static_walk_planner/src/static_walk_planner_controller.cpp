@@ -3,6 +3,7 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "pluginlib/class_list_macros.hpp"
 
+#include <algorithm>
 #include <utility>
 
 
@@ -41,12 +42,19 @@ CallbackReturn SWPController::on_init()
 
         auto_declare<double>("cycle_duration", double());
         auto_declare<double>("step_duty_factor", double());
+
         auto_declare<double>("step_length", double());
         auto_declare<double>("step_height", double());
         auto_declare<double>("desired_foot_penetration", double());
+        auto_declare<double>("step_horizontal_delay", double());
+        auto_declare<std::string>("foot_trajectory_type", std::string());
+
         auto_declare<double>("desired_base_height", double());
         auto_declare<double>("initial_base_height", double());
+
         auto_declare<double>("terrain_height", double());
+        auto_declare<double>("terrain_penetration", double());
+
         auto_declare<std::vector<double>>("initial_position", std::vector<double>());
         auto_declare<std::vector<double>>("leg_position", std::vector<double>());
         auto_declare<std::vector<double>>("base_oscillation", std::vector<double>());
@@ -89,6 +97,11 @@ CallbackReturn SWPController::on_configure(const rclcpp_lifecycle::State& /*prev
     bool use_estimator = get_node()->get_parameter("use_estimator").as_bool();
 
     init_time_ = get_node()->get_parameter("initialization_time").as_double();
+    if (init_time_ < 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'initialization_time' parameter is < 0.");
+        return CallbackReturn::ERROR;
+    }
+
 
     planner_.dt_ = get_node()->get_parameter("sample_time").as_double();
     if (planner_.dt_ <= 0) {
@@ -97,16 +110,25 @@ CallbackReturn SWPController::on_configure(const rclcpp_lifecycle::State& /*prev
     }
 
     planner_.init_phase_ = get_node()->get_parameter("init_phase").as_double();
-    if (planner_.init_phase_ <= 0) {
-        RCLCPP_ERROR(get_node()->get_logger(),"'init_phase' parameter is <= 0.");
+    if (planner_.init_phase_ < 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'init_phase' parameter is < 0.");
         return CallbackReturn::ERROR;
     }
 
+
     planner_.gait_pattern_ = get_node()->get_parameter("gait_pattern").as_string_array();
-    if (planner_.gait_pattern_.empty()) {
-        RCLCPP_ERROR(get_node()->get_logger(),"'gait_pattern' parameter is empty.");
+    if (planner_.gait_pattern_.size() != 4) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'gait_pattern' does not have four elements.");
         return CallbackReturn::ERROR;
+    } else {
+        for (auto name : planner_.all_feet_names_) {
+            if (std::find(planner_.gait_pattern_.begin(), planner_.gait_pattern_.end(), name) == planner_.gait_pattern_.end()) {
+                RCLCPP_ERROR(get_node()->get_logger(),"'gait_pattern' does not contain appropriate feet names.");
+                return CallbackReturn::ERROR;
+            }
+        }
     }
+
 
     planner_.cycle_duration_ = get_node()->get_parameter("cycle_duration").as_double();
     if (planner_.cycle_duration_ <= 0) {
@@ -120,9 +142,10 @@ CallbackReturn SWPController::on_configure(const rclcpp_lifecycle::State& /*prev
         return CallbackReturn::ERROR;
     }
 
+
     planner_.step_length_ = get_node()->get_parameter("step_length").as_double();
-    if (planner_.step_length_ <= 0) {
-        RCLCPP_ERROR(get_node()->get_logger(),"'step_length' parameter is <= 0.");
+    if (planner_.step_length_ < 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'step_length' parameter is < 0.");
         return CallbackReturn::ERROR;
     }
 
@@ -133,10 +156,23 @@ CallbackReturn SWPController::on_configure(const rclcpp_lifecycle::State& /*prev
     }
 
     planner_.desired_foot_penetration_ = get_node()->get_parameter("desired_foot_penetration").as_double();
-    if (planner_.desired_foot_penetration_ <= 0) {
-        RCLCPP_ERROR(get_node()->get_logger(),"'desired_foot_penetration' parameter is <= 0.");
+    if (planner_.desired_foot_penetration_ < 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'desired_foot_penetration' parameter is < 0.");
+        return CallbackReturn::ERROR;
+    }    
+
+    planner_.step_horizontal_delay_ = get_node()->get_parameter("step_horizontal_delay").as_double();
+    if (planner_.step_horizontal_delay_ < 0 || planner_.step_horizontal_delay_ >= 0.5) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'step_horizontal_delay' parameter must be in [0, 0.5).");
         return CallbackReturn::ERROR;
     }
+
+    int foot_trajectory_type_ret = planner_.set_foot_trajectory_type(get_node()->get_parameter("foot_trajectory_type").as_string());
+    if (foot_trajectory_type_ret != 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'foot_trajectory_type' is not an appropriate value. It should either be 'splines' or 'cycloid'.");
+        return CallbackReturn::ERROR;
+    }
+
 
     planner_.h_base_des_ = get_node()->get_parameter("desired_base_height").as_double();
     if (planner_.h_base_des_ <= 0) {
@@ -144,17 +180,22 @@ CallbackReturn SWPController::on_configure(const rclcpp_lifecycle::State& /*prev
         return CallbackReturn::ERROR;
     }
 
-    planner_.h_base_init = get_node()->get_parameter("initial_base_height").as_double();
-    if (planner_.h_base_init <= 0) {
+    planner_.h_base_init_ = get_node()->get_parameter("initial_base_height").as_double();
+    if (planner_.h_base_init_ <= 0) {
         RCLCPP_ERROR(get_node()->get_logger(),"'initial_base_height' parameter is <= 0.");
         return CallbackReturn::ERROR;
     }
 
-    planner_.terrain_height = get_node()->get_parameter("terrain_height").as_double();
-    if (planner_.h_base_init <= 0) {
-        RCLCPP_ERROR(get_node()->get_logger(),"'terrain_height' parameter is <= 0.");
+
+    planner_.terrain_height_ = get_node()->get_parameter("terrain_height").as_double();
+
+    double terrain_penetration = get_node()->get_parameter("terrain_penetration").as_double();
+    if (terrain_penetration < 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'terrain_penetration' parameter is < 0.");
         return CallbackReturn::ERROR;
     }
+    planner_.terrain_height_ -= terrain_penetration;
+    planner_.step_height_ += terrain_penetration;
 
     planner_.init_com_position_(0) = get_node()->get_parameter("initial_position").as_double_array()[0];
     planner_.init_com_position_(1) = get_node()->get_parameter("initial_position").as_double_array()[1];
@@ -225,7 +266,7 @@ CallbackReturn SWPController::on_deactivate(const rclcpp_lifecycle::State& /*pre
 
 /* ================================= Update ================================= */
 
-controller_interface::return_type SWPController::update(const rclcpp::Time& time, const rclcpp::Duration& /*period*/)
+controller_interface::return_type SWPController::update(const rclcpp::Time& time, const rclcpp::Duration& period)
 {
     double time_double = static_cast<double>(time.seconds()) + static_cast<double>(time.nanoseconds()) * std::pow(10, -9);
 
@@ -242,6 +283,7 @@ controller_interface::return_type SWPController::update(const rclcpp::Time& time
     }
 
     last_time_ = time_double;
+    // last_time_ += period.nanoseconds() * std::pow(10, -9);
 
     return controller_interface::return_type::OK;
 }

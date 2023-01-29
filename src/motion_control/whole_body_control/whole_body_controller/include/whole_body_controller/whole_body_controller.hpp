@@ -24,11 +24,15 @@ public:
 
     Eigen::VectorXd& get_tau_opt() {return tau_opt;}
 
+    Eigen::Ref<Eigen::VectorXd> get_v_dot_opt() {return x_opt.segment(0, prioritized_tasks.get_nv());}
+
     Eigen::VectorXd& get_f_c_opt() {return f_c_opt;}
 
     Eigen::VectorXd& get_d_des_opt() {return d_des_opt;}
 
-    const Eigen::VectorXd get_feet_position() { return prioritized_tasks.get_feet_position(); }
+    const Eigen::VectorXd get_feet_positions() { return prioritized_tasks.get_feet_positions(); }
+
+    const Eigen::VectorXd get_feet_velocities(const Eigen::VectorXd& v) { return prioritized_tasks.get_feet_velocities(v); }
 
     const std::vector<std::string>& get_generic_feet_names() const {return prioritized_tasks.get_generic_feet_names();}
 
@@ -70,7 +74,22 @@ public:
     void set_kp_s_pos(const Eigen::Ref<const Eigen::Vector3d>& kp_s_pos) {prioritized_tasks.set_kp_s_pos(kp_s_pos);}
     void set_kd_s_pos(const Eigen::Ref<const Eigen::Vector3d>& kd_s_pos) {prioritized_tasks.set_kd_s_pos(kd_s_pos);}
 
-    void set_kp_terr(const Eigen::Ref<const Eigen::Vector3d>& kp_terr) {prioritized_tasks.set_kp_terr(kp_terr);}
+    void set_kp_terr(const Eigen::Ref<const Eigen::Vector3d>& kp_terr) {
+        prioritized_tasks.set_kp_terr(kp_terr);
+
+        double kp_z = kp_terr(2);
+        double def_z = prioritized_tasks.get_mass() * 9.81 / (4. * kp_z);
+
+        Eigen::VectorXd d_k = Eigen::VectorXd::Zero(prioritized_tasks.get_all_feet_names().size() * deformations_history_manager.get_def_size());
+        for (int i=0; i<static_cast<int>(prioritized_tasks.get_all_feet_names().size()); i++) {
+            d_k(2 + deformations_history_manager.get_def_size() * i) = def_z;
+        }
+
+        deformations_history_manager.set_deformations_history(
+            prioritized_tasks.get_generic_feet_names(),
+            d_k, d_k
+        );
+    }
     void set_kd_terr(const Eigen::Ref<const Eigen::Vector3d>& kd_terr) {prioritized_tasks.set_kd_terr(kd_terr);}
 
     void set_kc_v(const Eigen::Ref<const Eigen::Vector3d>& kc_v) {prioritized_tasks.set_kc_v(kc_v);}

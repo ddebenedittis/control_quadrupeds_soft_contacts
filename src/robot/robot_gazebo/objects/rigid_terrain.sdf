@@ -1,14 +1,14 @@
 <?xml version="1.0" ?>
 <sdf version="1.6">
-    <model name="soft_mattress">
-        <pose>0 0 0.1 0 0 0</pose>
+    <model name="ground_plane">
         <static>true</static>
-        <link name="mattress">
+        <link name="link">
             <collision name="collision">
                 <geometry>
-                    <box>
-                    <size>20 20 0.2</size>
-                    </box>
+                    <plane>
+                        <normal>0 0 1</normal>
+                        <size>100 100</size>
+                    </plane>
                 </geometry>
                 <surface>
                     <friction>
@@ -19,25 +19,26 @@
                     </friction>
                     <contact>
                         <ode>
-                            <kp>2500</kp>
-                            <kd>707</kd>
+                            <kp>1e6</kp>
+                            <kd>1e2</kd>
                         </ode>
                     </contact>
                 </surface>
             </collision>
             <visual name="visual">
+                <cast_shadows>false</cast_shadows>
                 <geometry>
-                    <box>
-                    <size>20 20 0.2</size>
-                    </box>
+                    <plane>
+                        <normal>0 0 1</normal>
+                        <size>100 100</size>
+                    </plane>
                 </geometry>
                 <material>
                     <script>
                         <uri>file://media/materials/scripts/gazebo.material</uri>
-                        <name>Gazebo/Grass</name>
+                        <name>Gazebo/Grey</name>
                     </script>
                 </material>
-                <transparency>0.0</transparency>
             </visual>
         </link>
     </model>

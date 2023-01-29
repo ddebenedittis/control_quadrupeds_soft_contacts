@@ -244,7 +244,11 @@ class KalmanFilter:
             gyro_bias = self._state[4:7]
             v = self._state[13:16]
             
-            [B_r_fb, B_v_fb] = self._robot_model.compute_feet_pos_vel(qj, qj_dot, contact_feet_names)
+            [B_r_fb, B_v_fb] = self._robot_model.compute_feet_pos_vel(
+                np.concatenate((np.zeros(6), np.array([1]), qj)),
+                np.concatenate((np.zeros(6), qj_dot)),
+                contact_feet_names
+            )
                     
             # Error model
             nc = len(contact_feet_names)    # number of feet in contact with the terrain

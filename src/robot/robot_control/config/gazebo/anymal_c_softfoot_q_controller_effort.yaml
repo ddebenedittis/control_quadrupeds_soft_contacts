@@ -1,5 +1,7 @@
 controller_manager:
     ros__parameters:
+        use_sim_time: true
+
         update_rate: 200
 
         effort_controller:
@@ -47,11 +49,27 @@ imu_sensor_broadcaster:
 
 whole_body_controller:
     ros__parameters:
+        use_sim_time: true
+
         robot_name: anymal_c_softfoot_q
         sample_time: 0.0025
 
         use_estimator: false        # ! Must be the same as the use_estimator in the planner
-        initialization_time: 0.5    # ! Must be the same as the initialization_time in the planner
+        initialization_time: 2.
+
+        qi:
+            -  0.
+            -  0.3
+            - -0.6
+            -  0.
+            - -0.3
+            -  0.6
+            -  0.
+            -  0.3
+            - -0.6
+            -  0.
+            - -0.3
+            -  0.6
 
         PD_proportional: 100.
         PD_derivative: 1.
@@ -73,6 +91,7 @@ whole_body_controller:
             - RH_KFE
 
         contact_constraint_type: soft_kv
+
         tau_max: 80.
         mu: 0.8
         Fn_max: 350.
@@ -122,24 +141,35 @@ whole_body_controller:
 
 planner:
     ros__parameters:
+        use_sim_time: true
+
         use_estimator: false            # ! Must be the same as the use_estimator in the whole_body_controller
-        initialization_time: 0.5     # ! Must be the same as the initialization_time in the whole_body_controller
+        initialization_time: 2.
 
         sample_time: 0.005
         init_phase: 0.2
+
         gait_pattern:
             - LF
             - RH
             - RF
             - LH
+
         cycle_duration: 3.0
         step_duty_factor: 0.7
+
         step_length: 0.15
         step_height: 0.25
-        desired_foot_penetration: 0.05
+        desired_foot_penetration: 0.0
+        step_horizontal_delay: 0.01
+        foot_trajectory_type: splines
+
         desired_base_height: 0.47
-        initial_base_height: 0.6
+        initial_base_height: 0.55
+
         terrain_height: 0.0
+        terrain_penetration: 0.0
+
         initial_position:
             - 0.
             - 0.

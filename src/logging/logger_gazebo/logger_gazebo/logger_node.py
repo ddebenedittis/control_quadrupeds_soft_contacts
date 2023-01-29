@@ -7,6 +7,7 @@ from rclpy.node import Node
 from gazebo_msgs.msg import LinkStates
 from gazebo_msgs.msg import ContactsState
 from generalized_pose_msgs.msg import GeneralizedPose
+from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
 import logger_gazebo.plot as plot
@@ -36,6 +37,12 @@ class LoggerSubscriber(Node):
         
         # ============================ Subscribers =========================== #
         
+        self.optimal_joints_accelerations_subscription = self.create_subscription(
+            Float64MultiArray,
+            "logging/optimal_joints_accelerations",
+            self.optimal_joints_accelerations_callback,
+            1)
+        
         self.optimal_torques_subscription = self.create_subscription(
             Float64MultiArray,
             "/logging/optimal_torques",
@@ -54,17 +61,32 @@ class LoggerSubscriber(Node):
             self.optimal_deformations_callback,
             1)
         
-        self.feet_position_subscription = self.create_subscription(
+        
+        self.feet_positions_subscription = self.create_subscription(
             Float64MultiArray,
-            "/logging/feet_position",
-            self.feet_position_callback,
+            "/logging/feet_positions",
+            self.feet_positions_callback,
             1)
+        
+        self.feet_velocities_subscription = self.create_subscription(
+            Float64MultiArray,
+            "/logging/feet_velocities",
+            self.feet_velocities_callback,
+            1)
+
 
         self.link_states_subscription = self.create_subscription(
             LinkStates,
             "/gazebo/link_states",
             self.link_states_callback,
             1)
+        
+        self.joint_states_subscription = self.create_subscription(
+            JointState,
+            "/joint_states",
+            self.joint_states_callback,
+            1
+        )
         
         self.gen_pose_subscription = self.create_subscription(
             GeneralizedPose,
@@ -96,18 +118,26 @@ class LoggerSubscriber(Node):
         
         # ================ Variables Saved By The Subscribers ================ #
         
+        # q = [q_b, q_j]
+        # Base pose: q_b = [p_x, p_y, p_z, q_x, q_y, q_z, q_w]
+        # Joint angles: q_j
+        self.q = np.zeros(19)
+        self.q[6] = 1
+        
+        # v = [v_b, v_j]
+        # Base velocity: v_b = [v_x, v_y, v_z, w_x, w_y, w_z]
+        # Joint velocities: v_j
+        self.v = np.zeros(18)
+        
         # Output of the optimization problem solution
+        self.optimal_joints_accelerations = np.zeros(18)
         self.optimal_torques = np.zeros(12)
         self.optimal_forces = np.zeros(12)
         self.optimal_deformations = np.zeros(12)
         
         # Computed and published by the whole-body controller
-        self.feet_position = np.zeros((3,4))
-
-        # Base pose: q_b = [p_x, p_y, p_z, q_x, q_y, q_z, q_w]
-        self.q_b = np.zeros(7); self.q_b[6] = 1
-        # Base velocity: v_b = [v_x, v_y, v_z, w_x, w_y, w_z]
-        self.v_b = np.zeros(6)
+        self.feet_positions = np.zeros((3,4))
+        self.feet_velocities = np.zeros(12)
         
         # Planner output
         self.desired_base_pos = np.zeros(3)
@@ -145,7 +175,7 @@ class LoggerSubscriber(Node):
         # ============================= Csv Data ============================= #
         
         # Approximate time over which data is saved. Approximate because it depends on the actual frequency of the timer_callback.
-        time_horizon = 10
+        time_horizon = 20
         
         # Number of datapoints 
         self.n = int(time_horizon / timer_period + 1)
@@ -156,10 +186,14 @@ class LoggerSubscriber(Node):
         
         self.time_vector = np.zeros(self.n)
         
+        self.gen_coordinates_vector = np.zeros((self.n, 19))
+        self.gen_velocities_vector = np.zeros((self.n, 18))
+        
+        self.optimal_joints_accelerations_vector = np.zeros((self.n, 18))
         self.optimal_torques_vector = np.zeros((self.n, 12))
         self.optimal_forces_vector = np.zeros((self.n, 12))
         self.optimal_deformations_vector = np.zeros((self.n, 12))
-        self.feet_position_vector = np.zeros((self.n, 12))
+        self.feet_positions_vector = np.zeros((self.n, 12))
                 
         self.position_error_vector = np.zeros((self.n, 3))
         self.orientation_error_vector = np.zeros(self.n)
@@ -170,27 +204,37 @@ class LoggerSubscriber(Node):
         self.contact_forces_vector = np.zeros((self.n, 12))
         self.contact_positions_vector = np.zeros((self.n, 12))
         self.depths_vector = np.zeros((self.n, 4))
+        
+        self.feet_positions_vector = np.zeros((self.n, 12))
+        self.feet_velocities_vector = np.zeros((self.n, 12))
 
 
     # =============================== Callbacks ============================== #
 
+    def optimal_joints_accelerations_callback(self, msg):
+        self.optimal_joints_accelerations = np.array(msg.data)
+    
     def optimal_torques_callback(self, msg):
-        self.optimal_torques = np.array(msg.data)
-        
+        self.optimal_torques = np.array(msg.data) 
         
     def optimal_forces_callback(self, msg):
         self.optimal_forces = np.array(msg.data)
-        
-        
+           
     def optimal_deformations_callback(self, msg):
-        self.optimal_deformations = np.array(msg.data)
+        self.optimal_deformations = np.array(msg.data)  
         
+    def feet_positions_callback(self, msg):
+        self.feet_positions = np.array(msg.data).reshape((4,3)).T
         
-    def feet_position_callback(self, msg):
-        self.feet_position = np.array(msg.data).reshape((4,3)).T
+    def feet_velocities_callback(self, msg):
+        self.feet_velocities = np.array(msg.data)
 
 
     def link_states_callback(self, msg):
+        """
+        Save the pose and twist of the robot base.
+        """
+        
         #! This assumes that there is only one link whose name ends with "base".
         for index in range(len(msg.name)):
             if msg.name[index][-4:] == "base":
@@ -207,8 +251,27 @@ class LoggerSubscriber(Node):
         ang = msg.twist[index].angular
 
         # Save the base pose and twists as numpy arrays
-        self.q_b = np.array([pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w])
-        self.v_b = np.array([lin.x, lin.y, lin.z, ang.x, ang.y, ang.z])
+        q_b = np.array([pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w])
+        v_b = np.array([lin.x, lin.y, lin.z, ang.x, ang.y, ang.z])
+        
+        self.q[0:7] = q_b
+        self.v[0:6] = v_b
+        
+    
+    def joint_states_callback(self, msg):
+        """
+        Read, reorder and save the joint states.
+        The joints are saved in the following order: LF_(HAA -> HFE -> KFE) -> LH -> RF -> RH,
+        """
+
+        joint_names = ["LF_HAA", "LF_HFE", "LF_KFE",
+                       "LH_HAA", "LH_HFE", "LH_KFE",
+                       "RF_HAA", "RF_HFE", "RF_KFE",
+                       "RH_HAA", "RH_HFE", "RH_KFE"]
+        
+        for i in range(len(joint_names)):
+            self.q[7 + joint_names.index(msg.name[i])] = msg.position[i]
+            self.v[6 + joint_names.index(msg.name[i])] = msg.velocity[i]
         
         
     def gen_pose_callback(self, msg):
@@ -216,10 +279,10 @@ class LoggerSubscriber(Node):
         self.desired_base_quat = np.array([msg.base_quat.x, msg.base_quat.y, msg.base_quat.z, msg.base_quat.w])
         self.desired_base_vel = np.array([msg.base_vel.x, msg.base_vel.y, msg.base_vel.z])
              
-        # These are generic feet names, independent on the particular quadrupedal robot. E.g. LF, RF, etc.
+        # These are generic feet names, independent on the particular quadrupedal robot. I.e. LF, RF, LH, RH.
         self.contact_feet_names = msg.contact_feet
         
-        
+    
     def contact_state_callback(self, msg, foot_name):
         i = self.generic_feet_names.index(foot_name)
                 
@@ -243,7 +306,7 @@ class LoggerSubscriber(Node):
             
         n = len(msg.states)
         
-        if n > 0:
+        if n > 0:   # avoids dividing by zero
             self.contact_forces[0+3*i:3+3*i] = self.contact_forces[0+3*i:3+3*i] / n
             self.contact_positions[0+3*i:3+3*i] = self.contact_positions[0+3*i:3+3*i] / n
             self.depths[i] = self.depths[i] / n
@@ -281,7 +344,11 @@ class LoggerSubscriber(Node):
             else:
                 # When the foot is not in contact with the ground its position is set to nan.
                 self.saved_feet_pos[:,i] = np.nan * np.ones(3)
-                                
+                
+        # If the slippage in the current timestep is too big, discard it.
+        if slippage > 0.1:
+            slippage = 0
+        
         return slippage
         
     
@@ -290,22 +357,36 @@ class LoggerSubscriber(Node):
         Fill the data if self.i < self.n. Then, save the data is some csv files and destroy the node. 
         """
         
+        # This optimal_deformations vector can have different sized depending on the contact model used in the controller. This chunk of code deals with this.
+        if self.optimal_deformations.size != self.optimal_deformations_vector[0,:].size:
+            self.optimal_deformations_vector = np.zeros((self.n, self.optimal_deformations.size))
+        
         # =========================== Save The Data ========================== #
         
         self.i += 1
         
         self.time_vector[self.i] = self.get_clock().now().nanoseconds / 10**9
-        self.position_error_vector[self.i,:] = self.q_b[0:3] - self.desired_base_pos
-        self.orientation_error_vector[self.i] = q_dist(self.q_b[3:7], self.desired_base_quat)
-        self.velocity_error_vector[self.i,:] = self.v_b[0:3] - self.desired_base_vel
-        self.optimal_torques_vector[self.i,:] = self.optimal_torques
-        self.optimal_forces_vector[self.i,:] = self.optimal_forces
-        self.optimal_deformations_vector[self.i,:] = self.optimal_deformations
-        self.slippage_vector[self.i] = self.slippage_vector[self.i-1] + self.compute_slippage(self.contact_feet_names, self.feet_position)
         
-        self.contact_forces_vector[self.i,:] = self.contact_forces
-        self.contact_positions_vector[self.i,:] = self.contact_positions
-        self.depths_vector[self.i,:] = self.depths
+        self.gen_coordinates_vector[self.i, :] = self.q
+        self.gen_velocities_vector[self.i, :] = self.v
+        
+        self.position_error_vector[self.i, :] = self.q[0:3] - self.desired_base_pos
+        self.orientation_error_vector[self.i] = q_dist(self.q[3:7], self.desired_base_quat)
+        self.velocity_error_vector[self.i, :] = self.v[0:3] - self.desired_base_vel
+        
+        self.optimal_joints_accelerations_vector[self.i, :] = self.optimal_joints_accelerations
+        self.optimal_torques_vector[self.i, :] = self.optimal_torques
+        self.optimal_forces_vector[self.i, :] = self.optimal_forces
+        self.optimal_deformations_vector[self.i, :] = self.optimal_deformations
+        
+        self.slippage_vector[self.i] = self.slippage_vector[self.i-1] + self.compute_slippage(self.contact_feet_names, self.feet_positions)
+        
+        self.contact_forces_vector[self.i, :] = self.contact_forces
+        self.contact_positions_vector[self.i, :] = self.contact_positions
+        self.depths_vector[self.i, :] = self.depths
+        
+        self.feet_positions_vector[self.i, :] = self.feet_positions.flatten('F')
+        self.feet_velocities_vector[self.i, :] = self.feet_velocities
         
         
         # ================= Save The Csv And Destroy The Node ================ #
@@ -321,17 +402,27 @@ class LoggerSubscriber(Node):
                 print("Successfully created the directories %s" % path)
             
             np.savetxt(path+"time.csv", self.time_vector, delimiter=",")
+            
+            np.savetxt(path+"generalized_coordinates.csv", self.gen_coordinates_vector, delimiter=",")
+            np.savetxt(path+"generalized_velocities.csv", self.gen_velocities_vector, delimiter=",")
+            
             np.savetxt(path+"position_error.csv", self.position_error_vector, delimiter=",")
             np.savetxt(path+"orientation_error.csv", self.orientation_error_vector, delimiter=",")
             np.savetxt(path+"velocity_error.csv", self.velocity_error_vector, delimiter=",")
+            
+            np.savetxt(path+"optimal_joints_accelerations.csv", self.optimal_joints_accelerations_vector, delimiter=",")
             np.savetxt(path+"optimal_torques.csv", self.optimal_torques_vector, delimiter=",")
             np.savetxt(path+"optimal_forces.csv", self.optimal_forces_vector, delimiter=",")
             np.savetxt(path+"optimal_deformations.csv", self.optimal_deformations_vector, delimiter=",")
+            
             np.savetxt(path+"slippage.csv", self.slippage_vector, delimiter=",")
             
             np.savetxt(path+"contact_forces.csv", self.contact_forces_vector, delimiter=",")
             np.savetxt(path+"contact_positions.csv", self.contact_positions_vector, delimiter=",")
             np.savetxt(path+"depths.csv", self.depths_vector, delimiter=",")
+            
+            np.savetxt(path+"feet_positions.csv", self.feet_positions_vector, delimiter=",")
+            np.savetxt(path+"feet_velocities.csv", self.feet_velocities_vector, delimiter=",")
             
             print("DONE")
             print("Saved the CSVs in %s" % os.getcwd() + path)

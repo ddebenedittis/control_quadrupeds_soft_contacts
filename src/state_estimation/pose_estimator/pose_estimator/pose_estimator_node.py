@@ -31,12 +31,12 @@ class PoseEstimatorNode(Node):
         
         # ============================ Subscriber ============================ #
         
-        self.joint_state_subscription = self.create_subscription(
+        self.joint_states_subscription = self.create_subscription(
             JointState,
             "/joint_states",
-            self.joint_state_callback,
+            self.joint_states_callback,
             1)
-        self.joint_state_subscription   # prevent unused variable warning
+        self.joint_states_subscription   # prevent unused variable warning
 
         self.link_states_subscription = self.create_subscription(
             LinkStates,
@@ -94,7 +94,7 @@ class PoseEstimatorNode(Node):
         
         
         
-    def joint_state_callback(self, msg):
+    def joint_states_callback(self, msg):
         """
         Read, reorder and save the joint states.
         The joints are saved in the following order: LF_(HAA -> HFE -> KFE) -> LH -> RF -> RH,
