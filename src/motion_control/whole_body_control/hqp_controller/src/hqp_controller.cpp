@@ -332,7 +332,20 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
             "/gazebo/link_states", QUEUE_SIZE,
             [this](const gazebo_msgs::msg::LinkStates::SharedPtr msg) -> void
             {
-                int base_id = 1;
+                int base_id = -1;
+
+                for (std::size_t i=0; i<msg->name.size(); i++) {
+                    if (msg->name[i].size() >= 4) {
+                        if (msg->name[i].substr(msg->name[i].size() - 4) == "base") {
+                            base_id = i;
+                            break;
+                        }
+                    }
+                }
+
+                if (base_id == -1) {
+                    RCLCPP_ERROR(get_node()->get_logger(),"Can't find a link name which ends with 'base'");
+                }
 
                 geometry_msgs::msg::Point pos = msg->pose[base_id].position;
                 geometry_msgs::msg::Quaternion orient = msg->pose[base_id].orientation;

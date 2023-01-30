@@ -165,7 +165,7 @@ planner:
         foot_trajectory_type: splines
 
         desired_base_height: 0.47
-        initial_base_height: 0.60
+        initial_base_height: 0.52
 
         terrain_height: 0.0
         terrain_penetration: 0.0
