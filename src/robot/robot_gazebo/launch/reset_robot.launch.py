@@ -34,6 +34,8 @@ def generate_launch_description():
     
     terrain_type = LaunchConfiguration('terrain_type', default='rigid')
     
+    gait = LaunchConfiguration('gait', default='static_walk')
+    
     save_csv = LaunchConfiguration('save_csv', default='False')
     
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
@@ -105,6 +107,11 @@ def generate_launch_description():
     )
     
     planner_spawner = Node(
+        condition=IfCondition(
+            PythonExpression([
+                '"', gait, '"', ' == "static_walk"'
+            ]),
+        ),
         package = 'controller_manager',
         executable = 'spawner',
         arguments = ['planner', '--controller-manager', '/controller_manager'],
@@ -129,6 +136,9 @@ def generate_launch_description():
         DeclareLaunchArgument('contact_constraint_type', default_value="'soft_kv'"),
         SetParameter(name='contact_constraint_type', value=contact_constraint_type),
         
+        DeclareLaunchArgument('gait', default_value='static_walk'),
+        SetParameter(name='gait', value=gait),
+        
         DeclareLaunchArgument('terrain_type', default_value='rigid'),
         
         DeclareLaunchArgument('save_csv', default_value='False'),
@@ -143,6 +153,19 @@ def generate_launch_description():
                     whole_body_controller_spawner
                 ]
             )
+        ),
+        
+        Node(
+            condition=IfCondition(
+                PythonExpression([
+                    '"', gait, '"', ' == "walking_trot"'
+                ]),
+            ),
+            package='planners_python',
+            executable='planner_mjp_node',
+            parameters=[{'use_sim_time': use_sim_time}],
+            emulate_tty=True,
+            output='screen',
         ),
         
         RegisterEventHandler(

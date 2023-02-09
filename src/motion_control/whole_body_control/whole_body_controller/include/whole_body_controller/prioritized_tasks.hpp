@@ -142,10 +142,9 @@ private:
 
     /// @brief List of TaskNames used to specify the priority of every task.
     std::vector<TasksNames> prioritized_tasks_list = {
-        TasksNames::FloatingBaseEOM, TasksNames::SEPARATOR,
+        TasksNames::FloatingBaseEOM, TasksNames::ContactConstraints, TasksNames::SEPARATOR,
         TasksNames::TorqueLimits, TasksNames::FrictionAndFcModulation, TasksNames::SEPARATOR,
         TasksNames::LinearBaseMotionTracking, TasksNames::AngularBaseMotionTracking, TasksNames::SwingFeetMotionTracking, TasksNames::SEPARATOR,
-        TasksNames::ContactConstraints, TasksNames::SEPARATOR,
         TasksNames::EnergyAndForcesOptimization, TasksNames::SEPARATOR
     };
 

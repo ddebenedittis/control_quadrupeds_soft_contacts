@@ -1,8 +1,11 @@
+import csv
+from enum import Enum
 import os
 
 import numpy as np
 import rclpy
 from rclpy.node import Node
+from rcl_interfaces.srv import GetParameters
 
 from gazebo_msgs.msg import LinkStates
 from gazebo_msgs.msg import ContactsState
@@ -21,6 +24,14 @@ def q_dist(q1, q2):
     theta = np.arccos(2 * np.dot(q1, q2) - 1)
 
     return theta
+
+
+# ================================= ParamName ================================ #
+
+class ParamName(Enum):
+    ROBOT_NAME = 0
+    STEP_LENGTH = 1
+    CYCLE_DURATION = 2
 
 
 # ============================================================================ #
@@ -85,14 +96,14 @@ class LoggerSubscriber(Node):
             JointState,
             "/joint_states",
             self.joint_states_callback,
-            1
-        )
+            1)
         
         self.gen_pose_subscription = self.create_subscription(
             GeneralizedPose,
             "/robot/desired_generalized_pose",
             self.gen_pose_callback,
             1)
+        
         
         self.contact_sensor_LF_subscription = self.create_subscription(
             ContactsState,
@@ -175,7 +186,7 @@ class LoggerSubscriber(Node):
         # ============================= Csv Data ============================= #
         
         # Approximate time over which data is saved. Approximate because it depends on the actual frequency of the timer_callback.
-        time_horizon = 20
+        time_horizon = 2
         
         # Number of datapoints 
         self.n = int(time_horizon / timer_period + 1)
@@ -207,7 +218,50 @@ class LoggerSubscriber(Node):
         
         self.feet_positions_vector = np.zeros((self.n, 12))
         self.feet_velocities_vector = np.zeros((self.n, 12))
-
+        
+        
+        # ==================== Read Other Nodes Parameters =================== #
+        
+        self.robot_name = ""
+        self.step_length = 0
+        self.cycle_duration = 0
+        
+        # Robot name
+        self.client_robot_name = self.create_client(
+            GetParameters, "/whole_body_controller/get_parameters")
+        
+        request_robot_name = GetParameters.Request()
+        request_robot_name.names = ["robot_name"]
+        
+        self.client_robot_name.wait_for_service()
+        
+        future_robot_name = self.client_robot_name.call_async(request_robot_name)
+        future_robot_name.add_done_callback(self.callback_param_robot_name)
+        
+        # Step length
+        self.client_step_length = self.create_client(
+            GetParameters, "/planner/get_parameters")
+        
+        request_step_length = GetParameters.Request()
+        request_step_length.names = ["step_length"]
+        
+        self.client_step_length.wait_for_service()
+        
+        future_step_length = self.client_step_length.call_async(request_step_length)
+        future_step_length.add_done_callback(self.callback_param_step_length)
+        
+        # Cycle duration
+        self.client_cycle_duration = self.create_client(
+            GetParameters, "/planner/get_parameters")
+        
+        request_cycle_duration = GetParameters.Request()
+        request_cycle_duration.names = ["cycle_duration"]
+        
+        self.client_cycle_duration.wait_for_service()
+        
+        future_cycle_duration = self.client_cycle_duration.call_async(request_cycle_duration)
+        future_cycle_duration.add_done_callback(self.callback_param_cycle_duration)
+        
 
     # =============================== Callbacks ============================== #
 
@@ -264,10 +318,18 @@ class LoggerSubscriber(Node):
         The joints are saved in the following order: LF_(HAA -> HFE -> KFE) -> LH -> RF -> RH,
         """
 
-        joint_names = ["LF_HAA", "LF_HFE", "LF_KFE",
-                       "LH_HAA", "LH_HFE", "LH_KFE",
-                       "RF_HAA", "RF_HFE", "RF_KFE",
-                       "RH_HAA", "RH_HFE", "RH_KFE"]
+        if self.robot_name == "anymal_c" or self.robot_name == "anymal_c_softfoot_q":            
+            joint_names = ["LF_HAA", "LF_HFE", "LF_KFE",
+                           "LH_HAA", "LH_HFE", "LH_KFE",
+                           "RF_HAA", "RF_HFE", "RF_KFE",
+                           "RH_HAA", "RH_HFE", "RH_KFE"]
+        elif self.robot_name == "solo12":
+            joint_names = ["FL_HAA", "FL_HFE", "FL_KFE",
+                           "FR_HAA", "FR_HFE", "FR_KFE",
+                           "HL_HAA", "HL_HFE", "HL_KFE",
+                           "HR_HAA", "HR_HFE", "HR_KFE"]
+        elif self.robot_name == "":
+            return
         
         for i in range(len(joint_names)):
             self.q[7 + joint_names.index(msg.name[i])] = msg.position[i]
@@ -291,25 +353,39 @@ class LoggerSubscriber(Node):
         self.contact_positions[0+3*i:3+3*i].fill(0)
         self.depths[i] = 0
         
-        for contact_state in msg.states:
-            self.contact_forces[0+3*i:3+3*i] += np.array([
-                contact_state.total_wrench.force.x,
-                contact_state.total_wrench.force.y,
-                contact_state.total_wrench.force.z
-            ])
-            self.contact_positions[0+3*i:3+3*i] += np.array([
-                contact_state.contact_positions[0].x,
-                contact_state.contact_positions[0].y,
-                contact_state.contact_positions[0].z
-            ])
-            self.depths[i] += contact_state.depths[0]
+        # for contact_state in msg.states:
+        #     self.contact_forces[0+3*i:3+3*i] += np.array([
+        #         contact_state.total_wrench.force.x,
+        #         contact_state.total_wrench.force.y,
+        #         contact_state.total_wrench.force.z
+        #     ])
+        #     self.contact_positions[0+3*i:3+3*i] += np.array([
+        #         contact_state.contact_positions[0].x,
+        #         contact_state.contact_positions[0].y,
+        #         contact_state.contact_positions[0].z
+        #     ])
+        #     self.depths[i] += contact_state.depths[0]
             
-        n = len(msg.states)
+        # n = len(msg.states)
         
-        if n > 0:   # avoids dividing by zero
-            self.contact_forces[0+3*i:3+3*i] = self.contact_forces[0+3*i:3+3*i] / n
-            self.contact_positions[0+3*i:3+3*i] = self.contact_positions[0+3*i:3+3*i] / n
-            self.depths[i] = self.depths[i] / n
+        # if n > 0:   # avoids dividing by zero
+        #     self.contact_forces[0+3*i:3+3*i] = self.contact_forces[0+3*i:3+3*i] / n
+        #     self.contact_positions[0+3*i:3+3*i] = self.contact_positions[0+3*i:3+3*i] / n
+        #     self.depths[i] = self.depths[i] / n
+        
+        self.contact_forces[0+3*i:3+3*i] = np.array([
+            msg.states[0].total_wrench.force.x,
+            msg.states[0].total_wrench.force.y,
+            msg.states[0].total_wrench.force.z
+        ])
+        
+        self.contact_positions[0+3*i:3+3*i] = np.array([
+            msg.states[0].contact_positions[0].x,
+            msg.states[0].contact_positions[0].y,
+            msg.states[0].contact_positions[0].z
+        ])
+        
+        self.depths[i] = msg.states[0].depths[0]
         
         
     def contact_state_LF_callback(self, msg):
@@ -350,6 +426,30 @@ class LoggerSubscriber(Node):
             slippage = 0
         
         return slippage
+    
+            
+    def callback_param(self, future, param_name: ParamName):
+        try:
+            result = future.result()
+        except Exception as e:
+            self.get_logger().warn("service call failed %r" % (e,))
+        else:
+            if   param_name == ParamName.ROBOT_NAME:
+                self.robot_name = result.values[0].string_value
+            elif param_name == ParamName.STEP_LENGTH:
+                self.step_length = result.values[0].double_value
+            elif param_name == ParamName.CYCLE_DURATION:
+                self.cycle_duration = result.values[0].double_value
+                
+                
+    def callback_param_robot_name(self, future):
+        self.callback_param(future, ParamName.ROBOT_NAME)
+        
+    def callback_param_step_length(self, future):
+        self.callback_param(future, ParamName.STEP_LENGTH)
+        
+    def callback_param_cycle_duration(self, future):
+        self.callback_param(future, ParamName.CYCLE_DURATION)
         
     
     def timer_callback(self):
@@ -423,6 +523,19 @@ class LoggerSubscriber(Node):
             
             np.savetxt(path+"feet_positions.csv", self.feet_positions_vector, delimiter=",")
             np.savetxt(path+"feet_velocities.csv", self.feet_velocities_vector, delimiter=",")
+            
+            # ================================================================ #
+            
+            speed = self.step_length / self.cycle_duration
+            
+            
+            # Save in a csv file
+            with open(path+'params.csv', 'w+') as f:
+                f.write("%s,%s\n" %("robot_name", self.robot_name))
+                f.write("%s,%f\n" %("speed", speed))
+            
+            
+            # ================================================================ #
             
             print("DONE")
             print("Saved the CSVs in %s" % os.getcwd() + path)

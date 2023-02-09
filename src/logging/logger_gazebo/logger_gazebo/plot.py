@@ -1,3 +1,4 @@
+import csv
 import os
 import shutil
 
@@ -10,377 +11,390 @@ from robot_model.robot_model import RobotModel
 
 
 
+class Plot:
+    """
+    Save the csv data into numpy arrays and plot several figures.
+    """
+    
+    def __init__(self):
+        [self.x_size_def, self.y_size_def] = plt.rcParams.get('figure.figsize')
+        
+        self.format = 'svg'
+        
+        # Plot only data between time_init and time_end.
+        self.time_init = 0
+        self.time_end = 10
+        
+        self.foldername = 'log'
+        
+        # =========================== Read The CSVs ========================== #
+        
+        self.contact_forces = np.loadtxt(self.foldername + '/csv/' + 'contact_forces' + '.csv', delimiter=",")
+        self.contact_positions = np.loadtxt(self.foldername + '/csv/' + 'contact_positions' + '.csv', delimiter=",")
+        self.depths = np.loadtxt(self.foldername + '/csv/' + 'depths' + '.csv', delimiter=",")
+        self.feet_positions = np.loadtxt(self.foldername + '/csv/' + 'feet_positions' + '.csv', delimiter=",")
+        self.feet_velocities = np.loadtxt(self.foldername + '/csv/' + 'feet_velocities' + '.csv', delimiter=",")
+        self.generalized_coordinates = np.loadtxt(self.foldername + '/csv/' + 'generalized_coordinates' + '.csv', delimiter=",")
+        self.generalized_velocities = np.loadtxt(self.foldername + '/csv/' + 'generalized_velocities' + '.csv', delimiter=",")
+        self.optimal_deformations = np.loadtxt(self.foldername + '/csv/' + 'optimal_deformations' + '.csv', delimiter=",")
+        self.optimal_forces = np.loadtxt(self.foldername + '/csv/' + 'optimal_forces' + '.csv', delimiter=",")
+        self.optimal_joints_accelerations = np.loadtxt(self.foldername + '/csv/' + 'optimal_joints_accelerations' + '.csv', delimiter=",")
+        self.optimal_torques = np.loadtxt(self.foldername + '/csv/' + 'optimal_torques' + '.csv', delimiter=",")
+        self.orientation_error = np.loadtxt(self.foldername + '/csv/' + 'orientation_error' + '.csv', delimiter=",")
+        self.position_error = np.loadtxt(self.foldername + '/csv/' + 'position_error' + '.csv', delimiter=",")
+        self.slippage = np.loadtxt(self.foldername + '/csv/' + 'slippage' + '.csv', delimiter=",")
+        self.time = np.loadtxt(self.foldername + '/csv/' + 'time' + '.csv', delimiter=",")
+        self.velocity_error = np.loadtxt(self.foldername + '/csv/' + 'velocity_error' + '.csv', delimiter=",")
+        
+        with open(self.foldername + '/csv/params.csv') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            for row in csv_reader:
+                if row[0] == "robot_name":
+                    self.robot_name = row[1]
+                elif row[0] == 'speed':
+                    self.speed = float(row[1])
+        
+        # Get the indexes of time_init and time_end in the time vector.
+        for i in range(len(self.time)):
+            if self.time[i] >= self.time_init:
+                self.i_init = i
+                break
+            
+        for i in range(len(self.time)-1, -1, -1):
+            if self.time[i] <= self.time_end:
+                self.i_end = i
+                break
+            
+        self.time_vector = self.time[self.i_init:self.i_end]
+        
+        self.foot_names = ["LF", "RF", "LH", "RH"]
+        self.dir_names = ["x", "y", "z"]
+        
+        # ==================================================================== #
+        
+        # Compute the feet positions and velocities from the generalized coordinates and velocities vector.
+        
+        i_init = self.i_init
+        i_end = self.i_end
+        
+        robot_name = "anymal_c"
+        robot_model = RobotModel(robot_name)
+        
+        # The generalized accelerations vector is integrated to obtain the generalized coordinates and velocities vectors. The integration is performed over k_vec steps.
+        k_vec = [1]
+        
+        q = self.generalized_coordinates
+        u = self.generalized_velocities
+        
+        # Vectors that will contain the integrated generalized coordinates and velocities vectors.
+        q_int = np.copy(q[i_init:i_end, :])
+        u_int = np.copy(u[i_init:i_end, :])
+        
+        # Vectors that will contain the feet positions computed with q_int and u_int.
+        self.feet_pos_int = np.zeros((i_end+1-i_init, 12))
+        self.feet_vel_int = np.zeros((i_end+1-i_init, 12))
+        
+        # It may be interesting to perform this with different values of k.
+        #! The code does not support yet the use of multiple values of k.
+        for k in k_vec:
+            self.feet_pos_meas = np.zeros((i_end+1+k-i_init, 12))
+            self.feet_vel_meas = np.zeros((i_end+1+k-i_init, 12))
+            
+            for i in range(k):
+                for j in range(i_init, i_end):
+                    dt = self.time[j + 1 + i] - self.time[j + i]
+                
+                    w_old = u_int[j, 3:6]
+                    w_new = w_old + self.optimal_joints_accelerations[j+i, 3:6] * dt
+                    w_avg = 0.5 * (w_old + w_new)
+
+                    q_int[j, 0:3] = q_int[j, 0:3] + u_int[j, 0:3] * dt + 0.5 * self.optimal_joints_accelerations[j+i, 0:3] * dt**2
+                    
+                    quat = quaternion.from_float_array(q_int[j, 3:7])
+                    quat = quat * (
+                            quaternion.from_rotation_vector(w_avg * dt)
+                        + dt**2/24 * quaternion.from_vector_part(np.cross(w_old, w_new))
+                    )
+                    quat = np.normalized(quat)
+                    q_int[j, 3:7] = quaternion.as_float_array(quat)
+                    
+                    q_int[j, 7:] = q_int[j, 7:] + u_int[j, 6:] * dt + 0.5 * self.optimal_joints_accelerations[j+i, 6:] * dt**2
+                    
+                    u_int[j, :] = u_int[j, :] + self.optimal_joints_accelerations[j+i, :] * dt
+
+                                            
+            for j in range(i_init, i_end):
+                [feet_pos, feet_vel] = robot_model.compute_feet_pos_vel(q_int[j,:], u_int[j,:])
+                
+                self.feet_pos_int[j,:] = feet_pos.flatten()
+                self.feet_vel_int[j,:] = feet_vel.flatten()
+                
+            for j in range(i_init, i_end + k):
+                [feet_pos, feet_vel] = robot_model.compute_feet_pos_vel(q[j,:], u[j,:])
+                
+                self.feet_pos_meas[j,:] = feet_pos.flatten()
+                self.feet_vel_meas[j,:] = feet_vel.flatten()
+        
+    # ======================================================================== #
+    #                              PLOT FUNCTIONS                              #
+    # ======================================================================== #
+    
+    # Methods that plot different quantities. The method inputs are:
+    # ax (pyplot.axes): the axes (or a list of axes of appropriate dimension) that will be populated
+    # i (int): the index of the foot whose quantities are plotted. 0 = LF, 1 = RF, 2 =  LH, 3 = RH
+        
+    def plot_optimal_deformations(self, ax, i):
+        k = 1000
+        
+        ax.plot(self.time_vector,
+                k * self.optimal_deformations[self.i_init:self.i_end,
+                                              3*i:3*i+3])
+        
+        ax.set(
+            xlabel = "time [s]",
+            ylabel = "deformations [mm]",
+            title = "optimal deformations - " + self.foot_names[i],
+        )
+        ax.legend(["x-axis", "y-axis", "z-axis"], ncol=1)
+        ax.set_xlim([self.time_init, self.time_end])
+        
+    
+    def plot_optimal_forces(self, ax, i):        
+        ax.plot(self.time_vector,
+                self.optimal_forces[self.i_init:self.i_end,
+                                    3*i:3*i+3])
+        
+        ax.set(
+            xlabel = "time [s]",
+            ylabel = "forces [N]",
+            title = "optimal forces - " + self.foot_names[i],
+        )
+        ax.legend(["x-axis", "y-axis", "z-axis"], ncol=1)
+        ax.set_xlim([self.time_init, self.time_end])
+        
+        
+    def plot_optimal_torques(self, ax, i):        
+        ax.plot(self.time_vector,
+                self.optimal_torques[self.i_init:self.i_end,
+                                     3*i:3*i+3])
+        
+        ax.set(
+            xlabel = "time [s]",
+            ylabel = "torques [Nm]",
+            title = "optimal torques - " + self.foot_names[i],
+        )
+        ax.legend(["HAA", "HFE", "KFE"], ncol=3)
+        ax.set_xlim([self.time_init, self.time_end])
+        
+        
+    def plot_tangential_over_normal_optimal_forces(self, ax):
+        """
+        Plot the ratio of the tangential and normal component of the contact forces of the four feet.
+        """
+        
+        tangential_over_normal_optimal_force = np.zeros((self.i_end - self.i_init, 4))
+        
+        for i in range(4):
+            tangential_over_normal_optimal_force[:,i] = \
+                ( self.optimal_forces[self.i_init:self.i_end, 0+3*i]**2 + self.optimal_forces[self.i_init:self.i_end, 1+3*i]**2 )**0.5 / (self.optimal_forces[self.i_init:self.i_end, 2+3*i]**2 + 1e-9)
+        
+        ax.set(
+            xlabel = "time [s]",
+            ylabel = r"$f_t / f_n$",
+            title = "ratio of the tangential and normal forces"
+        )
+        ax.legend(["LF", "RF", "LH", "RH"], ncol=2)
+        ax.set_xlim([self.time_init, self.time_end])
+        
+        
+    def plot_meas_vs_opti_forces(self, axs, i):
+        for j in range(3):
+            axs[j].plot(self.time_vector,
+                        self.contact_forces[self.i_init:self.i_end,
+                                            j + 3*i])
+            
+            axs[j].plot(self.time_vector,
+                        self.optimal_forces[self.i_init:self.i_end,
+                                            j + 3*i])
+            
+            axs[j].set(
+                xlabel = "time [s]",
+                ylabel = "force [N]",
+                title = "simulated vs optimized contact forces - " + self.dir_names[j] + "-axis" + " - " + self.foot_names[i]
+            )
+            axs[j].legend(["simulated forces", "optimized forces"])    
+            axs[j].set_xlim([self.time_init, self.time_end])
+            
+        axs[3].plot(self.time_vector,
+                    (self.contact_forces[self.i_init:self.i_end, 0 + 3*i]**2 + self.contact_forces[self.i_init:self.i_end, 1 + 3*i]**2)**0.5)
+        
+        axs[3].plot(self.time_vector,
+                    (self.optimal_forces[self.i_init:self.i_end, 0 + 3*i]**2 + self.optimal_forces[self.i_init:self.i_end, 1 + 3*i]**2)**0.5)
+        
+        axs[3].set(
+            xlabel = "time [s]",
+            ylabel = "force [N]",
+            title = "simulated vs optimized contact forces - tangential - " + self.foot_names[i]
+        )
+        
+        axs[3].legend(["simulated forces", "optimized forces"])
+        axs[3].set_xlim([self.time_init, self.time_end])
+            
+    
+    def plot_meas_vs_opti_depths(self, ax, i):
+        k = int(self.optimal_deformations.shape[1] / 4)
+        
+        ax.plot(self.time_vector,
+                1000 * self.depths[self.i_init:self.i_end, i])
+        
+        ax.plot(self.time_vector,
+                1000 * self.optimal_deformations[self.i_init:self.i_end, k*i])
+        
+        ax.set(
+            xlabel = "time [s]",
+            ylabel = "depths [mm]",
+            title = "measured vs optimized deformations - " + self.foot_names[i],
+        )
+        ax.legend(["measured", "optimized"])
+        
+        
+    def plot_meas_vs_opti_foot_positions(self, axs, i):
+        #! Considers that all feet are in contact with the terrain
+        
+        for j in range(3):
+            axs[j].plot(self.time_vector,
+                        self.feet_positions[self.i_init:self.i_end, j + 3*i])
+            
+            axs[j].plot(self.time_vector,
+                        self.feet_pos_meas[self.i_init:self.i_end, j + 3*i])
+            
+            axs[j].set(
+                xlabel = "time [s]",
+                ylabel = "position [m]",
+                title = "true vs measured foot position - " + self.dir_names[j] + "-axis" + " - " + self.foot_names[i]
+            )
+            axs[j].legend(["true", "measured"])    
+            axs[j].set_xlim([self.time_init, self.time_end])
+            
+        
+    def plot_meas_vs_opti_feet_velocities(self, axs, i):
+        for j in range(3):
+            axs[j].plot(self.time_vector,
+                        self.feet_pos_int[self.i_init:self.i_end, j + 3*i] - self.feet_pos_meas[self.i_init:self.i_end, j + 3*i])
+            
+            #! +1 if previously k = [1]
+            axs[j].plot(self.time_vector,
+                        self.feet_pos_meas[self.i_init+1:self.i_end+1, j + 3*i] - self.feet_pos_meas[self.i_init:self.i_end, j + 3*i])
+            
+            axs[j].set(
+                xlabel = "time [s]",
+                ylabel = "temp [m]",
+                title = "measured vs optimized foot velocity - " + self.dir_names[j] + "-axis" + " - " + self.foot_names[i]
+            )
+            axs[j].legend(["measured", "optimized"])    
+            axs[j].set_xlim([self.time_init, self.time_end])
+            
+        
+    def plot_meas_vs_opti_feet_accelerations(self, axs, i):
+        for j in range(3):
+            axs[j].plot(self.time_vector,
+                        self.feet_vel_int[self.i_init:self.i_end, j + 3*i] - self.feet_pos_meas[self.i_init:self.i_end, j + 3*i])
+            
+            #! +1 if previously k = [1]
+            axs[j].plot(self.time_vector,
+                        self.feet_vel_meas[self.i_init+1:self.i_end+1, j + 3*i] - self.feet_pos_meas[self.i_init:self.i_end, j + 3*i])
+            
+            axs[j].set(
+                xlabel = "time [s]",
+                ylabel = "temp [m\s]",
+                title = "measured vs optimized foot acceleration - " + self.dir_names[j] + "-axis" + " - " + self.foot_names[i]
+            )
+            axs[j].legend(["measured", "optimized"])    
+            axs[j].set_xlim([self.time_init, self.time_end])
+            
+    
+    def plot_slippage(self, ax):
+        ax.plot(self.time_vector, self.slippage[self.i_init:self.i_end])
+        
+        ax.set(
+            xlabel = "time [s]",
+            ylabel = "slippage [m]",
+            title = "slippage",
+        )
+        ax.set_xlim([self.time_init, self.time_end])
+        
+        
+    def plot_normalized_slippage(self, ax):
+        ax.plot(self.time_vector,
+                self.slippage[self.i_init:self.i_end] / (self.speed * (self.time_vector + 1e-9)))
+        
+        ax.set(
+            xlabel = "time [s]",
+            ylabel = "normalized slippage",
+            title = "normalized slippage",
+        )
+        ax.set_xlim([self.time_init, self.time_end])
+            
+            
+    def megaplot(self):
+        feet_names = ["LF", "RF", "LH", "RH"]
+        
+        for i in range(len(feet_names)):
+            fig, axs = plt.subplots(4, 4, figsize=[3.5*self.x_size_def, 2.5*self.y_size_def])
+        
+            self.plot_meas_vs_opti_forces(axs[0:4, 0], i)
+            self.plot_meas_vs_opti_depths(axs[0,1], i)
+            self.plot_optimal_deformations(axs[1,1], i)
+            self.plot_optimal_forces(axs[2,1], i)
+            self.plot_optimal_torques(axs[3,1], i)
+            self.plot_meas_vs_opti_foot_positions(axs[0:3,2], i)
+            self.plot_meas_vs_opti_feet_velocities(axs[0:3,3], i)
+            
+            plt.savefig(self.foldername + '/' + self.format + '/' + "megaplot_" + feet_names[i] + '.' + self.format, bbox_inches="tight", format=self.format)
+            plt.close(fig)
+            
+        # ==================================================================== #
+            
+        fig, axs = plt.subplots(4, 4, figsize=[3.5*self.x_size_def, 2.5*self.y_size_def])
+        for i in range(len(feet_names)):
+            self.plot_meas_vs_opti_forces(axs[0:4, i], i)
+            
+        plt.savefig(self.foldername + '/' + self.format + '/' + "meas_vs_opti_forces" + '.' + self.format, bbox_inches="tight", format=self.format)
+        plt.close(fig)
+        
+        # ==================================================================== #
+        
+        fig, axs = plt.subplots(2, 1, figsize=[self.x_size_def, 2*self.y_size_def])
+        self.plot_slippage(axs[0])
+        self.plot_normalized_slippage(axs[1])
+        
+        plt.savefig(self.foldername + '/' + self.format + '/' + 'slippage' + '.' + self.format, bbox_inches="tight", format=self.format)
+        plt.close(fig)
+            
+        
+        
+        
 def main():
-    
-    # ============================= Preliminaries ============================ #
-    
     default_cycler = (cycler(color=['#0072BD', '#D95319', '#EDB120', '#7E2F8E']) + 
                     cycler('linestyle', ['-', '--', '-', '--']))
 
-    textsize = 16
+    textsize = 12
+    labelsize = 16
 
     plt.rc('font', family='serif', serif='Times')
     plt.rc('text', usetex=True)
     plt.rc('xtick', labelsize=textsize)
     plt.rc('ytick', labelsize=textsize)
-    plt.rc('axes', labelsize=24, prop_cycle=default_cycler)
+    plt.rc('axes', labelsize=labelsize, prop_cycle=default_cycler)
     plt.rc('legend', fontsize=textsize)
     
     plt.rc("axes", grid=True)
     plt.rc("grid", linestyle='dotted', linewidth=0.25)
     
-    
-    # Get the default figure size
-    [x_size_def, y_size_def] = plt.rcParams.get('figure.figsize')
-
-    # Figures output format
-    format = 'svg'
-    
-    # x-axis (time) limits
-    time_init = 0
-    time_end = 10
-
-    # Names of the csv files
-    filenames = [
-        'optimal_deformations',
-        'optimal_forces',
-        'optimal_torques',
-        'orientation_error',
-        'position_error',
-        'slippage',
-        'velocity_error',
-        'contact_forces',
-        'optimal_joints_accelerations',
-    ]
-
-    # The same operations must be repeated for the csv files in all these folders
-    foldernames = [
-        'log'
-    ]
-    
-    
-    # ======================================================================== #
-    
-    for foldername in foldernames:
+    plot = Plot()
+    plot.megaplot()
         
-        # Remove these folders and their content
-        shutil.rmtree(foldername + "/pdf", ignore_errors=True)
-        shutil.rmtree(foldername + "/svg", ignore_errors=True)
         
-        # Create a new folder
-        os.makedirs(foldername + "/" + format)
-
-        time_vector = np.loadtxt(foldername + '/csv/' + 'time' + '.csv', delimiter=",")
-
-        # Get the indexes of t_init and t_end in time_vector
-        for i in range(len(time_vector)):
-            if time_vector[i] >= time_init:
-                i_init = i
-                break
-            
-        for i in range(len(time_vector)-1, -1, -1):
-            if time_vector[i] <= time_end:
-                i_end = i
-                break
-
-
-        for filename in filenames:
-            
-            # ================================================================ #
-            
-            # Plot the integrated optimal joints accelerations
-            
-            if filename == 'optimal_joints_accelerations':
-                
-                robot_name = "anymal_c"
-                robot_model = RobotModel(robot_name)
-            
-                u_dot_star = np.loadtxt(foldername + '/csv/' + filename + '.csv', delimiter=",")
-                u = np.loadtxt(foldername + '/csv/' + 'generalized_velocities' + '.csv', delimiter=",")
-                q = np.loadtxt(foldername + '/csv/' + 'generalized_coordinates' + '.csv', delimiter=",")
-                
-                feet_pos_meas = np.loadtxt(foldername + '/csv/' + 'feet_positions' + '.csv', delimiter=",")
-                feet_vel_meas = np.loadtxt(foldername + '/csv/' + 'feet_velocities' + '.csv', delimiter=",")
-                
-                k_vec = [1]
-                
-                u_int = np.copy(u[i_init:i_end, :])
-                q_int = np.copy(q[i_init:i_end, :])
-                
-                feet_pos_int = np.zeros((i_end+1-i_init, 12))
-                feet_vel_int = np.zeros((i_end+1-i_init, 12))
-                
-                for k in k_vec:
-                    feet_pos_meas2 = np.zeros((i_end+1+k-i_init, 12))
-                    feet_vel_meas2 = np.zeros((i_end+1+k-i_init, 12))
-                    
-                    for i in range(k):
-                        for j in range(i_init, i_end):
-                            dt = time_vector[j + 1 + i] - time_vector[j + i]
-                        
-                            w_old = u_int[j, 3:6]
-                            w_new = w_old + u_dot_star[j+i, 3:6] * dt
-                            w_avg = 0.5 * (w_old + w_new)
-
-                            q_int[j, 0:3] = q_int[j, 0:3] + u_int[j, 0:3] * dt + 0.5 * u_dot_star[j+i, 0:3] * dt**2
-                            
-                            quat = quaternion.from_float_array(q_int[j, 3:7])
-                            quat = quat * (
-                                  quaternion.from_rotation_vector(w_avg * dt)
-                                + dt**2/24 * quaternion.from_vector_part(np.cross(w_old, w_new))
-                            )
-                            quat = np.normalized(quat)
-                            q_int[j, 3:7] = quaternion.as_float_array(quat)
-                            
-                            q_int[j, 7:] = q_int[j, 7:] + u_int[j, 6:] * dt + 0.5 * u_dot_star[j+i, 6:] * dt**2
-                            
-                            u_int[j, :] = u_int[j, :] + u_dot_star[j+i, :] * dt
-
-                                                    
-                    for j in range(i_init, i_end):
-                        [feet_pos, feet_vel] = robot_model.compute_feet_pos_vel(q_int[j,:], u_int[j,:])
-                        
-                        feet_pos_int[j,:] = feet_pos.flatten()
-                        feet_vel_int[j,:] = feet_vel.flatten()
-                        
-                    for j in range(i_init, i_end + k):
-                        [feet_pos, feet_vel] = robot_model.compute_feet_pos_vel(q[j,:], u[j,:])
-                        
-                        feet_pos_meas2[j,:] = feet_pos.flatten()
-                        feet_vel_meas2[j,:] = feet_vel.flatten()
-                        
-                    
-                    arr1 = feet_pos_int[i_init:i_end, :] - feet_pos_meas2[i_init:i_end, :]
-                    arr2 = feet_pos_meas2[i_init+k:i_end+k, :] - feet_pos_meas2[i_init:i_end, :]
-                    
-                    arr3 = feet_vel_int[i_init:i_end, :] - feet_vel_meas2[i_init:i_end, :]
-                    arr4 = feet_vel_meas2[i_init+k:i_end+k, :] - feet_vel_meas2[i_init:i_end, :]
-                    
-                    
-                    parts = ['_LF', '_RF', '_LH', '_RH']
-                    parts_indexes = [
-                        0, 3,
-                        3, 6,
-                        6, 9,
-                        9,12,
-                    ]
-                    
-                    # Create one subplot graph for each foot (LF, RF, ...)
-                    for i in range(len(parts)):
-                        fig, axs = plt.subplots(3, figsize=[x_size_def, 2*y_size_def])
-                        for j in range(3):
-                            axs[j].plot(time_vector[i_init:i_end], arr1[i_init:i_end, j + parts_indexes[2*i]])
-                            axs[j].plot(time_vector[i_init:i_end], arr2[i_init:i_end, j + parts_indexes[2*i]])
-                            
-                            dir_names = ["x", "y", "z"]
-                            axs[j].set(
-                                xlabel = "time [s]",
-                                ylabel = "position [m]",
-                                title = dir_names[j] + "-axis"
-                            )
-                            
-                            axs[j].legend(["integrated position change", "measured position change"])
-                            
-                            axs[j].set_xlim([time_init, time_end])
-                            
-                        plt.savefig(foldername + '/' + format + '/' + 'integrated_position_change' + parts[i] + '.' + format, bbox_inches="tight", format=format)
-                        plt.close(fig)
-                        
-                    for i in range(len(parts)):
-                        fig, axs = plt.subplots(3, figsize=[x_size_def, 2*y_size_def])
-                        for j in range(3):
-                            axs[j].plot(time_vector[i_init:i_end], arr3[i_init:i_end, j + parts_indexes[2*i]])
-                            axs[j].plot(time_vector[i_init:i_end], arr4[i_init:i_end, j + parts_indexes[2*i]])
-                            
-                            dir_names = ["x", "y", "z"]
-                            axs[j].set(
-                                xlabel = "time [s]",
-                                ylabel = "velocity [m/s]",
-                                title = dir_names[j] + "-axis"
-                            )
-                            
-                            axs[j].legend(["integrated velocity change", "measured velocity change"])
-                            
-                            axs[j].set_xlim([time_init, time_end])
-                            
-                        plt.savefig(foldername + '/' + format + '/' + 'integrated_velocity_change' + parts[i] + '.' + format, bbox_inches="tight", format=format)
-                        plt.close(fig)
-                    
-                    
-                continue
-                
-            
-            # ================================================================ #
-            
-            # Plot the optimized forces vs the measured forces
-            
-            if filename == "contact_forces":
-                contact_forces = np.loadtxt(foldername + '/csv/' + filename + '.csv', delimiter=",")
-                optimal_forces = np.loadtxt(foldername + '/csv/' + "optimal_forces" + '.csv', delimiter=",")
-                
-                parts = ['_LF', '_RF', '_LH', '_RH']
-                parts_indexes = [
-                    0, 3,
-                    3, 6,
-                    6, 9,
-                    9,12,
-                ]
-                
-                # Create one subplot graph for each foot (LF, RF, ...)
-                for i in range(len(parts)):
-                    fig, axs = plt.subplots(4, figsize=[x_size_def, 2*y_size_def])
-                    for j in range(3):
-                        axs[j].plot(time_vector[i_init:i_end], contact_forces[i_init:i_end, j + parts_indexes[2*i]])
-                        axs[j].plot(time_vector[i_init:i_end], optimal_forces[i_init:i_end, j + parts_indexes[2*i]])
-                        
-                        dir_names = ["x", "y", "z"]
-                        axs[j].set(
-                            xlabel = "time [s]",
-                            ylabel = "force [N]",
-                            title = dir_names[j] + "-axis"
-                        )
-                        
-                        axs[j].legend(["simulated forces", "optimized forces"])
-                        
-                        axs[j].set_xlim([time_init, time_end])
-                        # axs[j].grid(linestyle='dotted', linewidth = 0.25)
-                        
-                    axs[3].plot(time_vector[i_init:i_end], (contact_forces[i_init:i_end, 0 + parts_indexes[2*i]]**2 + contact_forces[i_init:i_end, 1 + parts_indexes[2*i]]**2)**0.5)
-                    axs[3].plot(time_vector[i_init:i_end], (optimal_forces[i_init:i_end, 0 + parts_indexes[2*i]]**2 + optimal_forces[i_init:i_end, 1 + parts_indexes[2*i]]**2)**0.5)
-                    
-                    axs[3].set(
-                        xlabel = "time [s]",
-                        ylabel = "force [N]",
-                        title = "tangential"
-                    )
-                    
-                    axs[3].legend(["simulated forces", "optimized forces"])
-                    axs[3].set_xlim([time_init, time_end])
-                    # axs[3].grid(linestyle='dotted', linewidth = 0.25)
-                        
-                    plt.savefig(foldername + '/' + format + '/' + filename + parts[i] + '.' + format, bbox_inches="tight", format=format)
-                    plt.close(fig)
-                    
-                continue 
-            
-            arr = np.loadtxt(foldername + '/csv/' + filename + '.csv', delimiter=",")
-            
-            if filename == 'optimal_deformations':
-                k = 1000
-            elif filename == 'orientation_error':
-                k = 180 / 2 / np.pi
-            elif filename == 'position_error':
-                k = 100
-            else:
-                k=1
-                
-            if filename == 'optimal_deformations':
-                if arr.size == 0:
-                    continue
-                else:
-                    arr2 = np.loadtxt(foldername + '/csv/' + 'depths' + '.csv', delimiter=",")
-                    
-                    parts = ["LF", "RF", "LH", "RH"]
-                    
-                    for i in range(4):
-                        fig = plt.figure()
-                        
-                        if arr[0,:].size == 4:
-                            plt.plot(time_vector[i_init:i_end], k *  arr[i_init:i_end, i])
-                        else:
-                            plt.plot(time_vector[i_init:i_end], k *  arr[i_init:i_end, 2+3*i])
-                        plt.plot(time_vector[i_init:i_end], k * arr2[i_init:i_end, i])
-                        
-                        plt.ylabel("deformation [mm]")
-                        plt.xlabel("time [s]")
-                        plt.legend(["desired", "measured"])
-                        
-                        plt.xlim([time_init, time_end])
-                        # plt.grid(linestyle='dotted', linewidth = 0.25)
-                        plt.savefig(foldername + '/' + format + '/' + "deformations_" + parts[i] + '.' + format, bbox_inches="tight", format=format)
-                        plt.close(fig)
-                        
-                    if arr[0,:].size == 4:
-                        continue
-                    
-                
-            if filename in ['optimal_deformations', 'optimal_forces', 'optimal_torques']:
-                parts = ['_LF', '_RF', '_LH', '_RH']
-                parts_indexes = [0, 3,
-                                 3, 6,
-                                 6, 9,
-                                 9,12]
-            else:
-                parts = ['']
-                
-            for i in range(len(parts)):
-                
-                fig = plt.figure()
-                if len(parts) > 1:
-                    plt.plot(time_vector[i_init:i_end], k * arr[i_init:i_end, parts_indexes[2*i]:parts_indexes[2*i+1]])
-                else:
-                    plt.plot(time_vector[i_init:i_end], k * arr[i_init:i_end])
-                
-                if filename == 'optimal_deformations':
-                    plt.ylabel("deformation [mm]")
-                    plt.xlabel("time [s]")
-                    plt.legend(["x-axis", "y-axis", "z-axis"], ncol=1, loc='upper right')
-                elif filename == 'optimal_forces':
-                    plt.ylabel("force [N]")
-                    plt.xlabel("time [s]")
-                    plt.legend(["x-axis", "y-axis", "z-axis"], ncol=3)
-                elif filename == 'optimal_torques':
-                    plt.ylabel("torque [Nm]")
-                    plt.xlabel("time [s]")
-                    plt.legend(["HAA", "HFE", "KFE"], ncol=3)
-                elif filename == 'orientation_error':
-                    plt.ylabel("orientation [deg]")
-                    plt.xlabel("time [s]")
-                elif filename == 'position_error':                
-                    plt.ylabel("position [cm]")
-                    plt.xlabel("time [s]")
-                    plt.legend(["x-axis", "y-axis", "z-axis"], ncol=3, loc='lower right')
-                elif filename == 'slippage':
-                    plt.ylabel("meters [m]")
-                    plt.xlabel("time [s]")
-                elif filename == 'velocity_error':
-                    plt.ylabel("velocity [m/s]")
-                    plt.xlabel("time [s]")
-                    plt.legend(["x-axis", "y-axis", "z-axis"], ncol=3)
-                    
-                plt.xlim([time_init, time_end])
-
-                # plt.grid(linestyle='dotted', linewidth = 0.25)
-                    
-                plt.savefig(foldername + '/' + format + '/' + filename + parts[i] + '.' + format, bbox_inches="tight", format=format)
-
-                plt.close(fig)
-                
-            
-            # ============= Tangential Over Normal Contact Force ============= #
-            
-            if filename == 'optimal_forces':
-                tangential_over_normal_optimal_force = np.zeros((i_end - i_init, 4))
-                
-                arr2  = arr[i_init:i_end,:]
-                
-                for i in range(4):
-                    tangential_over_normal_optimal_force[:,i] = (arr2[:,0+3*i]**2 + arr2[:,1+3*i]**2)**0.5 / (arr2[:,2+3*i] + 1e-9)
-                    
-                fig = plt.figure()
-                                    
-                plt.plot(time_vector[i_init:i_end], tangential_over_normal_optimal_force)
-                
-                plt.ylabel(r"$f_{t} / f_{n}$")
-                plt.xlabel("time [s]")
-                plt.legend(["LF", "RF", "LH", "RH"], ncol=2)
-                
-                plt.xlim([time_init, time_end])
-                # plt.grid(linestyle='dotted', linewidth = 0.25)
-                plt.savefig(foldername + '/' + format + '/' + 'tangential_over_normal_optimal_force' + '.' + format, bbox_inches="tight", format=format)
-                plt.close(fig)
-                
-                
-                
+        
 if __name__ == '__main__':
     main()

@@ -52,7 +52,7 @@ whole_body_controller:
         use_sim_time: true
 
         robot_name: anymal_c
-        sample_time: 0.0025
+        sample_time: 0.005
 
         use_estimator: false        # ! Must be the same as the use_estimator in the planner
         initialization_time: 2.
@@ -90,10 +90,10 @@ whole_body_controller:
             - RH_HFE
             - RH_KFE
 
-        contact_constraint_type: soft_kv
+        contact_constraint_type: rigid
         
         tau_max: 80.
-        mu: 0.8
+        mu: 1.
         Fn_max: 350.
         Fn_min: 40.
 
@@ -127,11 +127,11 @@ whole_body_controller:
         kp_terr:
             - 1000.
             - 1000.
-            - 1000.
+            - 7500.
         kd_terr:
             - 1000.
             - 1000.
-            - 1000.
+            - 500.
 
         kc_v:
             - 0.
@@ -144,7 +144,7 @@ planner:
         use_sim_time: true
 
         use_estimator: false            # ! Must be the same as the use_estimator in the whole_body_controller
-        initialization_time: 2.
+        initialization_time: 0.
         
         sample_time: 0.005
         init_phase: 0.2
@@ -155,7 +155,7 @@ planner:
             - RF
             - LH
         
-        cycle_duration: 40000.0
+        cycle_duration: 4.0
         step_duty_factor: 0.7
         
         step_length: 0.15
@@ -165,7 +165,7 @@ planner:
         foot_trajectory_type: splines
 
         desired_base_height: 0.47
-        initial_base_height: 0.52
+        initial_base_height: 0.541215
 
         terrain_height: 0.0
         terrain_penetration: 0.0

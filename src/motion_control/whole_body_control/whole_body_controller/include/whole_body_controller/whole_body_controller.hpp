@@ -86,8 +86,8 @@ public:
         }
 
         deformations_history_manager.set_deformations_history(
-            prioritized_tasks.get_generic_feet_names(),
-            d_k, d_k
+            d_k, d_k,
+            prioritized_tasks.get_generic_feet_names()
         );
     }
     void set_kd_terr(const Eigen::Ref<const Eigen::Vector3d>& kd_terr) {prioritized_tasks.set_kd_terr(kd_terr);}

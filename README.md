@@ -60,7 +60,7 @@ colcon build --symlink-install
 
 - ANYmal C static walk simulation:
 ```shell
-ros2 launch robot_gazebo anymal_c.launch.py [terrain_type:={rigid,soft}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo anymal_c.launch.py [terrain_type:={rigid,soft}] [save_csv:={False,True}] [reset:={False,True}] [gait:={static_walk,walking_trot}]
 ```
 - SOLO12 static walk simulation:
 ```shell

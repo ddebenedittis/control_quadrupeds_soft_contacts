@@ -336,7 +336,7 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
 
                 for (std::size_t i=0; i<msg->name.size(); i++) {
                     if (msg->name[i].size() >= 4) {
-                        if (msg->name[i].substr(msg->name[i].size() - 4) == "base") {
+                        if (msg->name[i].find("base") != std::string::npos) {
                             base_id = i;
                             break;
                         }
@@ -344,7 +344,7 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
                 }
 
                 if (base_id == -1) {
-                    RCLCPP_ERROR(get_node()->get_logger(),"Can't find a link name which ends with 'base'");
+                    RCLCPP_ERROR(get_node()->get_logger(),"Can't find a link name which contains 'base'");
                 }
 
                 geometry_msgs::msg::Point pos = msg->pose[base_id].position;
@@ -354,10 +354,10 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
                 geometry_msgs::msg::Vector3 ang = msg->twist[base_id].angular;
 
                 q_.head(7) << pos.x, pos.y, pos.z,
-                            orient.x, orient.y, orient.z, orient.w;
+                              orient.x, orient.y, orient.z, orient.w;
 
                 v_.head(6) << lin.x, lin.y, lin.z,
-                            ang.x, ang.y, ang.z;
+                              ang.x, ang.y, ang.z;
             }
         );
     } else {
@@ -368,7 +368,7 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
             [this](const geometry_msgs::msg::Pose::SharedPtr msg) -> void
             {
                 q_.head(7) << msg->position.x, msg->position.y, msg->position.z,
-                            msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w;
+                              msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w;
             }
         );
 
@@ -377,7 +377,7 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
             [this](const geometry_msgs::msg::Twist::SharedPtr msg) -> void
             {
                 v_.head(6) << msg->linear.x, msg->linear.y, msg->linear.z,
-                            msg->angular.x, msg->angular.y, msg->angular.z;
+                              msg->angular.x, msg->angular.y, msg->angular.z;
             }
         );
     }

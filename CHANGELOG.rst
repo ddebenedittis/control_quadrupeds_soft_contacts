@@ -43,9 +43,9 @@ upcoming
 - Reorganized prioritized_tasks. Now it is necessary to specify the dimension of the tasks only in one place.
 - Updated CMakeLists.txt to C++17.
 - Added a brief package description to some packages.
-- Logger_gazebo now saves and plots some data of the contact_sensors.
 - The controller interpolates the robot configuration from q0 to qi (given in the config file).
 - The soft mattress has been substituted by a soft terrain.
-- More data logged with logger_gazebo. The data can be plotted with the plot script directly in the docker image (which must be built with the `-l` option in this case).
+- More data logged with logger_gazebo and the script is better organized. The data can be plotted with the plot script directly in the docker image (which must be built with the `-l` option in this case).
 - Solo 12 now has contact sensors.
 - Shank collision removed from ANYmal C in order to avoid double collisions with soft terrains.
+- The node for trotting works. But ANYmal falls.

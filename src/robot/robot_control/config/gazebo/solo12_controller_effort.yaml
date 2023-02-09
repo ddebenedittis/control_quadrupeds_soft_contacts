@@ -1,5 +1,7 @@
 controller_manager:
     ros__parameters:
+        use_sim_time: true
+
         update_rate: 200
 
         effort_controller:
@@ -47,6 +49,8 @@ imu_sensor_broadcaster:
 
 whole_body_controller:
     ros__parameters:
+        use_sim_time: true
+
         robot_name: solo12
         sample_time: 0.0025
 
@@ -86,7 +90,8 @@ whole_body_controller:
             - HR_HFE
             - HR_KFE
 
-        contact_constraint_type: rigid
+        contact_constraint_type: soft_sim
+        
         tau_max: 2.7
         mu: 0.6
         Fn_max: 10.

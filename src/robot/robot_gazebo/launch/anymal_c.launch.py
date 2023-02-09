@@ -13,6 +13,8 @@ def generate_launch_description():
     
     terrain_type = LaunchConfiguration('terrain_type', default='rigid')
     
+    gait = LaunchConfiguration('gait', default='static_walk')
+    
     save_csv = LaunchConfiguration('save_csv', default='False')
     
     reset = LaunchConfiguration('reset', default='False')
@@ -38,6 +40,7 @@ def generate_launch_description():
                 'world_file_path': os.path.join('worlds', 'anymal.world'),
                 'contact_constraint_type': contact_constraint_type,
                 'terrain_type': terrain_type,
+                'gait': gait,
                 'save_csv': save_csv,
             }.items(),
             condition=IfCondition(PythonExpression(['not ', reset]))
@@ -54,6 +57,7 @@ def generate_launch_description():
                 'world_file_path': os.path.join('worlds', 'anymal.world'),
                 'contact_constraint_type': contact_constraint_type,
                 'terrain_type': terrain_type,
+                'gait': gait,
                 'save_csv': save_csv,
             }.items(),
             condition=IfCondition(reset)

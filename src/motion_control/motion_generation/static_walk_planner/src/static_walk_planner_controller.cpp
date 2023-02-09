@@ -266,7 +266,7 @@ CallbackReturn SWPController::on_deactivate(const rclcpp_lifecycle::State& /*pre
 
 /* ================================= Update ================================= */
 
-controller_interface::return_type SWPController::update(const rclcpp::Time& time, const rclcpp::Duration& period)
+controller_interface::return_type SWPController::update(const rclcpp::Time& time, const rclcpp::Duration& /*period*/)
 {
     double time_double = static_cast<double>(time.seconds()) + static_cast<double>(time.nanoseconds()) * std::pow(10, -9);
 

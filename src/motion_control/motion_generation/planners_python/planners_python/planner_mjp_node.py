@@ -35,8 +35,7 @@ class MinimalSubscriber(Node):
             Imu,
             "/imu_sensor_broadcaster/imu",
             self.imu_callback,
-            1
-        )
+            1)
 
         self.imu_subscription # prevent unused variable warning
 
@@ -47,9 +46,14 @@ class MinimalSubscriber(Node):
 
     # Save the base pose and twist
     def link_states_callback(self, msg):
-        # The index [1] is used because the first link ([0]) is the ground_plane. The second one (the index [1]) corresponds to anymal base.
-        base_id = 1
-
+        # The index of the base must be found by searching which link contains "base" in its name.
+        base_id = -1
+        
+        for i in range(len(msg.name)):
+            if "base" in msg.name[i]:
+                base_id = i
+                break
+                    
         # /gazebo/link_states returns the pose and the twist in the inertial or world frame.
         
         # Extract the base position and orientation (quaternion)
@@ -63,7 +67,6 @@ class MinimalSubscriber(Node):
         # Save the base pose and twists as numpy arrays
         self.q_b = np.array([pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w])
         self.v_b = np.array([lin.x, lin.y, lin.z, ang.x, ang.y, ang.z])
-
 
     # Save the base acceleration
     def imu_callback(self, msg):
@@ -119,74 +122,53 @@ class MinimalPublisher(Node):
         msg.feet_vel = r_s_dot_des.tolist()
         msg.feet_pos = r_s_des.tolist()
 
-        contactFeet = [s + "_FOOT" for s in contactFeet]
         msg.contact_feet = contactFeet
 
 
         self.publisher_.publish(msg)
-
-
-
-# ============================================================================ #
-#                                     MAIN                                     #
-# ============================================================================ #
-
-def main(args=None):
-    rclpy.init(args=args)
-
-    minimal_publisher = MinimalPublisher()
-
-    minimal_subscriber = MinimalSubscriber()
-
-    # Spin the node in another thread in order to avoid blocking the program
-    thread = threading.Thread(target=rclpy.spin, args=(minimal_subscriber, ), daemon=True)
-    thread.start()
-
-    # Instantiate the motion planner
-    planner = MotionPlanner()
-
-    # Instantiate the fading filter class (used to filter the base acceleration)
-    filter = FadingFilter()
-    filter.order = 2
-    filter.beta = 0.995
-
-    # Set the rate of this node
-    rate = minimal_subscriber.create_rate(int(1 / planner.dt))
-
-
-    # =================== Block Until The Simulation Starts ================== #
-
-    # While cycle used to pause the execution of the script until the simulation is started and thus the measurements are obtained.
-    q = minimal_subscriber.q_b
-    a = minimal_subscriber.a_b
-    while q.size == 0 or a.size == 0:
-        q = minimal_subscriber.q_b
-        a = minimal_subscriber.a_b
-
-        rate.sleep()
-
-    
-    # =============================== Main Loop ============================== #
-
-    # The time variable is used to enable the planner to have an initialization phase
-    time = 0
-    init_time = 0.5
-
-    # Initial base position
-    p_b_0 = minimal_subscriber.q_b[0:3]
-
-    # Main loop
-    try:
-        while rclpy.ok():
-
+        
+        
+        
+class Planner(Node):
+    def __init__(self):
+        super().__init__("Planner")
+        
+        self.time = 0
+        
+        self.minimal_publisher = MinimalPublisher()
+        
+        self.minimal_subscriber = MinimalSubscriber()
+        
+        # Instantiate the motion planner
+        self.planner = MotionPlanner()
+        
+        # Instantiate the fading filter class (used to filter the base acceleration)
+        self.filter = FadingFilter()
+        self.filter.order = 2
+        self.filter.beta = 0.995
+        
+        self.init_time = 0.5
+        
+        self.p_b_0 = np.array([0., 0., 0.])
+        
+        self.rate = self.minimal_subscriber.create_rate(int(1 / self.planner.dt))
+        
+        timer_period = self.planner.dt    # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+        
+    def timer_callback(self):        
+        if self.minimal_subscriber.q_b.size == 0 or self.minimal_subscriber.a_b.size == 0:
+            self.p_b_0 = self.minimal_subscriber.q_b[0:3]
+            self.rate.sleep()
+        else:
             # Update the internal timer
-            time += planner.dt
+            self.time += self.planner.dt
 
             # Get the base linear quantities (position, velocity and acceleration)
-            p_b = minimal_subscriber.q_b[0:3]
-            q_b = minimal_subscriber.q_b[3:7]
-            v_b = minimal_subscriber.v_b[0:3]
-            a_b_meas = minimal_subscriber.a_b
+            p_b = self.minimal_subscriber.q_b[0:3]
+            q_b = self.minimal_subscriber.q_b[3:7]
+            v_b = self.minimal_subscriber.v_b[0:3]
+            a_b_meas = self.minimal_subscriber.a_b
 
             # Rotate the acceleration in the inertial frame
             q_b_conj = np.array([-q_b[0], -q_b[1], -q_b[2], q_b[3]])
@@ -194,21 +176,21 @@ def main(args=None):
             a_b_meas_body = (q_mult(q_mult(q_b_conj, a_b_quat), q_b))[0:3]
 
             # Filter the acceleration measured with the 
-            a_b = - filter.filter(a_b_meas_body, Ts=planner.dt)
+            a_b = - self.filter.filter(a_b_meas_body, Ts=self.planner.dt)
 
             # Horizontal velocity command and yaw rate command
             vel_cmd = np.array([0.1,0])
             yaw_rate_cmd = 0
 
             # Perform a single iteration of the model predictive control
-            if time > init_time:
+            if self.time > self.init_time:
                 # Planner output after the initialization phase has finished
-                contactFeet, r_b_ddot_des, r_b_dot_des, r_b_des, omega_des, q_des, r_s_ddot_des, r_s_dot_des, r_s_des = planner.mpc(p_b, v_b, a_b, vel_cmd, yaw_rate_cmd)
+                contactFeet, r_b_ddot_des, r_b_dot_des, r_b_des, omega_des, q_des, r_s_ddot_des, r_s_dot_des, r_s_des = self.planner.mpc(p_b, v_b, a_b, vel_cmd, yaw_rate_cmd)
             else:
                 contactFeet = ['LF', 'RF', 'LH', 'RH']
 
                 # Base position quantities
-                r_b_des, r_b_dot_des, r_b_ddot_des = planner._spline(np.array([p_b_0[0], p_b_0[1], 0.6]), np.array([p_b_0[0], p_b_0[1], planner.zcom]), time/init_time)
+                r_b_des, r_b_dot_des, r_b_ddot_des = self.planner._spline(np.array([self.p_b_0[0], self.p_b_0[1], 0.6]), np.array([self.p_b_0[0], self.p_b_0[1], self.planner.zcom]), self.time/self.init_time)
 
                 # Base angular quantities
                 omega_des = np.zeros(3)
@@ -221,24 +203,31 @@ def main(args=None):
             
 
             # Publish the desired generalized pose message
-            minimal_publisher.publish_desired_gen_pose(
+            self.minimal_publisher.publish_desired_gen_pose(
                 contactFeet,
                 r_b_ddot_des, r_b_dot_des, r_b_des,
                 omega_des, q_des,
                 r_s_ddot_des, r_s_dot_des, r_s_des
             )
 
-            # Sleep for the remainder of time
-            rate.sleep()
-    except KeyboardInterrupt:
-        pass
+
+
+# ============================================================================ #
+#                                     MAIN                                     #
+# ============================================================================ #
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    planner = Planner()
+        
+    executor = rclpy.executors.MultiThreadedExecutor()
+    executor.add_node(planner)
+    executor.add_node(planner.minimal_subscriber)
     
-
-    minimal_publisher.destroy_node()
-    minimal_subscriber.destroy_node()
+    executor.spin()
+    
     rclpy.shutdown()
-
-    thread.join()
 
 
 

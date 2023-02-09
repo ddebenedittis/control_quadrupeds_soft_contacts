@@ -21,17 +21,25 @@ def generate_launch_description():
         package_share_path,
         LaunchConfiguration('config_file_path', default=os.path.join('config', 'anymal_controller_effort.yaml'))
     ])
+    
+    gazebo_config_file_path = PathJoinSubstitution([
+        FindPackageShare('robot_gazebo'),
+        'config/gazebo_params.yaml'
+    ])
 
     world_file_path = PathJoinSubstitution([
         FindPackageShare('robot_gazebo'),
         LaunchConfiguration('world_file_path', default=os.path.join('worlds', 'anymal.world'))
     ])
+    
 
-    height = LaunchConfiguration('height', default='0.62')
+    height = LaunchConfiguration('height', default='0.63')
     
     contact_constraint_type = LaunchConfiguration('contact_constraint_type', default="'soft_kv'")
     
     terrain_type = LaunchConfiguration('terrain_type', default='rigid')
+    
+    gait = LaunchConfiguration('gait', default='static_walk')
     
     save_csv = LaunchConfiguration('save_csv', default='False')
     
@@ -44,16 +52,33 @@ def generate_launch_description():
         DeclareLaunchArgument('contact_constraint_type', default_value="'soft_kv'"),
         SetParameter(name='contact_constraint_type', value=contact_constraint_type),
         
+        DeclareLaunchArgument('gait', default_value='static_walk'),
+        SetParameter(name='gait', value=gait),
+        
         DeclareLaunchArgument('terrain_type', default_value='rigid'),
         
         DeclareLaunchArgument('save_csv', default_value='False'),
 
         # The additional_env are used to launch gazebo using the dedicated graphics card (which also solves the shadow bug).
+        # ExecuteProcess(
+        #     cmd=['gazebo', '--verbose', '-s', 'libgazebo_ros_init.so', '-s', 'libgazebo_ros_factory.so', '--pause', world_file_path],
+        #     additional_env={'__NV_PRIME_RENDER_OFFLOAD': '1',
+        #                     '__GLX_VENDOR_LIBRARY_NAME': 'nvidia'},
+        #     output='screen',
+        # ),
+        
         ExecuteProcess(
-            cmd=['gazebo', '--verbose', '-s', 'libgazebo_ros_init.so', '-s', 'libgazebo_ros_factory.so', '--pause', world_file_path],
+            cmd=[['ros2 launch gazebo_ros gzserver.launch.py verbose:=true pause:=true world:=', world_file_path, ' params_file:=', gazebo_config_file_path]],
             additional_env={'__NV_PRIME_RENDER_OFFLOAD': '1',
                             '__GLX_VENDOR_LIBRARY_NAME': 'nvidia'},
-            output='screen',
+            shell=True,
+        ),
+        
+        ExecuteProcess(
+            cmd=[['ros2 launch gazebo_ros gzclient.launch.py']],
+            additional_env={'__NV_PRIME_RENDER_OFFLOAD': '1',
+                            '__GLX_VENDOR_LIBRARY_NAME': 'nvidia'},
+            shell=True,
         ),
 
         Node(
@@ -145,10 +170,28 @@ def generate_launch_description():
         ),
         
         Node(
+            condition=IfCondition(
+                PythonExpression([
+                    '"', gait, '"', ' == "static_walk"'
+                ]),
+            ),
             package = 'controller_manager',
             executable = 'spawner',
             arguments = ['planner', '--controller-manager', '/controller_manager'],
             parameters=[{'use_sim_time': use_sim_time},],
+            output='screen',
+        ),
+        
+        Node(
+            condition=IfCondition(
+                PythonExpression([
+                    '"', gait, '"', ' == "walking_trot"'
+                ]),
+            ),
+            package='planners_python',
+            executable='planner_mjp_node',
+            parameters=[{'use_sim_time': use_sim_time}],
+            emulate_tty=True,
             output='screen',
         ),
         

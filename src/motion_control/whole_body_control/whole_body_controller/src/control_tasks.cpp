@@ -297,7 +297,7 @@ void ControlTasks::task_contact_constraints_soft_kv(
 
     // MatrixXd C_temp = MatrixXd::Zero(nc, nd);
     // for (int i=0; i<nc; i++) {
-    //     C_temp(i, 3*i) = 1;
+    //     C_temp(i, 2+3*i) = 1;
     // }
 
     // C.block( 0, nv+nF, nc, nd) = - C_temp;
@@ -393,7 +393,7 @@ void ControlTasks::task_contact_constraints_soft_sim(
 
     MatrixXd C_temp = MatrixXd::Zero(nd, nF);
     for (int i=0; i<nc; i++) {
-        C_temp(i, 3*i) = 1;
+        C_temp(i, 2+3*i) = 1;
     }
 
     MatrixXd Kp = kp_terr(2) * MatrixXd::Identity(nc, nc);
