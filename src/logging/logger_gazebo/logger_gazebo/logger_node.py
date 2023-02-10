@@ -186,7 +186,7 @@ class LoggerSubscriber(Node):
         # ============================= Csv Data ============================= #
         
         # Approximate time over which data is saved. Approximate because it depends on the actual frequency of the timer_callback.
-        time_horizon = 2
+        time_horizon = 10
         
         # Number of datapoints 
         self.n = int(time_horizon / timer_period + 1)
@@ -373,19 +373,20 @@ class LoggerSubscriber(Node):
         #     self.contact_positions[0+3*i:3+3*i] = self.contact_positions[0+3*i:3+3*i] / n
         #     self.depths[i] = self.depths[i] / n
         
-        self.contact_forces[0+3*i:3+3*i] = np.array([
-            msg.states[0].total_wrench.force.x,
-            msg.states[0].total_wrench.force.y,
-            msg.states[0].total_wrench.force.z
-        ])
-        
-        self.contact_positions[0+3*i:3+3*i] = np.array([
-            msg.states[0].contact_positions[0].x,
-            msg.states[0].contact_positions[0].y,
-            msg.states[0].contact_positions[0].z
-        ])
-        
-        self.depths[i] = msg.states[0].depths[0]
+        if len(msg.states) > 0:
+            self.contact_forces[0+3*i:3+3*i] = np.array([
+                msg.states[0].total_wrench.force.x,
+                msg.states[0].total_wrench.force.y,
+                msg.states[0].total_wrench.force.z
+            ])
+            
+            self.contact_positions[0+3*i:3+3*i] = np.array([
+                msg.states[0].contact_positions[0].x,
+                msg.states[0].contact_positions[0].y,
+                msg.states[0].contact_positions[0].z
+            ])
+            
+            self.depths[i] = msg.states[0].depths[0]
         
         
     def contact_state_LF_callback(self, msg):

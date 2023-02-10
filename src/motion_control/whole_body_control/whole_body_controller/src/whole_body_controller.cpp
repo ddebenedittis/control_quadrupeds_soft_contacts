@@ -1,6 +1,7 @@
 #include "whole_body_controller/whole_body_controller.hpp"
 
 
+
 namespace wbc {
 
 
@@ -106,6 +107,11 @@ void WholeBodyController::step(const Eigen::VectorXd& q, const Eigen::VectorXd& 
     }
 
     compute_torques();
+
+    Eigen::MatrixXd J_act = prioritized_tasks.get_Jc().rightCols(nv-6).transpose();
+
+    auto f_comp = J_act.inverse() * this->tau_opt;
+    std::cout << f_comp << "\n" << std::endl;
 }
 
 

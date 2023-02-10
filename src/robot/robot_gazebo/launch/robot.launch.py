@@ -72,6 +72,7 @@ def generate_launch_description():
             additional_env={'__NV_PRIME_RENDER_OFFLOAD': '1',
                             '__GLX_VENDOR_LIBRARY_NAME': 'nvidia'},
             shell=True,
+            output = 'screen',
         ),
         
         ExecuteProcess(
@@ -79,6 +80,7 @@ def generate_launch_description():
             additional_env={'__NV_PRIME_RENDER_OFFLOAD': '1',
                             '__GLX_VENDOR_LIBRARY_NAME': 'nvidia'},
             shell=True,
+            output = 'screen',
         ),
 
         Node(
@@ -203,6 +205,7 @@ def generate_launch_description():
                 {"contact_constraint_type": contact_constraint_type},
                 {'use_sim_time': use_sim_time},
             ],
+            emulate_tty=True,
             output='screen',
         ),
     ])

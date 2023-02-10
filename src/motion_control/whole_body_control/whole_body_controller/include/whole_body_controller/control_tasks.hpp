@@ -125,6 +125,9 @@ public:
     /// @param[out] b 
     void task_energy_forces_minimization(Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b);
 
+
+    /* =============================== Getters ============================== */
+
     int get_nv() {return nv;}
     int get_nc() {return nc;}
     int get_nF() {return nF;}
@@ -149,6 +152,9 @@ public:
 
     /// @brief Return the feet names of the specific robot. These are the names of the links used for computing the contact point.
     const std::vector<std::string>& get_all_feet_names() const {return robot_model.get_all_feet_names();}
+
+
+    /* =============================== Setters ============================== */
 
     void set_tau_max(const double tau_max) {this->tau_max = tau_max;}
     void set_mu(const double mu) {this->mu = mu;}

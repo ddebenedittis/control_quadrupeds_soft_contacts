@@ -20,30 +20,49 @@ public:
     ///@param gen_pose 
     void step(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const GeneralizedPose& gen_pose);
 
+
+    /* =============================== Getters ============================== */
+
+    /// @brief Return the optimal value of the optimization vector.
     Eigen::VectorXd& get_x_opt() {return x_opt;}
 
+    /// @brief Return the optimal torques.
     Eigen::VectorXd& get_tau_opt() {return tau_opt;}
 
+    /// @brief Return the optimal generalized acceleration vector.
     Eigen::Ref<Eigen::VectorXd> get_v_dot_opt() {return x_opt.segment(0, prioritized_tasks.get_nv());}
 
+    /// @brief Return the optimal contact forces.
     Eigen::VectorXd& get_f_c_opt() {return f_c_opt;}
 
+    /// @brief Return the optimal deformations vector.
     Eigen::VectorXd& get_d_des_opt() {return d_des_opt;}
 
+    /// @brief Return the feet positions in world frame.
     const Eigen::VectorXd get_feet_positions() { return prioritized_tasks.get_feet_positions(); }
 
+    /// @brief Return the feet velocities in world frame.
     const Eigen::VectorXd get_feet_velocities(const Eigen::VectorXd& v) { return prioritized_tasks.get_feet_velocities(v); }
 
+    /// @brief Return the generic feet names, e.g. ["LF", "RF", "LH", "RH"]
     const std::vector<std::string>& get_generic_feet_names() const {return prioritized_tasks.get_generic_feet_names();}
 
+    /// @brief Return the names of the links that represent the feet in the URDF. This depends on the robot model used.
     const std::vector<std::string>& get_all_feet_names() {return prioritized_tasks.get_all_feet_names();}
 
+    /// @brief Get the dimension of the generalized velocities vector.
     int get_nv() {return prioritized_tasks.get_nv();}
 
+    /// @brief Get the size of the deformations of the single foot. This depends on the contact model used: 3 for the kv model, 1 for the soft_sim model, and 0 for the rigid model.
     int get_def_size() {return deformations_history_manager.get_def_size();}
+
+
+    /* =============================== Setters ============================== */
 
     void set_contact_constraint_type(const std::string& contact_constraint_type)
     {
+        // Set the contact constraint type, the size of the foot deformations, and initialize the deformations to zero.
+
         if (contact_constraint_type == "soft_kv") {
             prioritized_tasks.set_contact_constraint_type(ContactConstraintType::soft_kv);
             deformations_history_manager.set_def_size(3);
@@ -94,6 +113,8 @@ public:
 
     void set_kc_v(const Eigen::Ref<const Eigen::Vector3d>& kc_v) {prioritized_tasks.set_kc_v(kc_v);}
 
+    void set_regularization(double reg) {hierarchical_qp.set_regularization(reg);}
+
 private:
     void compute_torques();
 
@@ -103,7 +124,7 @@ private:
 
     hopt::HierarchicalQP hierarchical_qp;
 
-    Eigen::VectorXd x_opt;      /// @brief Optimal optimization vector
+    Eigen::VectorXd x_opt;      /// @brief Optimal value of the optimization vector
 
     Eigen::VectorXd tau_opt;    /// @brief Optimal joint torques
 

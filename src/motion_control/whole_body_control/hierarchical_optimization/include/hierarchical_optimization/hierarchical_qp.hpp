@@ -25,7 +25,9 @@ public:
     );
 
     /// @brief Get the QP problem solution
-    Eigen::VectorXd get_sol() { return sol_; }
+    Eigen::VectorXd get_sol() {return sol_;}
+
+    void set_regularization(double reg) {this->regularization_ = reg;}
     
 private:
     /// @brief Compute the null space projector of a matrix M.

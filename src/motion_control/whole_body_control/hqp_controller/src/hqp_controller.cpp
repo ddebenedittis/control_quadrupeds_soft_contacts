@@ -126,6 +126,8 @@ CallbackReturn HQPController::on_init()
         auto_declare<std::vector<double>>("kp_terr", std::vector<double>());
         auto_declare<std::vector<double>>("kd_terr", std::vector<double>());
         auto_declare<std::vector<double>>("kc_v", std::vector<double>());
+
+        auto_declare<double>("regularization", double());
     }
     catch(const std::exception& e) {
         fprintf(stderr,"Exception thrown during init stage with message: %s \n", e.what());
@@ -321,6 +323,12 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
         return CallbackReturn::ERROR;
     }
     wbc.set_kc_v(Eigen::Vector3d::Map(get_node()->get_parameter("kc_v").as_double_array().data()));
+
+    if (get_node()->get_parameter("regularization").as_double() < 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'regularization' parameter must be >= 0");
+        return CallbackReturn::ERROR;
+    }
+    wbc.set_regularization(get_node()->get_parameter("regularization").as_double());
 
 
     /* ====================================================================== */

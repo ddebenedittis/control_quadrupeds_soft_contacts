@@ -144,19 +144,27 @@ class Plot:
     # i (int): the index of the foot whose quantities are plotted. 0 = LF, 1 = RF, 2 =  LH, 3 = RH
         
     def plot_optimal_deformations(self, ax, i):
-        k = 1000
-        
-        ax.plot(self.time_vector,
-                k * self.optimal_deformations[self.i_init:self.i_end,
-                                              3*i:3*i+3])
-        
-        ax.set(
-            xlabel = "time [s]",
-            ylabel = "deformations [mm]",
-            title = "optimal deformations - " + self.foot_names[i],
-        )
-        ax.legend(["x-axis", "y-axis", "z-axis"], ncol=1)
-        ax.set_xlim([self.time_init, self.time_end])
+        if self.optimal_deformations.size > 0:
+            k = 1000
+            
+            def_size = self.optimal_deformations.shape[1] / 4
+            
+            ax.plot(self.time_vector,
+                    k * self.optimal_deformations[self.i_init:self.i_end,
+                                                  def_size*i:def_size*(i+1)])
+            
+            ax.set(
+                xlabel = "time [s]",
+                ylabel = "deformations [mm]",
+                title = "optimal deformations - " + self.foot_names[i],
+            )
+            if def_size == 3:
+                ax.legend(["x-axis", "y-axis", "z-axis"], ncol=1)
+            elif def_size == 1:
+                ax.legend(["z-axis"])
+            ax.set_xlim([self.time_init, self.time_end])
+        else:
+            ax.set(title="There's a time and place for everything, but not now.")
         
     
     def plot_optimal_forces(self, ax, i):        
@@ -242,20 +250,23 @@ class Plot:
             
     
     def plot_meas_vs_opti_depths(self, ax, i):
-        k = int(self.optimal_deformations.shape[1] / 4)
-        
-        ax.plot(self.time_vector,
-                1000 * self.depths[self.i_init:self.i_end, i])
-        
-        ax.plot(self.time_vector,
-                1000 * self.optimal_deformations[self.i_init:self.i_end, k*i])
-        
-        ax.set(
-            xlabel = "time [s]",
-            ylabel = "depths [mm]",
-            title = "measured vs optimized deformations - " + self.foot_names[i],
-        )
-        ax.legend(["measured", "optimized"])
+        if self.optimal_deformations.size > 0:
+            k = int(self.optimal_deformations.shape[1] / 4)
+            
+            ax.plot(self.time_vector,
+                    1000 * self.depths[self.i_init:self.i_end, i])
+            
+            ax.plot(self.time_vector,
+                    1000 * self.optimal_deformations[self.i_init:self.i_end, k*i])
+            
+            ax.set(
+                xlabel = "time [s]",
+                ylabel = "depths [mm]",
+                title = "measured vs optimized deformations - " + self.foot_names[i],
+            )
+            ax.legend(["measured", "optimized"])
+        else:
+            ax.set(title = "Not in my house!")
         
         
     def plot_meas_vs_opti_foot_positions(self, axs, i):
@@ -338,6 +349,8 @@ class Plot:
             
     def megaplot(self):
         feet_names = ["LF", "RF", "LH", "RH"]
+        
+        os.makedirs(self.foldername + '/' + self.format, exist_ok=True)
         
         for i in range(len(feet_names)):
             fig, axs = plt.subplots(4, 4, figsize=[3.5*self.x_size_def, 2.5*self.y_size_def])

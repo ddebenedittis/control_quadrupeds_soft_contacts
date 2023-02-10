@@ -138,6 +138,8 @@ whole_body_controller:
             - 0.
             - 0.
 
+        regularization: 1e-6
+
 
 planner:
     ros__parameters:
