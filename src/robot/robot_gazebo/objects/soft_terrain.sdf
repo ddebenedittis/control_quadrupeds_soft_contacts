@@ -19,8 +19,8 @@
                     </friction>
                     <contact>
                         <ode>
-                            <kp>7500</kp>
-                            <kd>500</kd>
+                            <kp>15000</kp>
+                            <kd>1000</kd>
                         </ode>
                     </contact>
                 </surface>

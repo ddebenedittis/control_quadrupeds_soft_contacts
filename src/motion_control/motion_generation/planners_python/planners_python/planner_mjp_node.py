@@ -141,11 +141,12 @@ class Planner(Node):
         
         # Instantiate the motion planner
         self.planner = MotionPlanner()
+        self.planner.dt = 1. / 200
         
         # Instantiate the fading filter class (used to filter the base acceleration)
         self.filter = FadingFilter()
         self.filter.order = 2
-        self.filter.beta = 0.995
+        self.filter.beta = 0.5
         
         self.init_time = 0.5
         
@@ -155,7 +156,7 @@ class Planner(Node):
         
         timer_period = self.planner.dt    # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
-        
+                
     def timer_callback(self):        
         if self.minimal_subscriber.q_b.size == 0 or self.minimal_subscriber.a_b.size == 0:
             self.p_b_0 = self.minimal_subscriber.q_b[0:3]
@@ -173,13 +174,13 @@ class Planner(Node):
             # Rotate the acceleration in the inertial frame
             q_b_conj = np.array([-q_b[0], -q_b[1], -q_b[2], q_b[3]])
             a_b_quat = np.concatenate((a_b_meas, np.array([0])))
-            a_b_meas_body = (q_mult(q_mult(q_b_conj, a_b_quat), q_b))[0:3]
-
+            a_b_meas_body = (q_mult(q_mult(q_b, a_b_quat), q_b_conj))[0:3] + np.array([0., 0., -9.81])
+            
             # Filter the acceleration measured with the 
             a_b = - self.filter.filter(a_b_meas_body, Ts=self.planner.dt)
 
             # Horizontal velocity command and yaw rate command
-            vel_cmd = np.array([0.1,0])
+            vel_cmd = np.array([0.0,0.0])
             yaw_rate_cmd = 0
 
             # Perform a single iteration of the model predictive control

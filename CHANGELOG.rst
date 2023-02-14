@@ -28,11 +28,9 @@
 - The simulation can be restarted without closing gazebo now.
 - Corrected some bugs
 
-upcoming
+0.1.3 (2023-02-14)
 ------------------
 - Moved the config .yaml files from the respective robot_description package to the robot_control package.
-- Fixed some minor warnings in the quadprog package.
-- Added the terrain height to the planner parameters.
 - Modified the contact model (both the rigid and the soft contact model):
   Jc u_dot + Jc_dot u = - k_c_v Jc u + ... 
   This term is proportional to the velocity of the contact point.
@@ -40,12 +38,9 @@ upcoming
 - Implemented the soft_sim contact model in the controller.
   This is the contact model used in most physics engines (e.g. ODE and DART). It models the contact with a spring and damper in parallel and normal to the contact direction. Along the tangential directions, the rigid contact model is used (no slippage).
   The controller is adapted to deal with deformations of different size.
-- Reorganized prioritized_tasks. Now it is necessary to specify the dimension of the tasks only in one place.
-- Updated CMakeLists.txt to C++17.
-- Added a brief package description to some packages.
 - The controller interpolates the robot configuration from q0 to qi (given in the config file).
 - The soft mattress has been substituted by a soft terrain.
-- More data logged with logger_gazebo and the script is better organized. The data can be plotted with the plot script directly in the docker image (which must be built with the `-l` option in this case).
+- Better data logging and plotting.
 - Solo 12 now has contact sensors.
 - Shank collision removed from ANYmal C in order to avoid double collisions with soft terrains.
-- The node for trotting works. But ANYmal falls.
+- Trotting works. But its parameters are suboptimal.

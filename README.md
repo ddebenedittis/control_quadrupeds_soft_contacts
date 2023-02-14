@@ -77,8 +77,11 @@ With `save_csv:=True`, some data is logged and saved in several .csv files in `l
 
 The `reset:=True` parameter must be used in another terminal when there is an already running simulation. The simulation will be restarted. The time is not reset to avoid problems with the controllers.
 
+The `gait` parameter selects the gait type. Currently, the walking trot gait is implemented only on the ANYmal C robot.
+
 Other parameters, such as `contact_constraint_type: {soft_kv, rigid}`, must be changed directly in the specific robot config .yaml file.
 
+In some simulations (e.g. the simulation of ANYmal with SoftFoot-Q or the simulation with a trotting gait), due to the relatively high computational cost, it may be helpful to start or to run the simulation with a reduced real-time factor.
 
 ### Plot
 

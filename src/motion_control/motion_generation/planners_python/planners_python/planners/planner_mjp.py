@@ -36,7 +36,7 @@ class MotionPlanner:
         self.d = 0.2
 
         # Maximum height of a step
-        self.step_height = 0.05
+        self.step_height = 0.1
 
         # Parameters used to describe the feet position with respect to the ZMP
         self.theta0 = 0.61
