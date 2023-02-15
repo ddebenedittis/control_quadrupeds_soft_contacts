@@ -23,6 +23,15 @@
                             <kd>1000</kd>
                         </ode>
                     </contact>
+                    <soft_contact>
+                        <!-- The soft terrain does not work with DART yet. -->
+                        <dart>
+                            <bone_attachment>100</bone_attachment>
+                            <stiffness>100</stiffness>
+                            <damping>10</damping>
+                            <flesh_mass_fraction>0.05</flesh_mass_fraction>
+                        </dart>
+                    </soft_contact>
                 </surface>
             </collision>
             <visual name="visual">

@@ -107,8 +107,6 @@ void WholeBodyController::step(const Eigen::VectorXd& q, const Eigen::VectorXd& 
     }
 
     compute_torques();
-
-    Eigen::MatrixXd J_act = prioritized_tasks.get_Jc().rightCols(nv-6).transpose();
 }
 
 

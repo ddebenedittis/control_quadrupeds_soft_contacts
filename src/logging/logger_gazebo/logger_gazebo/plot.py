@@ -147,7 +147,7 @@ class Plot:
         if self.optimal_deformations.size > 0:
             k = 1000
             
-            def_size = self.optimal_deformations.shape[1] / 4
+            def_size = int(self.optimal_deformations.shape[1] / 4)
             
             ax.plot(self.time_vector,
                     k * self.optimal_deformations[self.i_init:self.i_end,
@@ -203,6 +203,7 @@ class Plot:
         tangential_over_normal_optimal_force = np.zeros((self.i_end - self.i_init, 4))
         
         for i in range(4):
+            # + 1e-9 in order to avoid dividing by zero.
             tangential_over_normal_optimal_force[:,i] = \
                 ( self.optimal_forces[self.i_init:self.i_end, 0+3*i]**2 + self.optimal_forces[self.i_init:self.i_end, 1+3*i]**2 )**0.5 / (self.optimal_forces[self.i_init:self.i_end, 2+3*i]**2 + 1e-9)
         
@@ -336,15 +337,21 @@ class Plot:
         
         
     def plot_normalized_slippage(self, ax):
-        ax.plot(self.time_vector,
-                self.slippage[self.i_init:self.i_end] / (self.speed * (self.time_vector + 1e-9)))
-        
-        ax.set(
-            xlabel = "time [s]",
-            ylabel = "normalized slippage",
-            title = "normalized slippage",
-        )
-        ax.set_xlim([self.time_init, self.time_end])
+        if self.speed != 0:
+            # + 1e-9 in order to avoid dividing by zero.
+            ax.plot(self.time_vector,
+                    self.slippage[self.i_init:self.i_end] / (abs(self.speed) * (self.time_vector) + 1e-9))
+            
+            ax.set(
+                xlabel = "time [s]",
+                ylabel = "normalized slippage",
+                title = "normalized slippage",
+            )
+            ax.set_xlim([self.time_init, self.time_end])
+        else:
+            # This plot is pointless if the speed of the robot is zero.
+            ax.set(title = "No, no, no.",)
+            
             
             
     def megaplot(self):
