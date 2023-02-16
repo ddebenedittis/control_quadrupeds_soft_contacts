@@ -22,7 +22,7 @@ class Plot:
         self.format = 'svg'
         
         # Plot only data between time_init and time_end.
-        self.time_init = 0
+        self.time_init = 1
         self.time_end = 10
         
         self.foldername = 'log'
@@ -104,36 +104,36 @@ class Plot:
                 for j in range(i_init, i_end):
                     dt = self.time[j + 1 + i] - self.time[j + i]
                 
-                    w_old = u_int[j, 3:6]
+                    w_old = u_int[j-i_init, 3:6]
                     w_new = w_old + self.optimal_joints_accelerations[j+i, 3:6] * dt
                     w_avg = 0.5 * (w_old + w_new)
 
-                    q_int[j, 0:3] = q_int[j, 0:3] + u_int[j, 0:3] * dt + 0.5 * self.optimal_joints_accelerations[j+i, 0:3] * dt**2
+                    q_int[j-i_init, 0:3] = q_int[j-i_init, 0:3] + u_int[j-i_init, 0:3] * dt + 0.5 * self.optimal_joints_accelerations[j+i, 0:3] * dt**2
                     
-                    quat = quaternion.from_float_array(q_int[j, 3:7])
+                    quat = quaternion.from_float_array(q_int[j-i_init, 3:7])
                     quat = quat * (
                             quaternion.from_rotation_vector(w_avg * dt)
                         + dt**2/24 * quaternion.from_vector_part(np.cross(w_old, w_new))
                     )
                     quat = np.normalized(quat)
-                    q_int[j, 3:7] = quaternion.as_float_array(quat)
+                    q_int[j-i_init, 3:7] = quaternion.as_float_array(quat)
                     
-                    q_int[j, 7:] = q_int[j, 7:] + u_int[j, 6:] * dt + 0.5 * self.optimal_joints_accelerations[j+i, 6:] * dt**2
+                    q_int[j-i_init, 7:] = q_int[j-i_init, 7:] + u_int[j-i_init, 6:] * dt + 0.5 * self.optimal_joints_accelerations[j+i, 6:] * dt**2
                     
-                    u_int[j, :] = u_int[j, :] + self.optimal_joints_accelerations[j+i, :] * dt
+                    u_int[j-i_init, :] = u_int[j-i_init, :] + self.optimal_joints_accelerations[j+i, :] * dt
 
                                             
             for j in range(i_init, i_end):
-                [feet_pos, feet_vel] = robot_model.compute_feet_pos_vel(q_int[j,:], u_int[j,:])
+                [feet_pos, feet_vel] = robot_model.compute_feet_pos_vel(q_int[j-i_init,:], u_int[j-i_init,:])
                 
-                self.feet_pos_int[j,:] = feet_pos.flatten()
-                self.feet_vel_int[j,:] = feet_vel.flatten()
+                self.feet_pos_int[j-i_init,:] = feet_pos.flatten()
+                self.feet_vel_int[j-i_init,:] = feet_vel.flatten()
                 
             for j in range(i_init, i_end + k):
                 [feet_pos, feet_vel] = robot_model.compute_feet_pos_vel(q[j,:], u[j,:])
                 
-                self.feet_pos_meas[j,:] = feet_pos.flatten()
-                self.feet_vel_meas[j,:] = feet_vel.flatten()
+                self.feet_pos_meas[j-i_init,:] = feet_pos.flatten()
+                self.feet_vel_meas[j-i_init,:] = feet_vel.flatten()
         
     # ======================================================================== #
     #                              PLOT FUNCTIONS                              #
@@ -278,7 +278,7 @@ class Plot:
                         self.feet_positions[self.i_init:self.i_end, j + 3*i])
             
             axs[j].plot(self.time_vector,
-                        self.feet_pos_meas[self.i_init:self.i_end, j + 3*i])
+                        self.feet_pos_meas[0:self.i_end-self.i_init, j + 3*i])
             
             axs[j].set(
                 xlabel = "time [s]",
@@ -292,11 +292,11 @@ class Plot:
     def plot_meas_vs_opti_feet_velocities(self, axs, i):
         for j in range(3):
             axs[j].plot(self.time_vector,
-                        self.feet_pos_int[self.i_init:self.i_end, j + 3*i] - self.feet_pos_meas[self.i_init:self.i_end, j + 3*i])
+                        self.feet_pos_int[0:self.i_end-self.i_init, j + 3*i] - self.feet_pos_meas[0:self.i_end-self.i_init, j + 3*i])
             
             #! +1 if previously k = [1]
             axs[j].plot(self.time_vector,
-                        self.feet_pos_meas[self.i_init+1:self.i_end+1, j + 3*i] - self.feet_pos_meas[self.i_init:self.i_end, j + 3*i])
+                        self.feet_pos_meas[1:self.i_end-self.i_init+1, j + 3*i] - self.feet_pos_meas[0:self.i_end-self.i_init, j + 3*i])
             
             axs[j].set(
                 xlabel = "time [s]",
@@ -310,11 +310,11 @@ class Plot:
     def plot_meas_vs_opti_feet_accelerations(self, axs, i):
         for j in range(3):
             axs[j].plot(self.time_vector,
-                        self.feet_vel_int[self.i_init:self.i_end, j + 3*i] - self.feet_pos_meas[self.i_init:self.i_end, j + 3*i])
+                        self.feet_vel_int[self.i_init:self.i_end, j + 3*i] - self.feet_pos_meas[0:self.i_end-self.i_init, j + 3*i])
             
             #! +1 if previously k = [1]
             axs[j].plot(self.time_vector,
-                        self.feet_vel_meas[self.i_init+1:self.i_end+1, j + 3*i] - self.feet_pos_meas[self.i_init:self.i_end, j + 3*i])
+                        self.feet_vel_meas[self.i_init+1:self.i_end+1, j + 3*i] - self.feet_pos_meas[0:self.i_end-self.i_init, j + 3*i])
             
             axs[j].set(
                 xlabel = "time [s]",

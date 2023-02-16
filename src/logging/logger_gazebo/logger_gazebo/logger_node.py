@@ -539,7 +539,7 @@ class LoggerSubscriber(Node):
             # ================================================================ #
             
             print("DONE")
-            print("Saved the CSVs in %s" % os.getcwd() + path)
+            print("Saved the CSVs in %s" % os.getcwd() + "/" + path)
                                                             
             self.destroy_node()
 
