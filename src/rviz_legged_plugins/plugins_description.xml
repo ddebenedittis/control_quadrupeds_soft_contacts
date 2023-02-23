@@ -1,0 +1,14 @@
+<library path="rviz_legged_plugins">
+
+    <class
+        name="rviz_legged_plugins/ExternalWrench"
+        type="rviz_legged_plugins::displays::ExternalWrenchDisplay"
+        base_class_type="rviz_common::Display"
+    >
+        <description>
+            Displays an axis with the arrow at the Target Frame's origin.
+            &lt;a href="http://www.ros.org/wiki/rviz/DisplayTypes/Axes"&gt;More Information&lt;/a&gt;.
+        </description>
+    </class>
+
+</library>

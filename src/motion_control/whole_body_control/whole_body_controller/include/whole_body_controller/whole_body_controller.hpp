@@ -47,7 +47,7 @@ public:
     /// @brief Return the generic feet names, e.g. ["LF", "RF", "LH", "RH"]
     const std::vector<std::string>& get_generic_feet_names() const {return prioritized_tasks.get_generic_feet_names();}
 
-    /// @brief Return the names of the links that represent the feet in the URDF. This depends on the robot model used.
+    /// @brief Return the names of the links that represent the feet in the URDF. These depend on the robot model used.
     const std::vector<std::string>& get_all_feet_names() {return prioritized_tasks.get_all_feet_names();}
 
     /// @brief Get the dimension of the generalized velocities vector.

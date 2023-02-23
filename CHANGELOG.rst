@@ -44,3 +44,7 @@
 - Solo 12 now has contact sensors.
 - Shank collision removed from ANYmal C in order to avoid double collisions with soft terrains.
 - Trotting works. But its parameters are suboptimal.
+
+Upcoming (2023-02-23)
+------------------
+- Alpha version of a visualizer with RViz. The robot, the terrain, and the (optimal) contact forces are displayed.

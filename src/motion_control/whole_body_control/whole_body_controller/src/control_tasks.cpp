@@ -280,28 +280,16 @@ void ControlTasks::task_contact_constraints_soft_kv(
     b.tail(nF) = - Jc_dot_times_v + 2 * d_k1 / (dt*dt) - d_k2 / (dt*dt) - Kc_v * Jc * v;
 
 
-    // c = [ ... ]   ∈ 2*nF x (nv+nF+nd)
-    // d = [ ... ]
-
-    VectorXd ma_che_fai_scemo(3);
-    ma_che_fai_scemo << 0, 0, 1;
-    MatrixXd C_temp = tile(ma_che_fai_scemo, nc).asDiagonal();
-
-    C.block( 0, nv+nF, nd, nd) = - C_temp;
-    C.block(nd, nv+nF, nd, nd) = (Kp - Kd/dt) * C_temp;
-
-    d.tail(nd) = C_temp * Kd * d_k1 / dt;
-
     // C = [ ... ]   ∈ 2*nc x (nv+nF+nd)
     // d = [ ... ]
 
-    // MatrixXd C_temp = MatrixXd::Zero(nc, nd);
-    // for (int i=0; i<nc; i++) {
-    //     C_temp(i, 2+3*i) = 1;
-    // }
+    MatrixXd C_temp = MatrixXd::Zero(nc, nd);
+    for (int i=0; i<nc; i++) {
+        C_temp(i, 2+3*i) = 1;
+    }
 
-    // C.block( 0, nv+nF, nc, nd) = - C_temp;
-    // C.block(nc,    nv, nc, nF) = - C_temp;
+    C.block( 0, nv+nF, nc, nd) = - C_temp;
+    C.block(nc,    nv, nc, nF) = - C_temp;
 }
 
 

@@ -17,6 +17,8 @@ def generate_launch_description():
     
     save_csv = LaunchConfiguration('save_csv', default='False')
     
+    use_rviz = LaunchConfiguration('use_rviz', default='False')
+    
     reset = LaunchConfiguration('reset', default='False')
     
     # ======================================================================== #
@@ -42,6 +44,7 @@ def generate_launch_description():
                 'terrain_type': terrain_type,
                 'gait': gait,
                 'save_csv': save_csv,
+                'use_rviz': use_rviz,
             }.items(),
             condition=IfCondition(PythonExpression(['not ', reset]))
         ),
@@ -59,6 +62,7 @@ def generate_launch_description():
                 'terrain_type': terrain_type,
                 'gait': gait,
                 'save_csv': save_csv,
+                'use_rviz': use_rviz,
             }.items(),
             condition=IfCondition(reset)
         ),

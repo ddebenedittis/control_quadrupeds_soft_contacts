@@ -26,6 +26,16 @@ def generate_launch_description():
         FindPackageShare('robot_gazebo'),
         'config/gazebo_params.yaml'
     ])
+    
+    rigid_terrain_file_path = PathJoinSubstitution([
+        FindPackageShare('robot_gazebo'),
+        'objects/rigid_terrain.xacro'
+    ])
+    
+    soft_terrain_file_path = PathJoinSubstitution([
+        FindPackageShare('robot_gazebo'),
+        'objects/soft_terrain.xacro'
+    ])
 
     world_file_path = PathJoinSubstitution([
         FindPackageShare('robot_gazebo'),
@@ -43,6 +53,8 @@ def generate_launch_description():
     
     save_csv = LaunchConfiguration('save_csv', default='False')
     
+    use_rviz = LaunchConfiguration('use_rviz', default='False')
+    
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     
     # ======================================================================== #
@@ -58,6 +70,8 @@ def generate_launch_description():
         DeclareLaunchArgument('terrain_type', default_value='rigid'),
         
         DeclareLaunchArgument('save_csv', default_value='False'),
+        
+        DeclareLaunchArgument('use_rviz', default_value='False'),
 
         # The additional_env are used to launch gazebo using the dedicated graphics card (which also solves the shadow bug).
         # ExecuteProcess(
@@ -88,7 +102,7 @@ def generate_launch_description():
             executable = 'robot_state_publisher',
             parameters = [
                 {'use_sim_time': use_sim_time},
-                {'robot_description': ParameterValue(Command(['xacro', ' ' ,xacro_file_path]), value_type=str)}
+                {'robot_description': ParameterValue(Command(['xacro', ' ', xacro_file_path]), value_type=str)}
             ],
             output = 'screen',
         ),
@@ -125,10 +139,41 @@ def generate_launch_description():
                 PythonExpression([
                     "'", terrain_type, "'", " == 'rigid'"
                 ])),
+            package = 'robot_state_publisher',
+            executable = 'robot_state_publisher',
+            namespace = 'ground_plane',
+            parameters = [
+                {'use_sim_time': use_sim_time},
+                {'robot_description': ParameterValue(Command(['xacro', ' ' , rigid_terrain_file_path]), value_type=str)}
+            ],
+            output = 'screen',
+        ),
+        
+        Node(
+            condition=IfCondition(
+                PythonExpression([
+                    "'", terrain_type, "'", " == 'rigid'"
+                ])),
             package = 'gazebo_ros',
             executable = 'spawn_entity.py',
             arguments = ['-entity', 'ground_plane',
-                         '-file', PathJoinSubstitution([FindPackageShare("robot_gazebo"), os.path.join('objects', 'rigid_terrain.sdf')])],
+                         '-topic', '/ground_plane/robot_description'],
+                        #  '-file', PathJoinSubstitution([FindPackageShare("robot_gazebo"), os.path.join('objects', 'rigid_terrain.sdf')])],
+            output = 'screen',
+        ),
+        
+        Node(
+            condition=IfCondition(
+                PythonExpression([
+                    "'", terrain_type, "'", " == 'soft'"
+                ])),
+            package = 'robot_state_publisher',
+            executable = 'robot_state_publisher',
+            namespace = 'ground_plane',
+            parameters = [
+                {'use_sim_time': use_sim_time},
+                {'robot_description': ParameterValue(Command(['xacro', ' ' , soft_terrain_file_path]), value_type=str)}
+            ],
             output = 'screen',
         ),
         
@@ -140,7 +185,7 @@ def generate_launch_description():
             package = 'gazebo_ros',
             executable = 'spawn_entity.py',
             arguments = ['-entity', 'ground_plane',
-                         '-file', PathJoinSubstitution([FindPackageShare("robot_gazebo"), os.path.join('objects', 'soft_terrain.sdf')])],
+                         '-topic', '/ground_plane/robot_description'],
             output = 'screen',
         ),
         
@@ -207,5 +252,25 @@ def generate_launch_description():
             ],
             emulate_tty=True,
             output='screen',
+        ),
+        
+        Node(
+            condition=IfCondition(use_rviz),
+            package='rviz_legged_plugins',
+            executable='ground_to_base_frame_broadcaster_node.py',
+            parameters=[{'use_sim_time': use_sim_time}],
+            emulate_tty=True,
+            output='screen',
+        ),
+        
+        Node(
+            condition=IfCondition(use_rviz),
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            arguments=['-d', PathJoinSubstitution([
+                FindPackageShare('rviz_legged_plugins'),
+                'config', 'rviz', 'config.rviz'
+            ])],
         ),
     ])

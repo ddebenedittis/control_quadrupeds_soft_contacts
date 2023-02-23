@@ -11,6 +11,7 @@
 #include "generalized_pose_msgs/msg/generalized_pose.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include "geometry_msgs/msg/wrench_stamped.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 
 #include <string>
@@ -28,7 +29,7 @@ namespace hqp_controller {
 
 class HQPPublisher : public rclcpp::Node {
 public:
-    HQPPublisher();
+    HQPPublisher(const std::vector<std::string> feet_names);
 
     void publish_all(
         const Eigen::VectorXd& joints_accelerations, const Eigen::VectorXd& torques,
@@ -36,6 +37,8 @@ public:
         const Eigen::VectorXd& feet_positions, const Eigen::VectorXd& feet_velocities);
 
 private:
+    std::vector<std::string> feet_names_;
+
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr joints_accelerations_publisher_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr torques_publisher_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr forces_publisher_;
@@ -43,6 +46,11 @@ private:
 
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr feet_positions_publisher_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr feet_velocities_publisher_;
+
+    rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>::SharedPtr wrench_stamped_LF_publisher_;
+    rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>::SharedPtr wrench_stamped_RF_publisher_;
+    rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>::SharedPtr wrench_stamped_LH_publisher_;
+    rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>::SharedPtr wrench_stamped_RH_publisher_;
 };
 
 

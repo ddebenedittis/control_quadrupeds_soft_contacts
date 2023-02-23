@@ -23,9 +23,11 @@ using hardware_interface::HW_IF_EFFORT;
 /*                                HQPPUBLISHER                                */
 /* ========================================================================== */
 
-HQPPublisher::HQPPublisher()
+HQPPublisher::HQPPublisher(const std::vector<std::string> feet_names)
 : Node("HQP_publisher")
 {
+    feet_names_ = feet_names;
+
     joints_accelerations_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
         "/logging/optimal_joints_accelerations", 1);
 
@@ -38,11 +40,22 @@ HQPPublisher::HQPPublisher()
     deformations_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
         "/logging/optimal_deformations", 1);
 
+
     feet_positions_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
         "/logging/feet_positions", 1);
 
     feet_velocities_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
         "/logging/feet_velocities", 1);
+
+
+    wrench_stamped_LF_publisher_ = this->create_publisher<geometry_msgs::msg::WrenchStamped>(
+        "/logging/wrench_stamped_LF", 1);
+    wrench_stamped_RF_publisher_ = this->create_publisher<geometry_msgs::msg::WrenchStamped>(
+        "/logging/wrench_stamped_RF", 1);
+    wrench_stamped_LH_publisher_ = this->create_publisher<geometry_msgs::msg::WrenchStamped>(
+        "/logging/wrench_stamped_LH", 1);
+    wrench_stamped_RH_publisher_ = this->create_publisher<geometry_msgs::msg::WrenchStamped>(
+        "/logging/wrench_stamped_RH", 1);
 }
 
 void HQPPublisher::publish_all(
@@ -77,6 +90,34 @@ void HQPPublisher::publish_all(
     auto feet_velocities_message = std_msgs::msg::Float64MultiArray();
     feet_velocities_message.data = std::vector<double>(feet_velocities.data(), feet_velocities.data() + feet_velocities.size());
     feet_velocities_publisher_->publish(feet_velocities_message);
+
+    auto wrench_stamped_LF_message = geometry_msgs::msg::WrenchStamped();
+    wrench_stamped_LF_message.header.frame_id = feet_names_[0];
+    wrench_stamped_LF_message.wrench.force.x = forces[0 + 3*0];
+    wrench_stamped_LF_message.wrench.force.y = forces[1 + 3*0];
+    wrench_stamped_LF_message.wrench.force.z = forces[2 + 3*0];
+    wrench_stamped_LF_publisher_->publish(wrench_stamped_LF_message);
+
+    auto wrench_stamped_RF_message = geometry_msgs::msg::WrenchStamped();
+    wrench_stamped_RF_message.header.frame_id = feet_names_[1];
+    wrench_stamped_RF_message.wrench.force.x = forces[0 + 3*1];
+    wrench_stamped_RF_message.wrench.force.y = forces[1 + 3*1];
+    wrench_stamped_RF_message.wrench.force.z = forces[2 + 3*1];
+    wrench_stamped_RF_publisher_->publish(wrench_stamped_RF_message);
+
+    auto wrench_stamped_LH_message = geometry_msgs::msg::WrenchStamped();
+    wrench_stamped_LH_message.header.frame_id = feet_names_[2];
+    wrench_stamped_LH_message.wrench.force.x = forces[0 + 3*2];
+    wrench_stamped_LH_message.wrench.force.y = forces[1 + 3*2];
+    wrench_stamped_LH_message.wrench.force.z = forces[2 + 3*2];
+    wrench_stamped_LH_publisher_->publish(wrench_stamped_LH_message);
+
+    auto wrench_stamped_RH_message = geometry_msgs::msg::WrenchStamped();
+    wrench_stamped_RH_message.header.frame_id = feet_names_[3];
+    wrench_stamped_RH_message.wrench.force.x = forces[0 + 3*3];
+    wrench_stamped_RH_message.wrench.force.y = forces[1 + 3*3];
+    wrench_stamped_RH_message.wrench.force.z = forces[2 + 3*3];
+    wrench_stamped_RH_publisher_->publish(wrench_stamped_RH_message);
 }
 
 
@@ -414,7 +455,7 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
     /* ====================================================================== */
 
     if (logging_ == true) {
-        logger_ = std::make_shared<HQPPublisher>();
+        logger_ = std::make_shared<HQPPublisher>(wbc.get_all_feet_names());
     }
 
 

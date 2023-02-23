@@ -60,7 +60,7 @@ colcon build --symlink-install
 
 - ANYmal C static walk simulation:
 ```shell
-ros2 launch robot_gazebo anymal_c.launch.py [terrain_type:={rigid,soft}] [save_csv:={False,True}] [reset:={False,True}] [gait:={static_walk,walking_trot}]
+ros2 launch robot_gazebo anymal_c.launch.py [terrain_type:={rigid,soft}] [save_csv:={False,True}] [reset:={False,True}] [gait:={static_walk,walking_trot}] [use_rviz:={True,False}]
 ```
 - SOLO12 static walk simulation:
 ```shell
@@ -78,6 +78,8 @@ With `save_csv:=True`, some data is logged and saved in several .csv files in `l
 The `reset:=True` parameter must be used in another terminal when there is an already running simulation. The simulation will be restarted. The time is not reset to avoid problems with the controllers.
 
 The `gait` parameter selects the gait type. Currently, the walking trot gait is implemented only on the ANYmal C robot.
+
+When `use_rviz` parameter is `True`, RViz is used to show the contact forces of the robot (still in Alpha version).
 
 Other parameters, such as `contact_constraint_type: {soft_kv, rigid}`, must be changed directly in the specific robot config .yaml file.
 

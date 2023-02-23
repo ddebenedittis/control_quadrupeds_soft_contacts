@@ -132,22 +132,22 @@ class MotionPlanner:
 
     def _mpc_qp(self, Xcom_0, p_0, xcom_dot_des):
 
-        # State
+        ### State
+        
         # xi = [
-        #   1                           extra state equal to one
-        #   [xcom_i, x_com_dot_i].T     position and velocity coordinate (only one coordinate)
-        #   px                          ZMP coordinate
+        #     1                             extra state equal to one
+        #     [xcom_i, x_com_dot_i].T       position and velocity coordinate (only one coordinate)
+        #     px                            ZMP coordinate
         # ]
 
-        N = self.N      # future steps
-        Ts = self.Ts    # swing duration
+        N = self.N      # number of future steps
+        Ts = self.Ts    # swing phase duration
 
 
         ### QP formulation
 
         # min_xi   1/2 xi^T H xi + c^T xi
-        # s.t.:
-        #       A xi - b  = 0
+        # s.t.: A xi - b  = 0
         #       D xi - f <= 0
 
 
@@ -326,7 +326,7 @@ class MotionPlanner:
             
     # ========================== _get_des_base_pose ========================== #
 
-    # Compute the desired base position, velocity and acceleration from the current base position and ZMP position, using the LIPM. 
+    # Compute the desired base position, velocity and acceleration from the current base position and ZMP position, using the LIPM (Linearized Inverted Pendulum Model). 
 
     def _get_des_base_pose(self, Xcom_0, Ycom_0, px_0, py_0):
 
@@ -348,49 +348,50 @@ class MotionPlanner:
 
     # ================================== Mpc ================================= #
 
-    # Main class method that will be called to perform a step of the planner
-
     def mpc(self, p_com, v_com, a_com, vel_cmd, yaw_rate_cmd):
+        """
+        Main method called to perform a step of the planner.
+        """
 
-        #
+        # Initial COM position.
         Xcom_0 = np.array([p_com[0], v_com[0]])
         Ycom_0 = np.array([p_com[1], v_com[1]])
 
-        #
+        # Initial ZMP position (from the dynamics of a linear inverted pendulum).
         g = 9.81
         px_0 = p_com[0] - a_com[0] * self.zcom / g
         py_0 = p_com[1] - a_com[1] * self.zcom / g
 
-        #
+        # Compute the x and y coordinates of the ZMP.
         xcom_dot_des = vel_cmd[0]; ycom_dot_des = vel_cmd[1]
         p_x_star = self._mpc_qp(Xcom_0, px_0, xcom_dot_des)
         p_y_star = self._mpc_qp(Ycom_0, py_0, ycom_dot_des)
 
-        #
+        # Optimal ZMP position.
         p_star = np.array([p_x_star, p_y_star])
 
-        # Compute the desired footholds of the feet currently in swing phase
+        # Compute the desired footholds of the feet currently in swing phase.
         self.dtheta += yaw_rate_cmd * self.dt
         p_swing_feet = self._desired_footholds(p_star)
 
-        #
+        # Compute the feet trajectories.
         r_s_ddot_des, r_s_dot_des, r_s_des = self._foot_trajectory(p_swing_feet)
 
-        #
+        # Compute the base linear trajectory.
         r_b_ddot_des, r_b_dot_des, r_b_des = self._get_des_base_pose(Xcom_0, Ycom_0, px_0, py_0)
 
+        # Compute the base angular trajectory.
         omega_des = np.array([0.0, 0.0, yaw_rate_cmd])
-
         q_des = np.array([0.0, 0.0, np.sin(self.dtheta), np.cos(self.dtheta)])
 
-        #
+        # Compute the list of feet in contact phase.
         contactFeet = []
         allFeet = ['LF', 'RF', 'LH', 'RH']
         for i in allFeet:
             if i not in self.swing_feet:
                 contactFeet.append(i)
 
-
+        # Update the normalized phase. When it becomes >=1, switch the contact feet and reset it to zero.
         self.phi += self.dt / self.Ts
         if self.phi >= 1:
             self.phi = 0

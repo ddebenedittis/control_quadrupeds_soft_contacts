@@ -148,7 +148,8 @@ class Planner(Node):
         self.filter.order = 2
         self.filter.beta = 0.5
         
-        self.init_time = 0.5
+        self.zero_time = 1.     # time before the planner starts (no message is published).
+        self.init_time = 0.5    # time during which the robot goes to the initial position, before the real planning starts.
         
         self.p_b_0 = np.array([0., 0., 0.])
         
@@ -184,14 +185,14 @@ class Planner(Node):
             yaw_rate_cmd = 0
 
             # Perform a single iteration of the model predictive control
-            if self.time > self.init_time:
+            if self.time > self.init_time + self.zero_time:
                 # Planner output after the initialization phase has finished
                 contactFeet, r_b_ddot_des, r_b_dot_des, r_b_des, omega_des, q_des, r_s_ddot_des, r_s_dot_des, r_s_des = self.planner.mpc(p_b, v_b, a_b, vel_cmd, yaw_rate_cmd)
-            else:
+            elif self.time > self.zero_time:
                 contactFeet = ['LF', 'RF', 'LH', 'RH']
 
                 # Base position quantities
-                r_b_des, r_b_dot_des, r_b_ddot_des = self.planner._spline(np.array([self.p_b_0[0], self.p_b_0[1], 0.6]), np.array([self.p_b_0[0], self.p_b_0[1], self.planner.zcom]), self.time/self.init_time)
+                r_b_des, r_b_dot_des, r_b_ddot_des = self.planner._spline(np.array([self.p_b_0[0], self.p_b_0[1], self.p_b_0[2]]), np.array([self.p_b_0[0], self.p_b_0[1], self.planner.zcom]), (self.time - self.zero_time)/self.init_time)
 
                 # Base angular quantities
                 omega_des = np.zeros(3)
@@ -201,6 +202,8 @@ class Planner(Node):
                 r_s_ddot_des = np.array([])
                 r_s_dot_des = np.array([])
                 r_s_des = np.array([])
+            else:
+                self.p_b_0[2] = self.minimal_subscriber.q_b[2]
             
 
             # Publish the desired generalized pose message
