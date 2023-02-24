@@ -47,4 +47,4 @@
 
 Upcoming (2023-02-23)
 ------------------
-- Alpha version of a visualizer with RViz. The robot, the terrain, and the (optimal) contact forces are displayed.
+- Alpha version of a visualizer with RViz. The robot, the terrain, and the (optimal) contact forces are displayed. The support polygon is displayed.

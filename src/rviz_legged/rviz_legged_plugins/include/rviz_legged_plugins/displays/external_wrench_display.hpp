@@ -32,7 +32,7 @@
 #include <memory>
 #include <deque>
 
-#include "geometry_msgs/msg/wrench_stamped.hpp"
+#include "rviz_legged_msgs/msg/wrenches_stamped.hpp"
 
 #include "rviz_common/message_filter_display.hpp"
 #include "rviz_default_plugins/visibility_control.hpp"
@@ -64,7 +64,7 @@ namespace displays
 
 
 class RVIZ_DEFAULT_PLUGINS_PUBLIC ExternalWrenchDisplay : public
-    rviz_common::MessageFilterDisplay<geometry_msgs::msg::WrenchStamped>
+    rviz_common::MessageFilterDisplay<rviz_legged_msgs::msg::WrenchesStamped>
 {
     Q_OBJECT
 
@@ -77,7 +77,7 @@ public:
 
     void reset() override;
 
-    void processMessage(geometry_msgs::msg::WrenchStamped::ConstSharedPtr msg) override;
+    void processMessage(rviz_legged_msgs::msg::WrenchesStamped::ConstSharedPtr msg) override;
 
 private
     Q_SLOTS:
@@ -86,7 +86,7 @@ private
 
 private:
     std::shared_ptr<rviz_rendering::WrenchVisual> createWrenchVisual(
-        const geometry_msgs::msg::WrenchStamped::ConstSharedPtr & msg,
+        const geometry_msgs::msg::WrenchStamped & msg,
         const Ogre::Quaternion & orientation,
         const Ogre::Vector3 & position);
 
@@ -100,6 +100,8 @@ private:
     rviz_common::properties::FloatProperty * torque_scale_property_;
     rviz_common::properties::FloatProperty * width_property_;
     rviz_common::properties::IntProperty * history_length_property_;
+
+    int n_wrenches_ = 1;
 };
 
 }   // namespace displays

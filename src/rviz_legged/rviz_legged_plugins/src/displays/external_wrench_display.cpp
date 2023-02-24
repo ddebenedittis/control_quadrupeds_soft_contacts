@@ -32,6 +32,8 @@
 #include <OgreSceneNode.h>
 #include <OgreSceneManager.h>
 
+#include "geometry_msgs/msg/wrench_stamped.hpp"
+
 #include "rviz_common/display_context.hpp"
 #include "rviz_common/frame_manager_iface.hpp"
 #include "rviz_common/properties/color_property.hpp"
@@ -119,7 +121,7 @@ void ExternalWrenchDisplay::updateWrenchVisuals()
 
 void ExternalWrenchDisplay::updateHistoryLength()
 {
-    while (visuals_.size() > static_cast<size_t>(history_length_property_->getInt())) {
+    while (visuals_.size() > static_cast<size_t>(history_length_property_->getInt()) * n_wrenches_) {
         visuals_.pop_front();
     }
 }
@@ -130,76 +132,82 @@ bool validateFloats(const geometry_msgs::msg::WrenchStamped & msg)
            rviz_common::validateFloats(msg.wrench.torque);
 }
 
-void ExternalWrenchDisplay::processMessage(geometry_msgs::msg::WrenchStamped::ConstSharedPtr msg)
+void ExternalWrenchDisplay::processMessage(rviz_legged_msgs::msg::WrenchesStamped::ConstSharedPtr msg)
 {
-    auto adjusted_msg = std::make_shared<geometry_msgs::msg::WrenchStamped>();
-    bool accept_nan = accept_nan_values_->getBool();
+    n_wrenches_ = msg->wrenches_stamped.size();
 
-    if (!accept_nan) {
-        if (!validateFloats(*msg)) {
-        setStatus(
-            rviz_common::properties::StatusProperty::Error, "Topic",
-            "Message contained invalid floating point values (nans or infs)");
-        return;
+    for (int i = 0; i < n_wrenches_; i++) {
+        auto wrench_stamped_msg = msg->wrenches_stamped[i];
+
+        geometry_msgs::msg::WrenchStamped adjusted_msg;
+        bool accept_nan = accept_nan_values_->getBool();
+
+        if (!accept_nan) {
+            if (!validateFloats(wrench_stamped_msg)) {
+            setStatus(
+                rviz_common::properties::StatusProperty::Error, "Topic",
+                "Message contained invalid floating point values (nans or infs)");
+            return;
+            }
+        } else {
+            adjusted_msg.wrench.force.x = (std::isnan(wrench_stamped_msg.wrench.force.x)) ? 0.0 : wrench_stamped_msg.wrench.force.x;
+            adjusted_msg.wrench.force.y = (std::isnan(wrench_stamped_msg.wrench.force.y)) ? 0.0 : wrench_stamped_msg.wrench.force.y;
+            adjusted_msg.wrench.force.z = (std::isnan(wrench_stamped_msg.wrench.force.z)) ? 0.0 : wrench_stamped_msg.wrench.force.z;
+
+            adjusted_msg.wrench.torque.x = (std::isnan(wrench_stamped_msg.wrench.torque.x)) ? 0.0 :
+            wrench_stamped_msg.wrench.torque.x;
+            adjusted_msg.wrench.torque.y = (std::isnan(wrench_stamped_msg.wrench.torque.y)) ? 0.0 :
+            wrench_stamped_msg.wrench.torque.y;
+            adjusted_msg.wrench.torque.z = (std::isnan(wrench_stamped_msg.wrench.torque.z)) ? 0.0 :
+            wrench_stamped_msg.wrench.torque.z;
+
+            if (!validateFloats(wrench_stamped_msg)) {
+            setStatus(
+                rviz_common::properties::StatusProperty::Error, "Topic",
+                "Message contained invalid floating point values (nans or infs)");
+            return;
+            }
         }
-    } else {
-        adjusted_msg->wrench.force.x = (std::isnan(msg->wrench.force.x)) ? 0.0 : msg->wrench.force.x;
-        adjusted_msg->wrench.force.y = (std::isnan(msg->wrench.force.y)) ? 0.0 : msg->wrench.force.y;
-        adjusted_msg->wrench.force.z = (std::isnan(msg->wrench.force.z)) ? 0.0 : msg->wrench.force.z;
 
-        adjusted_msg->wrench.torque.x = (std::isnan(msg->wrench.torque.x)) ? 0.0 :
-        msg->wrench.torque.x;
-        adjusted_msg->wrench.torque.y = (std::isnan(msg->wrench.torque.y)) ? 0.0 :
-        msg->wrench.torque.y;
-        adjusted_msg->wrench.torque.z = (std::isnan(msg->wrench.torque.z)) ? 0.0 :
-        msg->wrench.torque.z;
-
-        if (!validateFloats(*msg)) {
-        setStatus(
-            rviz_common::properties::StatusProperty::Error, "Topic",
-            "Message contained invalid floating point values (nans or infs)");
-        return;
+        Ogre::Quaternion orientation;
+        Ogre::Vector3 position;
+        if (!context_->getFrameManager()->getTransform(
+            wrench_stamped_msg.header.frame_id, wrench_stamped_msg.header.stamp, position, orientation))
+        {
+            setMissingTransformToFixedFrame(wrench_stamped_msg.header.frame_id);
+            return;
         }
+
+        if (position.isNaN()) {
+            RVIZ_COMMON_LOG_ERROR(
+            "Wrench position contains NaNs. Skipping render as long as the position is invalid");
+            return;
+        }
+
+        if (visuals_.size() >= static_cast<size_t>(history_length_property_->getInt()) * n_wrenches_) {
+            visuals_.pop_front();
+        }
+
+        // Shift the position of the arrow.
+
+        float force_scale = force_scale_property_->getFloat();
+        Ogre::Vector3 force(
+            static_cast<float>(wrench_stamped_msg.wrench.force.x),
+            static_cast<float>(wrench_stamped_msg.wrench.force.y),
+            static_cast<float>(wrench_stamped_msg.wrench.force.z));
+        position -= force_scale * 1.25 * force;
+
+        orientation = Ogre::Quaternion(1., 0., 0., 0.);
+
+        auto visual = (!accept_nan) ? createWrenchVisual(wrench_stamped_msg, orientation, position) :
+            createWrenchVisual(adjusted_msg, orientation, position);
+
+        visuals_.push_back(visual);
     }
-
-    Ogre::Quaternion orientation;
-    Ogre::Vector3 position;
-    if (!context_->getFrameManager()->getTransform(
-        msg->header.frame_id, msg->header.stamp, position, orientation))
-    {
-        setMissingTransformToFixedFrame(msg->header.frame_id);
-        return;
-    }
-
-    if (position.isNaN()) {
-        RVIZ_COMMON_LOG_ERROR(
-        "Wrench position contains NaNs. Skipping render as long as the position is invalid");
-        return;
-    }
-
-    if (visuals_.size() >= static_cast<size_t>(history_length_property_->getInt())) {
-        visuals_.pop_front();
-    }
-
-    // Shift the position of the arrow.
-
-    float force_scale = force_scale_property_->getFloat();
-    Ogre::Vector3 force(
-        static_cast<float>(msg->wrench.force.x),
-        static_cast<float>(msg->wrench.force.y),
-        static_cast<float>(msg->wrench.force.z));
-    position -= force_scale * 1.25 * force;
-
-    orientation = Ogre::Quaternion(1., 0., 0., 0.);
-
-    auto visual = (!accept_nan) ? createWrenchVisual(msg, orientation, position) :
-        createWrenchVisual(adjusted_msg, orientation, position);
-
-    visuals_.push_back(visual);
 }
 
 std::shared_ptr<rviz_rendering::WrenchVisual> ExternalWrenchDisplay::createWrenchVisual(
-    const geometry_msgs::msg::WrenchStamped::ConstSharedPtr & msg,
+    const geometry_msgs::msg::WrenchStamped & msg,
     const Ogre::Quaternion & orientation,
     const Ogre::Vector3 & position)
     {
@@ -207,13 +215,13 @@ std::shared_ptr<rviz_rendering::WrenchVisual> ExternalWrenchDisplay::createWrenc
     visual = std::make_shared<rviz_rendering::WrenchVisual>(context_->getSceneManager(), scene_node_);
 
     Ogre::Vector3 force(
-        static_cast<float>(msg->wrench.force.x),
-        static_cast<float>(msg->wrench.force.y),
-        static_cast<float>(msg->wrench.force.z));
+        static_cast<float>(msg.wrench.force.x),
+        static_cast<float>(msg.wrench.force.y),
+        static_cast<float>(msg.wrench.force.z));
     Ogre::Vector3 torque(
-        static_cast<float>(msg->wrench.torque.x),
-        static_cast<float>(msg->wrench.torque.y),
-        static_cast<float>(msg->wrench.torque.z));
+        static_cast<float>(msg.wrench.torque.x),
+        static_cast<float>(msg.wrench.torque.y),
+        static_cast<float>(msg.wrench.torque.z));
     visual->setWrench(force, torque);
     visual->setFramePosition(position);
     visual->setFrameOrientation(orientation);

@@ -48,20 +48,18 @@ HQPPublisher::HQPPublisher(const std::vector<std::string> feet_names)
         "/logging/feet_velocities", 1);
 
 
-    wrench_stamped_LF_publisher_ = this->create_publisher<geometry_msgs::msg::WrenchStamped>(
-        "/logging/wrench_stamped_LF", 1);
-    wrench_stamped_RF_publisher_ = this->create_publisher<geometry_msgs::msg::WrenchStamped>(
-        "/logging/wrench_stamped_RF", 1);
-    wrench_stamped_LH_publisher_ = this->create_publisher<geometry_msgs::msg::WrenchStamped>(
-        "/logging/wrench_stamped_LH", 1);
-    wrench_stamped_RH_publisher_ = this->create_publisher<geometry_msgs::msg::WrenchStamped>(
-        "/logging/wrench_stamped_RH", 1);
+    wrenches_stamped_publisher_ = this->create_publisher<rviz_legged_msgs::msg::WrenchesStamped>(
+        "/logging/wrenches_stamped", 1);
+
+    polygon_stamped_publisher_ = this->create_publisher<geometry_msgs::msg::PolygonStamped>(
+        "/logging/polygon_stamped", 1);
 }
 
 void HQPPublisher::publish_all(
     const Eigen::VectorXd& joints_accelerations, const Eigen::VectorXd& torques,
     const Eigen::VectorXd& forces, const Eigen::VectorXd& deformations,
-    const Eigen::VectorXd& feet_positions, const Eigen::VectorXd& feet_velocities)
+    const Eigen::VectorXd& feet_positions, const Eigen::VectorXd& feet_velocities,
+    const std::vector<std::string> contact_feet_names, const std::vector<std::string> all_feet_names)
 {
     // Convert the joints accelerations to a ROS message and publish it
     auto joints_accelerations_message = std_msgs::msg::Float64MultiArray();
@@ -91,33 +89,42 @@ void HQPPublisher::publish_all(
     feet_velocities_message.data = std::vector<double>(feet_velocities.data(), feet_velocities.data() + feet_velocities.size());
     feet_velocities_publisher_->publish(feet_velocities_message);
 
-    auto wrench_stamped_LF_message = geometry_msgs::msg::WrenchStamped();
-    wrench_stamped_LF_message.header.frame_id = feet_names_[0];
-    wrench_stamped_LF_message.wrench.force.x = forces[0 + 3*0];
-    wrench_stamped_LF_message.wrench.force.y = forces[1 + 3*0];
-    wrench_stamped_LF_message.wrench.force.z = forces[2 + 3*0];
-    wrench_stamped_LF_publisher_->publish(wrench_stamped_LF_message);
+    auto wrenches_stamped_message = rviz_legged_msgs::msg::WrenchesStamped();
+    wrenches_stamped_message.header.frame_id = "ground_plane_link";
+    wrenches_stamped_message.wrenches_stamped.resize(4);
+    for (int i = 0; i < 4; i++) {
+        wrenches_stamped_message.wrenches_stamped[i].header.frame_id = feet_names_[i];
+        wrenches_stamped_message.wrenches_stamped[i].wrench.force.x = forces[0 + 3*i];
+        wrenches_stamped_message.wrenches_stamped[i].wrench.force.y = forces[1 + 3*i];
+        wrenches_stamped_message.wrenches_stamped[i].wrench.force.z = forces[2 + 3*i];
+    }
+    wrenches_stamped_publisher_->publish(wrenches_stamped_message);
 
-    auto wrench_stamped_RF_message = geometry_msgs::msg::WrenchStamped();
-    wrench_stamped_RF_message.header.frame_id = feet_names_[1];
-    wrench_stamped_RF_message.wrench.force.x = forces[0 + 3*1];
-    wrench_stamped_RF_message.wrench.force.y = forces[1 + 3*1];
-    wrench_stamped_RF_message.wrench.force.z = forces[2 + 3*1];
-    wrench_stamped_RF_publisher_->publish(wrench_stamped_RF_message);
+    auto polygon_stamped_message = geometry_msgs::msg::PolygonStamped();
+    polygon_stamped_message.polygon.points.resize(contact_feet_names.size());
 
-    auto wrench_stamped_LH_message = geometry_msgs::msg::WrenchStamped();
-    wrench_stamped_LH_message.header.frame_id = feet_names_[2];
-    wrench_stamped_LH_message.wrench.force.x = forces[0 + 3*2];
-    wrench_stamped_LH_message.wrench.force.y = forces[1 + 3*2];
-    wrench_stamped_LH_message.wrench.force.z = forces[2 + 3*2];
-    wrench_stamped_LH_publisher_->publish(wrench_stamped_LH_message);
+    std::vector<int> contact_feet_indices(contact_feet_names.size());
+    for (int i = 0; i < static_cast<int>(contact_feet_names.size()); i++) {
+        auto index = std::find(all_feet_names.begin(), all_feet_names.end(), contact_feet_names[i]);
+        if (index != all_feet_names.end()) {
+            contact_feet_indices[i] = index - all_feet_names.begin();
+        }
+    }
 
-    auto wrench_stamped_RH_message = geometry_msgs::msg::WrenchStamped();
-    wrench_stamped_RH_message.header.frame_id = feet_names_[3];
-    wrench_stamped_RH_message.wrench.force.x = forces[0 + 3*3];
-    wrench_stamped_RH_message.wrench.force.y = forces[1 + 3*3];
-    wrench_stamped_RH_message.wrench.force.z = forces[2 + 3*3];
-    wrench_stamped_RH_publisher_->publish(wrench_stamped_RH_message);
+    for (auto i = 0; i < static_cast<int>(contact_feet_names.size()); i++) {
+        polygon_stamped_message.header.frame_id = "ground_plane_link";
+        polygon_stamped_message.polygon.points[i].x = feet_positions[0 + 3*contact_feet_indices[i]];
+        polygon_stamped_message.polygon.points[i].y = feet_positions[1 + 3*contact_feet_indices[i]];
+        polygon_stamped_message.polygon.points[i].z = feet_positions[2 + 3*contact_feet_indices[i]];
+    }
+
+    // LF -> RF -> LH -> RH would not produce a quadrilateral. Change the order of points.
+    if (contact_feet_names.size() == 4) {
+        auto temp = polygon_stamped_message.polygon.points[2];
+        polygon_stamped_message.polygon.points[2] = polygon_stamped_message.polygon.points[3];
+        polygon_stamped_message.polygon.points[3] = temp;
+    }
+    polygon_stamped_publisher_->publish(polygon_stamped_message);
 }
 
 
@@ -521,7 +528,8 @@ controller_interface::return_type HQPController::update(
             logger_->publish_all(
                 wbc.get_v_dot_opt(), tau_,
                 wbc.get_f_c_opt(), wbc.get_d_des_opt(),
-                wbc.get_feet_positions(), wbc.get_feet_velocities(v_));
+                wbc.get_feet_positions(), wbc.get_feet_velocities(v_),
+                des_gen_pose_copy.contact_feet_names, wbc.get_generic_feet_names());
         }
     }
 

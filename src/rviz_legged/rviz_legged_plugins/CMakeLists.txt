@@ -35,7 +35,7 @@ find_package(rviz_ogre_vendor REQUIRED)
 
 find_package(Qt5 REQUIRED COMPONENTS Widgets Test)
 
-find_package(geometry_msgs REQUIRED)
+find_package(rviz_legged_msgs REQUIRED)
 
 find_package(ignition-math6 REQUIRED)
 
@@ -105,7 +105,7 @@ pluginlib_export_plugin_description_file(rviz_common plugins_description.xml)
 
 ament_target_dependencies(${LIBRARY_NAME}
   PUBLIC
-  geometry_msgs
+  rviz_legged_msgs
   image_transport
   interactive_markers
   laser_geometry
@@ -131,7 +131,7 @@ ament_export_include_directories("include/${PROJECT_NAME}")
 ament_export_targets(${LIBRARY_NAME} HAS_LIBRARY_TARGET)
 
 ament_export_dependencies(
-  geometry_msgs
+  rviz_legged_msgs
   image_transport
   interactive_markers
   laser_geometry

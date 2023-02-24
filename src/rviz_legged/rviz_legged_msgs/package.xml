@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-    <name>rviz_legged_plugins</name>
+    <name>rviz_legged_msgs</name>
     <version>0.0.0</version>
-    <description>Plugins useful for legged robots</description>
+    <description>Messages for visualizing legged robots in RViz</description>
     <maintainer email="davide.debenedittis@gmail.com">Davide De Benedittis</maintainer>
     <license>TODO: License declaration</license>
 
@@ -11,10 +11,13 @@
     <author email="davide.debenedittis@gmail.com">Davide De Benedittis</author>
 
     <buildtool_depend>ament_cmake</buildtool_depend>
-    <buildtool_depend>ament_cmake_python</buildtool_depend>
 
-    <depend>rclpy</depend>
-    <depend>rviz_default_plugins</depend>
+    <!-- Message generation dependencies -->
+    <buildtool_depend>rosidl_default_generators</buildtool_depend>
+    <exec_depend>rosidl_default_runtime</exec_depend>
+    <member_of_group>rosidl_interface_packages</member_of_group>
+
+    <depend>geometry_msgs</depend>
 
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>ament_lint_common</test_depend>
