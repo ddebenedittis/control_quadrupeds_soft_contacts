@@ -8,18 +8,15 @@ from launch_ros.actions import Node, SetParameter
 from launch_ros.descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
+
+
 def generate_launch_description():
 
     package_share_path = FindPackageShare(LaunchConfiguration('package_name', default="anymal_c_simple_description"))
 
-    xacro_file_path = PathJoinSubstitution([
+    robot_file_path = PathJoinSubstitution([
         package_share_path,
-        LaunchConfiguration('xacro_file_path', default=os.path.join('urdf', 'anymal.xacro'))
-    ])
-
-    config_file_path = PathJoinSubstitution([
-        package_share_path,
-        LaunchConfiguration('config_file_path', default=os.path.join('config', 'anymal_controller_effort.yaml'))
+        LaunchConfiguration('robot_file_path', default=os.path.join('urdf', 'anymal.xacro'))
     ])
     
     gazebo_config_file_path = PathJoinSubstitution([
@@ -27,14 +24,9 @@ def generate_launch_description():
         'config/gazebo_params.yaml'
     ])
     
-    rigid_terrain_file_path = PathJoinSubstitution([
+    terrain_file_path = PathJoinSubstitution([
         FindPackageShare('robot_gazebo'),
-        'objects/rigid_terrain.xacro'
-    ])
-    
-    soft_terrain_file_path = PathJoinSubstitution([
-        FindPackageShare('robot_gazebo'),
-        'objects/soft_terrain.xacro'
+        'objects/terrain.xacro'
     ])
 
     world_file_path = PathJoinSubstitution([
@@ -42,20 +34,21 @@ def generate_launch_description():
         LaunchConfiguration('world_file_path', default=os.path.join('worlds', 'anymal.world'))
     ])
     
-
-    height = LaunchConfiguration('height', default='0.63')
     
     contact_constraint_type = LaunchConfiguration('contact_constraint_type', default="'soft_kv'")
-    
-    terrain_type = LaunchConfiguration('terrain_type', default='rigid')
-    
+
     gait = LaunchConfiguration('gait', default='static_walk')
-    
+
+    height = LaunchConfiguration('height', default='0.63')
+        
     save_csv = LaunchConfiguration('save_csv', default='False')
+
+    terrain = LaunchConfiguration('terrain', default='rigid')
     
     use_rviz = LaunchConfiguration('use_rviz', default='False')
     
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+    
     
     # ======================================================================== #
 
@@ -67,7 +60,7 @@ def generate_launch_description():
         DeclareLaunchArgument('gait', default_value='static_walk'),
         SetParameter(name='gait', value=gait),
         
-        DeclareLaunchArgument('terrain_type', default_value='rigid'),
+        DeclareLaunchArgument('terrain', default_value='rigid'),
         
         DeclareLaunchArgument('save_csv', default_value='False'),
         
@@ -102,7 +95,7 @@ def generate_launch_description():
             executable = 'robot_state_publisher',
             parameters = [
                 {'use_sim_time': use_sim_time},
-                {'robot_description': ParameterValue(Command(['xacro', ' ', xacro_file_path]), value_type=str)}
+                {'robot_description': ParameterValue(Command(['xacro', ' ', robot_file_path]), value_type=str)}
             ],
             output = 'screen',
         ),
@@ -135,53 +128,17 @@ def generate_launch_description():
         ),
         
         Node(
-            condition=IfCondition(
-                PythonExpression([
-                    "'", terrain_type, "'", " == 'rigid'"
-                ])),
             package = 'robot_state_publisher',
             executable = 'robot_state_publisher',
             namespace = 'ground_plane',
             parameters = [
                 {'use_sim_time': use_sim_time},
-                {'robot_description': ParameterValue(Command(['xacro', ' ' , rigid_terrain_file_path]), value_type=str)}
+                {'robot_description': ParameterValue(Command(['xacro', ' ', terrain_file_path, ' ', 'terrain:=', terrain]), value_type=str)}
             ],
             output = 'screen',
         ),
         
         Node(
-            condition=IfCondition(
-                PythonExpression([
-                    "'", terrain_type, "'", " == 'rigid'"
-                ])),
-            package = 'gazebo_ros',
-            executable = 'spawn_entity.py',
-            arguments = ['-entity', 'ground_plane',
-                         '-topic', '/ground_plane/robot_description'],
-                        #  '-file', PathJoinSubstitution([FindPackageShare("robot_gazebo"), os.path.join('objects', 'rigid_terrain.sdf')])],
-            output = 'screen',
-        ),
-        
-        Node(
-            condition=IfCondition(
-                PythonExpression([
-                    "'", terrain_type, "'", " == 'soft'"
-                ])),
-            package = 'robot_state_publisher',
-            executable = 'robot_state_publisher',
-            namespace = 'ground_plane',
-            parameters = [
-                {'use_sim_time': use_sim_time},
-                {'robot_description': ParameterValue(Command(['xacro', ' ' , soft_terrain_file_path]), value_type=str)}
-            ],
-            output = 'screen',
-        ),
-        
-        Node(
-            condition=IfCondition(
-                PythonExpression([
-                    "'", terrain_type, "'", " == 'soft'"
-                ])),
             package = 'gazebo_ros',
             executable = 'spawn_entity.py',
             arguments = ['-entity', 'ground_plane',
@@ -201,11 +158,7 @@ def generate_launch_description():
         # ),
         
         Node(
-            condition=IfCondition(
-                PythonExpression([
-                    save_csv, ' == True'
-                ]),
-            ),
+            condition=IfCondition(save_csv),
             package='logger_gazebo',
             executable='logger_node',
             parameters=[

@@ -9,36 +9,28 @@ from launch_ros.actions import Node, SetParameter
 from launch_ros.descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
+
+
 def generate_launch_description():
 
     package_share_path = FindPackageShare(LaunchConfiguration('package_name', default="anymal_c_simple_description"))
 
-    xacro_file_path = PathJoinSubstitution([
+    robot_file_path = PathJoinSubstitution([
         package_share_path,
-        LaunchConfiguration('xacro_file_path', default=os.path.join('urdf', 'anymal.xacro'))
+        LaunchConfiguration('robot_file_path', default=os.path.join('urdf', 'anymal.xacro'))
     ])
-
-    config_file_path = PathJoinSubstitution([
-        package_share_path,
-        LaunchConfiguration('config_file_path', default=os.path.join('config', 'anymal_controller_effort.yaml'))
-    ])
-
-    world_file_path = PathJoinSubstitution([
-        FindPackageShare('robot_gazebo'),
-        LaunchConfiguration('world_file_path', default=os.path.join('worlds', 'anymal.world'))
-    ])
-
-    height = LaunchConfiguration('height', default='0.62')
+    
     
     contact_constraint_type = LaunchConfiguration('contact_constraint_type', default="'soft_kv'")
     
-    terrain_type = LaunchConfiguration('terrain_type', default='rigid')
-    
     gait = LaunchConfiguration('gait', default='static_walk')
+    
+    height = LaunchConfiguration('height', default='0.63')
     
     save_csv = LaunchConfiguration('save_csv', default='False')
     
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+    
     
     # ======================================================================== #
     
@@ -75,7 +67,7 @@ def generate_launch_description():
         executable = 'robot_state_publisher',
         parameters = [
             {'use_sim_time': use_sim_time},
-            {'robot_description': ParameterValue(Command(['xacro', ' ' ,xacro_file_path]), value_type=str)}
+            {'robot_description': ParameterValue(Command(['xacro', ' ' ,robot_file_path]), value_type=str)}
         ],
         output = 'screen',
     )
@@ -139,7 +131,7 @@ def generate_launch_description():
         DeclareLaunchArgument('gait', default_value='static_walk'),
         SetParameter(name='gait', value=gait),
         
-        DeclareLaunchArgument('terrain_type', default_value='rigid'),
+        DeclareLaunchArgument('terrain', default_value='rigid'),
         
         DeclareLaunchArgument('save_csv', default_value='False'),
         

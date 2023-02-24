@@ -7,40 +7,43 @@ from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
 
+
+
 def generate_launch_description():
 
     contact_constraint_type = LaunchConfiguration('contact_constraint_type', default="'soft_kv'")
     
-    terrain_type = LaunchConfiguration('terrain_type', default='rigid')
+    reset = LaunchConfiguration('reset', default='False')
     
     save_csv = LaunchConfiguration('save_csv', default='False')
     
-    reset = LaunchConfiguration('reset', default='False')
+    terrain = LaunchConfiguration('terrain', default='rigid')
+
     
     # ======================================================================== #
+    
+    launch_arguments = {
+        'package_name': 'solo_description',
+        'robot_file_path': os.path.join('xacro', 'solo12.urdf.xacro'),
+        'world_file_path': os.path.join('worlds', 'solo.world'),
+        'contact_constraint_type': contact_constraint_type,
+        'height': '0.34',
+        'save_csv': save_csv,
+        'terrain': terrain,
+    }.items()
+
 
     return LaunchDescription([
         
         DeclareLaunchArgument('contact_constraint_type', default_value="'soft_kv'"),
-
-        DeclareLaunchArgument('terrain_type', default_value='rigid'),
-        
+        DeclareLaunchArgument('terrain', default_value='rigid'),
         DeclareLaunchArgument('save_csv', default_value='False'),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(get_package_share_directory('robot_gazebo'), 'launch', 'robot.launch.py')
             ),
-            launch_arguments = {
-                'package_name': 'solo_description',
-                'xacro_file_path': os.path.join('xacro', 'solo12.urdf.xacro'),
-                'config_file_path': os.path.join('config', 'solo_controller_effort.yaml'),
-                'world_file_path': os.path.join('worlds', 'solo.world'),
-                'height': '0.34',
-                'contact_constraint_type': contact_constraint_type,
-                'terrain_type': terrain_type,
-                'save_csv': save_csv,
-            }.items(),
+            launch_arguments = launch_arguments,
             condition=IfCondition(PythonExpression(['not ', reset]))
         ),
         
@@ -48,16 +51,7 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(
                 os.path.join(get_package_share_directory('robot_gazebo'), 'launch', 'reset_robot.launch.py')
             ),
-            launch_arguments = {
-                'package_name': 'solo_description',
-                'xacro_file_path': os.path.join('xacro', 'solo12.urdf.xacro'),
-                'config_file_path': os.path.join('config', 'solo_controller_effort.yaml'),
-                'world_file_path': os.path.join('worlds', 'solo.world'),
-                'height': '0.34',
-                'contact_constraint_type': contact_constraint_type,
-                'terrain_type': terrain_type,
-                'save_csv': save_csv,
-            }.items(),
+            launch_arguments = launch_arguments,
             condition=IfCondition(reset)
         ),
     ])

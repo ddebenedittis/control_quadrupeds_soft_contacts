@@ -60,28 +60,24 @@ colcon build --symlink-install
 
 - ANYmal C static walk simulation:
 ```shell
-ros2 launch robot_gazebo anymal_c.launch.py [terrain_type:={rigid,soft}] [save_csv:={False,True}] [reset:={False,True}] [gait:={static_walk,walking_trot}] [use_rviz:={True,False}]
+ros2 launch robot_gazebo anymal_c.launch.py [terrain:={rigid,soft,very_soft}] [gait:={static_walk,walking_trot}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 - SOLO12 static walk simulation:
 ```shell
-ros2 launch robot_gazebo solo12.launch.py [terrain_type:={rigid,soft}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo solo12.launch.py [terrain:={rigid,soft,very_soft}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 - ANYmal C with SoftFoot-Qs static walk simulation:
 ```shell
-ros2 launch robot_gazebo anymal_c_softfoot_q.launch.py [terrain_type:={rigid,soft}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo anymal_c_softfoot_q.launch.py [terrain:={rigid,soft,very_soft}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
-With the `terrain_type` parameter, the robot walks on a soft and deformable mattress.
-
-With `save_csv:=True`, some data is logged and saved in several .csv files in `log/csv/` folder. This data can be plotted with `plot.py` in the `logger_gazebo` package.
-
-The `reset:=True` parameter must be used in another terminal when there is an already running simulation. The simulation will be restarted. The time is not reset to avoid problems with the controllers.
-
-The `gait` parameter selects the gait type. Currently, the walking trot gait is implemented only on the ANYmal C robot.
-
-When `use_rviz` parameter is `True`, RViz is used to show the contact forces of the robot (still in Alpha version).
-
-Other parameters, such as `contact_constraint_type: {soft_kv, rigid}`, must be changed directly in the specific robot config .yaml file.
+Optional arguments:
+- `gait`: select the gait type. Currently, the walking trot gait is implemented only on the ANYmal C robot.
+- `terrain`: select the terrain type: a rigid terrain (the gray one) or a soft terrain (the grass-like one).
+- `reset`: must be used in another terminal when there is an already running simulation. The simulation will be restarted. The time is not reset to avoid problems with the controllers.
+- `save_csv`: when `True`, some data is logged and saved in several .csv files in the `log/csv/` folder. This data can be plotted with `plot.py` (in the `logger_gazebo` package).
+- `use_rviz`: when `True`, RViz is used to display the contact forces of the robot (still in Alpha version).
+- `contact_constraint_type`: not working. Must be changed directly in the specific robot config .yaml file.
 
 In some simulations (e.g. the simulation of ANYmal with SoftFoot-Q or the simulation with a trotting gait), due to the relatively high computational cost, it may be helpful to start or to run the simulation with a reduced real-time factor.
 
