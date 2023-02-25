@@ -58,14 +58,20 @@ colcon build --symlink-install
 
 ### Simulations
 
-- ANYmal C static walk simulation:
+- ANYmal C simulation:
 ```shell
 ros2 launch robot_gazebo anymal_c.launch.py [terrain:={rigid,soft,very_soft}] [gait:={static_walk,walking_trot}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
+
+![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/anymal_c-trot-grass.gif)
+
 - SOLO12 static walk simulation:
 ```shell
 ros2 launch robot_gazebo solo12.launch.py [terrain:={rigid,soft,very_soft}] [save_csv:={False,True}] [reset:={False,True}]
 ```
+
+![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/solo12-walk-rigid.gif)
+
 - ANYmal C with SoftFoot-Qs static walk simulation:
 ```shell
 ros2 launch robot_gazebo anymal_c_softfoot_q.launch.py [terrain:={rigid,soft,very_soft}] [save_csv:={False,True}] [reset:={False,True}]
@@ -77,6 +83,10 @@ Optional arguments:
 - `reset`: must be used in another terminal when there is an already running simulation. The simulation will be restarted. The time is not reset to avoid problems with the controllers.
 - `save_csv`: when `True`, some data is logged and saved in several .csv files in the `log/csv/` folder. This data can be plotted with `plot.py` (in the `logger_gazebo` package).
 - `use_rviz`: when `True`, RViz is used to display the contact forces of the robot (still in Alpha version).
+
+<img src="https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/rviz_legged_walk.gif" width="500">
+<img src="https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/rviz_legged_trot.gif" width="500">
+
 - `contact_constraint_type`: not working. Must be changed directly in the specific robot config .yaml file.
 
 In some simulations (e.g. the simulation of ANYmal with SoftFoot-Q or the simulation with a trotting gait), due to the relatively high computational cost, it may be helpful to start or to run the simulation with a reduced real-time factor.
