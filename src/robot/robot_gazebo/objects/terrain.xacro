@@ -57,7 +57,7 @@
 
     <xacro:if value="${'soft' == terrain}">
         <gazebo reference="ground_plane_link">
-            <material>Gazebo/Gold</material>
+            <material>Gazebo/Grass</material>
             <kp>5000</kp>
             <kd>100</kd>
         </gazebo>

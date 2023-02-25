@@ -382,7 +382,7 @@ class MotionPlanner:
 
         # Compute the base angular trajectory.
         omega_des = np.array([0.0, 0.0, yaw_rate_cmd])
-        q_des = np.array([0.0, 0.0, np.sin(self.dtheta), np.cos(self.dtheta)])
+        q_des = np.array([0.0, 0.0, np.sin(self.dtheta/2), np.cos(self.dtheta/2)])
 
         # Compute the list of feet in contact phase.
         contactFeet = []
