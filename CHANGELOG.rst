@@ -51,3 +51,4 @@ Upcoming (2023-02-23)
 - Fixed the base teleoperation node.
 - Reorganized the gazebo launch files.
 - Added an heterogeneous terrain (multi_terrains).
+- New parameter in the controllers yaml file: `shift_base_height`. When `true`, we consider the fact that the terrain is soft and move the desired base height to take into account the terrain penetration.

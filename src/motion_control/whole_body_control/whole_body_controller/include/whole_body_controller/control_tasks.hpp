@@ -153,6 +153,8 @@ public:
     /// @brief Return the feet names of the specific robot. These are the names of the links used for computing the contact point.
     const std::vector<std::string>& get_all_feet_names() const {return robot_model.get_all_feet_names();}
 
+    const Eigen::VectorXd get_kp_terr() {return this->kp_terr;}
+
 
     /* =============================== Setters ============================== */
 

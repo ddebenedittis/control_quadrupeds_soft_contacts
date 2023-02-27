@@ -91,6 +91,8 @@ whole_body_controller:
             - HR_KFE
 
         contact_constraint_type: soft_sim
+
+        shift_base_height: false
         
         tau_max: 2.7
         mu: 0.6

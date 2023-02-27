@@ -53,8 +53,13 @@ public:
     /// @brief Get the dimension of the generalized velocities vector.
     int get_nv() {return prioritized_tasks.get_nv();}
 
+    /// @brief Get the mass of the robot. 
+    double get_mass() {return prioritized_tasks.get_mass();}
+
     /// @brief Get the size of the deformations of the single foot. This depends on the contact model used: 3 for the kv model, 1 for the soft_sim model, and 0 for the rigid model.
     int get_def_size() {return deformations_history_manager.get_def_size();}
+
+    const Eigen::VectorXd get_kp_terr() {return prioritized_tasks.get_kp_terr();}
 
 
     /* =============================== Setters ============================== */

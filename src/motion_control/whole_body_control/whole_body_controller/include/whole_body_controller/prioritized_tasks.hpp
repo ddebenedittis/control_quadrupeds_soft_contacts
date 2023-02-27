@@ -109,6 +109,12 @@ public:
     int get_max_priority() {return *max_element(tasks_vector.begin(), tasks_vector.end());}
 
     auto get_contact_constraint_type() {return this->contact_constraint_type;}
+
+    const Eigen::VectorXd get_kp_terr() {return control_tasks.get_kp_terr();}
+
+
+    /* =============================== Setters ============================== */
+
     void set_contact_constraint_type(ContactConstraintType contact_constraint_type) {this->contact_constraint_type = contact_constraint_type;}
 
     void set_tau_max(const double tau_max) {control_tasks.set_tau_max(tau_max);}

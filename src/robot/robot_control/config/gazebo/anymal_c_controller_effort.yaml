@@ -92,6 +92,8 @@ whole_body_controller:
 
         contact_constraint_type: rigid
         
+        shift_base_height: true
+        
         tau_max: 80.
         mu: 1.
         Fn_max: 350.

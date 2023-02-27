@@ -92,6 +92,8 @@ whole_body_controller:
 
         contact_constraint_type: soft_kv
 
+        shift_base_height: false
+
         tau_max: 80.
         mu: 0.8
         Fn_max: 350.

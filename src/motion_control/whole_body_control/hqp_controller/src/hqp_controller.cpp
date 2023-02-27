@@ -160,6 +160,9 @@ CallbackReturn HQPController::on_init()
         auto_declare<bool>("logging", bool());
 
         auto_declare<std::string>("contact_constraint_type", std::string());
+
+        auto_declare<bool>("shift_base_height", bool());
+
         auto_declare<double>("tau_max", double());
         auto_declare<double>("mu", double());
         auto_declare<double>("Fn_max", double());
@@ -261,6 +264,11 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
     /* ====================================================================== */
 
     logging_ = get_node()->get_parameter("logging").as_bool();
+
+
+    /* ====================================================================== */
+
+    shift_base_height_ = get_node()->get_parameter("shift_base_height").as_bool();
 
 
     /* ====================================================================== */
@@ -514,6 +522,21 @@ controller_interface::return_type HQPController::update(
         }
 
         wbc::GeneralizedPose des_gen_pose_copy = des_gen_pose_;
+
+        //! This assumes that the robot is a quadrupedal robot, not a bipedal one.
+        if (shift_base_height_ == true) {
+            int n = 0;
+            
+            if (des_gen_pose_copy.contact_feet_names.size() == 2) {
+                // If contact_feet_names has size 2, we assume that the robot is trotting and there are on average 2 contact points with the terrain.
+                n = 2;
+            } else if (des_gen_pose_copy.contact_feet_names.size() > 2) {
+                // If contact_feet_names has size > 2, we assume that the robot is performing a walking gait and that there are 3 contact points on average.
+                n = 3;
+            }
+
+            des_gen_pose_copy.base_pos[2] -= wbc.get_mass() * 9.81 / (n * wbc.get_kp_terr()[2]);
+        }
         
         wbc.step(q_, v_, des_gen_pose_copy);
 

@@ -106,6 +106,9 @@ protected:
     /// @brief If true, the controller will publish the computed optimal joint torques, contact forces, and feet deformations.
     bool logging_ = false;
 
+    /// @brief If true, the desired base height in world frame is shifted to take into account the fact that the terrain is soft and the robot will penetrate it. It also takes into account the number of feet in contact with the terrain.
+    bool shift_base_height_ = false;
+
     std::shared_ptr<HQPPublisher> logger_ = nullptr;
 
     /// @brief Initialization time to give the state estimator some time to get better estimates. During this time, a PD controller is used to keep the robot in q0 and the planner is paused.
