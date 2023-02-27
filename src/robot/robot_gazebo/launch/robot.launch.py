@@ -12,7 +12,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     
-    global package_share_path, robot_file_path, gazebo_config_file_path, terrain_file_path, world_file_path
+    global package_share_path, robot_file_path, gazebo_config_file_path, terrain_file_path, multi_terrains_file_path, world_file_path
 
     package_share_path = FindPackageShare(LaunchConfiguration('package_name', default="anymal_c_simple_description"))
 
@@ -29,6 +29,11 @@ def generate_launch_description():
     terrain_file_path = PathJoinSubstitution([
         FindPackageShare('robot_gazebo'),
         'objects/terrain.xacro'
+    ])
+    
+    multi_terrains_file_path = PathJoinSubstitution([
+        FindPackageShare('robot_gazebo'),
+        'objects/multi_terrains.xacro'
     ])
 
     world_file_path = PathJoinSubstitution([
@@ -140,6 +145,11 @@ def spawn_things(ld):
     # Spawn the terrain
     
     terrain_rsp = Node(
+        condition=IfCondition(
+            PythonExpression([
+                '"', terrain, '"', ' != "multi_terrains"'
+            ])
+        ),
         package = 'robot_state_publisher',
         executable = 'robot_state_publisher',
         namespace = 'ground_plane',
@@ -149,12 +159,28 @@ def spawn_things(ld):
         ],
         output = 'screen',
     )
+    
+    multi_terrain_rsp = Node(
+        condition=IfCondition(
+            PythonExpression([
+                '"', terrain, '"', ' == "multi_terrains"'
+            ])
+        ),
+        package = 'robot_state_publisher',
+        executable = 'robot_state_publisher',
+        namespace = 'ground_plane',
+        parameters = [
+            {'use_sim_time': use_sim_time},
+            {'robot_description': ParameterValue(Command(['xacro', ' ', multi_terrains_file_path, ' ', 'terrain:=', terrain]), value_type=str)}
+        ],
+        output = 'screen',
+    )
         
     spawn_terrain = Node(
         package = 'gazebo_ros',
         executable = 'spawn_entity.py',
         arguments = ['-entity', 'ground_plane',
-                        '-topic', '/ground_plane/robot_description'],
+                     '-topic', '/ground_plane/robot_description'],
         output = 'screen',
     )
     
@@ -162,6 +188,7 @@ def spawn_things(ld):
     ld.add_action(spawn_robot)
     
     ld.add_action(terrain_rsp)
+    ld.add_action(multi_terrain_rsp)
     ld.add_action(spawn_terrain)
     
 

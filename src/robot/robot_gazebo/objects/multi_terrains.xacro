@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="ground_plane" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <gazebo>
+        <static>true</static>
+    </gazebo>
+
+    <link name="ground_plane_link">
+        <inertial>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <mass value="1"/>
+            <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+        </inertial>
+        <visual>
+            <origin rpy="0 0 0" xyz="50 50 -1"/>
+            <geometry>
+                <box size="100 100 2"/>
+            </geometry>
+            <material name="grey">
+                <color rgba="0.8 0.8 0.8 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="50 50 -1"/>
+            <geometry>
+                <box size="100 100 2"/>
+            </geometry>
+        </collision>
+    </link>
+    <joint name="LF_to_RF" type="revolute">
+        <parent link="ground_plane_link"/>
+        <child link="ground_plane_link_RF"/>
+        <origin rpy="0 0 0" xyz="50 -50 0"/>
+        <axis xyz="1 0 0"/>
+        <limit effort="0.0" lower="0.0" upper="0.0" velocity="0.0"/>
+        <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+    <link name="ground_plane_link_RF">
+        <inertial>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <mass value="1"/>
+            <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+        </inertial>
+        <visual>
+            <origin rpy="0 0 0" xyz="0 0 -1"/>
+            <geometry>
+                <box size="100 100 2"/>
+            </geometry>
+            <material name="grey">
+                <color rgba="0.0 0.8 0.0 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="0 0 -1"/>
+            <geometry>
+                <box size="100 100 2"/>
+            </geometry>
+        </collision>
+    </link>
+    <joint name="RF_to_RH" type="revolute">
+        <parent link="ground_plane_link_RF"/>
+        <child link="ground_plane_link_RH"/>
+        <origin rpy="0 0 0" xyz="-100 0 0"/>
+        <axis xyz="1 0 0"/>
+        <limit effort="0.0" lower="0.0" upper="0.0" velocity="0.0"/>
+        <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+    <link name="ground_plane_link_RH">
+        <inertial>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <mass value="1"/>
+            <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+        </inertial>
+        <visual>
+            <origin rpy="0 0 0" xyz="0 0 -1"/>
+            <geometry>
+                <box size="100 100 2"/>
+            </geometry>
+            <material name="gold">
+                <color rgba="0.8 0.8 0.0 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="0 0 -1"/>
+            <geometry>
+                <box size="100 100 2"/>
+            </geometry>
+        </collision>
+    </link>
+    <joint name="RH_to_LH" type="revolute">
+        <parent link="ground_plane_link_RH"/>
+        <child link="ground_plane_link_LH"/>
+        <origin rpy="0 0 0" xyz="0 100 0"/>
+        <axis xyz="1 0 0"/>
+        <limit effort="0.0" lower="0.0" upper="0.0" velocity="0.0"/>
+        <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+    <link name="ground_plane_link_LH">
+        <inertial>
+            <origin rpy="0 0 0" xyz="0 100 0"/>
+            <mass value="1"/>
+            <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+        </inertial>
+        <visual>
+            <origin rpy="0 0 0" xyz="0 0 -1"/>
+            <geometry>
+                <box size="100 100 2"/>
+            </geometry>
+            <material name="white">
+                <color rgba="1.0 1.0 1.0 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="0 0 -1"/>
+            <geometry>
+                <box size="100 100 2"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <gazebo reference="ground_plane_link">
+        <material>Gazebo/Grey</material>
+            <kp>1e6</kp>
+            <kd>1e2</kd>
+    </gazebo>
+
+    <gazebo reference="LF_to_RF">
+        <preserve_fixed_joint>true</preserve_fixed_joint>
+    </gazebo>
+
+    <gazebo reference="ground_plane_link_RF">
+        <material>Gazebo/Grass</material>
+        <kp>5000</kp>
+        <kd>100</kd>
+    </gazebo>
+
+    <gazebo reference="ground_plane_link_RH">
+        <material>Gazebo/Gold</material>
+        <kp>2000</kp>
+        <kd>100</kd>
+    </gazebo>
+
+    <gazebo reference="ground_plane_link_LH">
+        <material>Gazebo/White</material>
+        <kp>10000</kp>
+        <kd>200</kd>
+    </gazebo>
+    
+</robot>

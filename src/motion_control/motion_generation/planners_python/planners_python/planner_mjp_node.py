@@ -181,7 +181,11 @@ class Planner(Node):
             a_b = - self.filter.filter(a_b_meas_body, Ts=self.planner.dt)
 
             # Horizontal velocity command and yaw rate command
-            vel_cmd = np.array([0.0,0.0])
+            # vel_cmd = np.array([0.0,0.0])
+            vel_cmd = - np.array([
+                p_b[0],
+                p_b[1]
+            ])
             yaw_rate_cmd = 0
 
             # Perform a single iteration of the model predictive control
