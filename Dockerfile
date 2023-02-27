@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -qqy \
     lsb-release \
     gnupg2 \
     curl \
+    xterm \
     python3-pip \
     ros-humble-gazebo-ros-pkgs \
     ros-humble-gazebo-ros2-control \

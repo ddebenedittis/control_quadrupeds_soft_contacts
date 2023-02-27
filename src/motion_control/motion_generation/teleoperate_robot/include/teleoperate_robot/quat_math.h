@@ -50,6 +50,16 @@ std::array<double, 4> quat_exp_vec(std::array<double, 3> v)
     return q;
 }
 
+double quat_norm(std::array<double, 4>& q)
+{
+    double norm = 0;
+
+    for(int i=0; i<4; i++)
+        norm += q[i] * q[i];
+
+    return sqrt(norm);
+}
+
 // Normalize a quaternion
 void normalize_quat(std::array<double, 4>& q)
 {
