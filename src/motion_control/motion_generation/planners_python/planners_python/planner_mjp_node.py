@@ -160,7 +160,9 @@ class Planner(Node):
                 
     def timer_callback(self):        
         if self.minimal_subscriber.q_b.size == 0 or self.minimal_subscriber.a_b.size == 0:
-            self.p_b_0 = self.minimal_subscriber.q_b[0:3]
+            if self.minimal_subscriber.q_b.size != 0:
+                self.p_b_0 = self.minimal_subscriber.q_b[0:3]
+                
             self.rate.sleep()
         else:
             # Update the internal timer
@@ -208,6 +210,8 @@ class Planner(Node):
                 r_s_des = np.array([])
             else:
                 self.p_b_0[2] = self.minimal_subscriber.q_b[2]
+                
+                return
             
 
             # Publish the desired generalized pose message

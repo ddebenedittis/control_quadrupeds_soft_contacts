@@ -110,7 +110,7 @@ public:
 
     auto get_contact_constraint_type() {return this->contact_constraint_type;}
 
-    const Eigen::VectorXd get_kp_terr() {return control_tasks.get_kp_terr();}
+    const Eigen::Vector3d get_kp_terr() {return control_tasks.get_kp_terr();}
 
 
     /* =============================== Setters ============================== */
