@@ -48,7 +48,7 @@
 Upcoming (2023-02-23)
 ------------------
 - Alpha version of a visualizer with RViz. The robot, the terrain, and the (optimal) contact forces are displayed. The support polygon is displayed.
-- Fixed the base teleoperation node.
+- Fixed the teleoperate_robot_base node. New teleoperate_velocity_command node that teleoperates the robot trotting (use `gait:=teleop_walking_trot`).
 - Reorganized the gazebo launch files.
 - Added an heterogeneous terrain (multi_terrains).
 - New parameter in the controllers yaml file: `shift_base_height`. When `true`, we consider the fact that the terrain is soft and move the desired base height to take into account the terrain penetration.

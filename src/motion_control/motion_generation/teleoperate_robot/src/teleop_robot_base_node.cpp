@@ -4,10 +4,11 @@
 
 
 
-/* ============================== TeleopRobotx ============================== */
+namespace teleoperate_robot
+{
 
-TeleopRobot::TeleopRobot()
-: Node("teleop_robot"),
+TeleopRobotBase::TeleopRobotBase()
+: TeleopRobot(),
   l_twist_{0.0, 0.0, 0.0},
   a_twist_{0.0, 0.0, 0.0},
   l_scale_(1.0),
@@ -15,86 +16,26 @@ TeleopRobot::TeleopRobot()
 {
     this->declare_parameter("scale_angular", rclcpp::ParameterValue(1.0));
     this->declare_parameter("scale_linear", rclcpp::ParameterValue(1.0));
+    this->declare_parameter("robot_name", rclcpp::ParameterValue("generic_robot_name"));
     this->get_parameter("scale_angular", a_scale_);
     this->get_parameter("scale_linear", l_scale_);
+    this->get_parameter("robot_name", robot_name);
 
-    des_gen_pose_pub_ = this->create_publisher<generalized_pose_msgs::msg::GeneralizedPose>(
+    pub_ = this->create_publisher<generalized_pose_msgs::msg::GeneralizedPose>(
         "robot/desired_generalized_pose", 1);
 
-    // base_pose_sub_ = this->create_subscription<gazebo_msgs::msg::LinkStates>(
-    //     "gazebo/link_states", 1, std::bind(&TeleopRobot::pose_callback, this, _1));
+    subscriber_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    auto sub_opt = rclcpp::SubscriptionOptions();
+    sub_opt.callback_group = subscriber_cb_group_;
 
-    timer_ = rclcpp::create_timer(this, this->get_clock(), timer_period_, std::bind(&TeleopRobot::read_key, this));
+    base_pose_sub_ = this->create_subscription<gazebo_msgs::msg::ModelStates>(
+        "gazebo/model_states", 1, std::bind(&TeleopRobotBase::pose_callback, this, _1), sub_opt);
 
-    TeleopRobot::print_instructions();
+    print_instructions();
 }
 
 
-/* ================================ Key_read ================================ */
-
-void TeleopRobot::read_key()
-{
-    char c;
-    bool dirty = false;
-
-    try {
-        keyboard_reader_.read_one(&c);
-    } catch (const std::runtime_error &) {
-        perror("read():");
-    }
-
-    l_twist_ = a_twist_ = {0.0, 0.0, 0.0};
-    RCLCPP_DEBUG(this->get_logger(), "value: 0x%02X\n", c);
-
-    dirty = process_key(c);
-
-    // Update the desired base position
-    for(int i=0; i<static_cast<int>(r_b_des.size()); i++) {
-        r_b_des[i] = r_b_des[i] + l_twist_[i] * l_scale_ * 0.01;
-    }
-    
-    // Integrate the orientation with the angular velocity in body frame received by the user input.
-    q_des = quat_int(q_des, a_twist_, a_scale_ * 0.01);
-
-
-    // Initialize the message and set its parts.
-    generalized_pose_msgs::msg::GeneralizedPose gen_pose;
-    
-    gen_pose.base_acc.x = r_b_ddot_des[0];
-    gen_pose.base_acc.y = r_b_ddot_des[1];
-    gen_pose.base_acc.z = r_b_ddot_des[2];
-
-    gen_pose.base_vel.x = r_b_dot_des[0];
-    gen_pose.base_vel.y = r_b_dot_des[1];
-    gen_pose.base_vel.z = r_b_dot_des[2];
-
-    gen_pose.base_pos.x = r_b_des[0];
-    gen_pose.base_pos.y = r_b_des[1];
-    gen_pose.base_pos.z = r_b_des[2];
-
-    gen_pose.base_angvel.x = omega_des[0];
-    gen_pose.base_angvel.y = omega_des[1];
-    gen_pose.base_angvel.z = omega_des[2];
-
-    gen_pose.base_quat.x = q_des[0];
-    gen_pose.base_quat.y = q_des[1];
-    gen_pose.base_quat.z = q_des[2];
-    gen_pose.base_quat.w = q_des[3];
-
-    gen_pose.contact_feet = {"LF", "RF", "LH", "RH"};
-
-
-    // This if statement is used to publishes the message only when the desired generalized pose is changed (when there is a user input).
-    if (dirty == true) {
-        des_gen_pose_pub_->publish(gen_pose);
-        // base_pose_sub_.reset();
-    }
-}
-
-
-/* =========================== Print_instructions =========================== */
-
-void TeleopRobot::print_instructions()
+void TeleopRobotBase::print_instructions()
 {
     puts("Reading from keyboard");
     puts("---------------------------");
@@ -110,10 +51,11 @@ void TeleopRobot::print_instructions()
 }
 
 
-/* =============================== Process_key ============================== */
-
-bool TeleopRobot::process_key(const char c)
+bool TeleopRobotBase::process_key(const char c)
 {
+    l_twist_ = a_twist_ = {0.0, 0.0, 0.0};
+    RCLCPP_DEBUG(this->get_logger(), "value: 0x%02X\n", c);
+
     switch(c) {
     // Linear movements of the base
     case KEYCODE_w:
@@ -172,28 +114,110 @@ bool TeleopRobot::process_key(const char c)
 }
 
 
-/* ============================ gen_pose_callback =========================== */
-
-void TeleopRobot::pose_callback(const gazebo_msgs::msg::LinkStates::SharedPtr msg)
+bool TeleopRobotBase::initialize_message()
 {
-    const int base_id = 1;
+    msg_.base_acc.x = 0;
+    msg_.base_acc.y = 0;
+    msg_.base_acc.z = 0;
 
-    r_b_des = {
+    msg_.base_vel.x = 0;
+    msg_.base_vel.y = 0;
+    msg_.base_vel.z = 0;
+
+    msg_.base_pos.x = base_pos_des_[0];
+    msg_.base_pos.y = base_pos_des_[1];
+    msg_.base_pos.z = base_pos_des_[2];
+
+    msg_.base_angvel.x = 0;
+    msg_.base_angvel.y = 0;
+    msg_.base_angvel.z = 0;
+
+    msg_.base_quat.x = base_quat_des_[0];
+    msg_.base_quat.y = base_quat_des_[1];
+    msg_.base_quat.z = base_quat_des_[2];
+    msg_.base_quat.w = base_quat_des_[3];
+
+    msg_.contact_feet = {"LF", "RF", "LH", "RH"};
+
+    if (quat_norm(base_quat_des_) > 0.9) {
+        base_pose_sub_.reset();
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
+void TeleopRobotBase::update_message()
+{
+    // Update the desired base position and orientation using the commanded linear and angular twist.
+
+    // Update the desired base position
+    for(int i=0; i<static_cast<int>(base_pos_des_.size()); i++) {
+        base_pos_des_[i] = base_pos_des_[i] + l_twist_[i] * l_scale_ * 0.01;
+    }
+    
+    // Integrate the orientation with the angular velocity in body frame received by the user input.
+    base_quat_des_ = quat_int(base_quat_des_, a_twist_, a_scale_ * 0.01);
+
+
+    // Set the message fields.
+
+    msg_.base_acc.x = 0;
+    msg_.base_acc.y = 0;
+    msg_.base_acc.z = 0;
+
+    msg_.base_vel.x = 0;
+    msg_.base_vel.y = 0;
+    msg_.base_vel.z = 0;
+
+    msg_.base_pos.x = base_pos_des_[0];
+    msg_.base_pos.y = base_pos_des_[1];
+    msg_.base_pos.z = base_pos_des_[2];
+
+    msg_.base_angvel.x = 0;
+    msg_.base_angvel.y = 0;
+    msg_.base_angvel.z = 0;
+
+    msg_.base_quat.x = base_quat_des_[0];
+    msg_.base_quat.y = base_quat_des_[1];
+    msg_.base_quat.z = base_quat_des_[2];
+    msg_.base_quat.w = base_quat_des_[3];
+
+    msg_.contact_feet = {"LF", "RF", "LH", "RH"};
+}
+
+/* ============================== Pose_callback ============================= */
+
+void TeleopRobotBase::pose_callback(const gazebo_msgs::msg::ModelStates::SharedPtr msg)
+{
+    int base_id = -1;
+
+    for (int i = 0; i < static_cast<int>(msg->name.size()); i++) {
+        if (msg->name[i] == robot_name) {
+            base_id = i;
+            break;
+        }
+    }
+
+    base_pos_des_ = {
         msg->pose[base_id].position.x,
         msg->pose[base_id].position.y,
         msg->pose[base_id].position.z
     };
 
-    q_des[0] = msg->pose[base_id].orientation.x;
-    q_des[1] = msg->pose[base_id].orientation.y;
-    q_des[2] = msg->pose[base_id].orientation.z;
-    q_des[3] = msg->pose[base_id].orientation.w;
+    base_quat_des_[0] = msg->pose[base_id].orientation.x;
+    base_quat_des_[1] = msg->pose[base_id].orientation.y;
+    base_quat_des_[2] = msg->pose[base_id].orientation.z;
+    base_quat_des_[3] = msg->pose[base_id].orientation.w;
 }
+
+} // teleoperate_robot
 
 
 
 /* ========================================================================== */
-/*                          MAIN FUNCTION DEFINITION                          */
+/*                                    MAIN                                    */
 /* ========================================================================== */
 
 int main(int argc, char* argv[])
@@ -201,11 +225,14 @@ int main(int argc, char* argv[])
     rclcpp::init(argc, argv);
 
     // TeleopRobot teleop_robot;
-    auto teleop_robot = std::make_shared<TeleopRobot>();
+    auto teleop_robot_base = std::make_shared<teleoperate_robot::TeleopRobotBase>();
 
-    rclcpp::spin(teleop_robot);
+    rclcpp::executors::MultiThreadedExecutor executor;
 
-    teleop_robot->shutdown();
+    executor.add_node(teleop_robot_base);
+    executor.spin();
+
+    teleop_robot_base->shutdown();
 
     rclcpp::shutdown();
     

@@ -35,6 +35,7 @@ find_package(gazebo_msgs REQUIRED)
 find_package(generalized_pose_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(velocity_command_msgs REQUIRED)
 
 
 
@@ -42,47 +43,56 @@ find_package(sensor_msgs REQUIRED)
 #                                ADD EXECUTABLES                                
 # ==============================================================================
 
-set(EXECUTABLE_NAME teleop_robot_base_node)
+set(FILES teleop_robot_base_node teleop_velocity_command_node)
 
-set(EXECUTABLE_DEPENDENCIES
-    rclcpp
+foreach(FILE IN LISTS FILES)
+    message(${FILE})
 
-    gazebo_msgs
-    generalized_pose_msgs
-    std_msgs
-    sensor_msgs
-)
+    set(SOURCE_FILE ${FILE})
 
-add_executable(${EXECUTABLE_NAME} src/teleop_robot_base_node.cpp)
+    message(${SOURCE_FILE})
 
-target_include_directories(${EXECUTABLE_NAME} PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
-)
+    set(EXECUTABLE_DEPENDENCIES
+        rclcpp
 
-ament_target_dependencies(${EXECUTABLE_NAME} PUBLIC ${EXECUTABLE_DEPENDENCIES})
+        gazebo_msgs
+        generalized_pose_msgs
+        std_msgs
+        sensor_msgs
+        velocity_command_msgs
+    )
 
-ament_export_targets(${EXECUTABLE_NAME}_targets HAS_LIBRARY_TARGET)
-ament_export_dependencies(${EXECUTABLE_DEPENDENCIES})
+    add_executable(${SOURCE_FILE} src/${SOURCE_FILE}.cpp)
 
-install(
-    DIRECTORY include/
-    DESTINATION include/${PROJECT_NAME}
-)
+    target_include_directories(${SOURCE_FILE} PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+    )
 
-install(
-    DIRECTORY launch
-    DESTINATION share/${PROJECT_NAME}
-)
+    ament_target_dependencies(${SOURCE_FILE} PUBLIC ${EXECUTABLE_DEPENDENCIES})
 
-install(
-    TARGETS ${EXECUTABLE_NAME}
-    EXPORT ${EXECUTABLE_NAME}_targets
-    LIBRARY DESTINATION lib/${PROJECT_NAME}
-    ARCHIVE DESTINATION lib/${PROJECT_NAME}
-    RUNTIME DESTINATION lib/${PROJECT_NAME}
-    INCLUDES DESTINATION include/${PROJECT_NAME}
-)
+    ament_export_targets(${SOURCE_FILE}_targets HAS_LIBRARY_TARGET)
+    ament_export_dependencies(${EXECUTABLE_DEPENDENCIES})
+
+    install(
+        DIRECTORY include/
+        DESTINATION include/${PROJECT_NAME}
+    )
+
+    install(
+        DIRECTORY launch
+        DESTINATION share/${PROJECT_NAME}
+    )
+
+    install(
+        TARGETS ${SOURCE_FILE}
+        EXPORT ${SOURCE_FILE}_targets
+        LIBRARY DESTINATION lib/${PROJECT_NAME}
+        ARCHIVE DESTINATION lib/${PROJECT_NAME}
+        RUNTIME DESTINATION lib/${PROJECT_NAME}
+        INCLUDES DESTINATION include/${PROJECT_NAME}
+    )
+endforeach()
 
 
 

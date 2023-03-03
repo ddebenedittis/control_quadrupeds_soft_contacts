@@ -3,8 +3,9 @@ import rclpy
 from rclpy.node import Node
 
 from gazebo_msgs.msg import LinkStates
-from sensor_msgs.msg import Imu
 from generalized_pose_msgs.msg import GeneralizedPose
+from velocity_command_msgs.msg import SimpleVelocityCommand
+from sensor_msgs.msg import Imu
 
 from .planners.planner_mjp import MotionPlanner
 
@@ -36,12 +37,22 @@ class MinimalSubscriber(Node):
             "/imu_sensor_broadcaster/imu",
             self.imu_callback,
             1)
+        
+        self.velocity_command_subscription = self.create_subscription(
+            SimpleVelocityCommand,
+            "robot/simple_velocity_command",
+            self.vel_cmd_callback,
+            1)
 
         self.imu_subscription # prevent unused variable warning
 
         self.q_b = np.array([])     # base position
         self.v_b = np.array([])     # base velocity
         self.a_b = np.array([])     # base acceleration
+        
+        self.velocity_forward = 0.
+        self.velocity_lateral = 0.
+        self.yaw_rate = 0.
 
 
     # Save the base pose and twist
@@ -73,6 +84,11 @@ class MinimalSubscriber(Node):
         acc = msg.linear_acceleration
 
         self.a_b = np.array([acc.x, acc.y, acc.z])
+        
+    def vel_cmd_callback(self, msg):
+        self.velocity_forward = msg.velocity_forward
+        self.velocity_lateral = msg.velocity_lateral
+        self.yaw_rate = msg.yaw_rate
 
 
 
@@ -184,11 +200,15 @@ class Planner(Node):
 
             # Horizontal velocity command and yaw rate command
             # vel_cmd = np.array([0.0,0.0])
-            vel_cmd = - np.array([
-                p_b[0],
-                p_b[1]
+            # vel_cmd = - np.array([
+            #     p_b[0],
+            #     p_b[1]
+            # ])
+            vel_cmd = np.array([
+                self.minimal_subscriber.velocity_forward,
+                self.minimal_subscriber.velocity_lateral,
             ])
-            yaw_rate_cmd = 0
+            yaw_rate_cmd = self.minimal_subscriber.yaw_rate
 
             # Perform a single iteration of the model predictive control
             if self.time > self.init_time + self.zero_time:

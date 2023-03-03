@@ -1,12 +1,13 @@
-#include "teleoperate_robot/keyboard_reader.hpp"
+#pragma once
 
-#include "rclcpp/rclcpp.hpp"
+#include "teleoperate_robot/teleop_robot.tpp"
 
-#include "gazebo_msgs/msg/link_states.hpp"
+#include "gazebo_msgs/msg/model_states.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 #include "generalized_pose_msgs/msg/generalized_pose.hpp"
 
 #include <array>
+#include <string>
 
 
 
@@ -36,44 +37,39 @@
 
 
 
-/* ========================================================================== */
-/*                              TELEOPROBOT CLASS                             */
-/* ========================================================================== */
+namespace teleoperate_robot
+{
 
 using std::placeholders::_1;
 
-class TeleopRobot : public rclcpp::Node {
+class TeleopRobotBase : public TeleopRobot<generalized_pose_msgs::msg::GeneralizedPose> {
 public:
-    TeleopRobot();
-
-    /// TeleopRobot member function that handles the keyboard input and publish the DesGenPose to the appropriate topic.
-    void read_key();
-
-    void shutdown() {keyboard_reader_.shutdown();};
+    TeleopRobotBase();
 
 private:
-    void print_instructions();
+    virtual void print_instructions() override;
 
-    bool process_key(const char c);
+    virtual bool process_key(const char c) override;
 
-    void pose_callback(const gazebo_msgs::msg::LinkStates::SharedPtr msg);
+    virtual void update_message() override;
+
+    bool initialize_message() override;
+
+    void pose_callback(const gazebo_msgs::msg::ModelStates::SharedPtr msg);
 
     KeyboardReader keyboard_reader_;
     
     std::array<double, 3> l_twist_, a_twist_;
     double l_scale_, a_scale_;
 
-    std::array<double, 3> r_b_des = {0., 0., 0.55};      ///< @brief Desired base position
-    std::array<double, 4> q_des = {0., 0., 0., 1.};     ///< @brief Desired base orientation
+    std::array<double, 3> base_pos_des_ = {0., 0., 0.55};       ///< @brief Desired base position
+    std::array<double, 4> base_quat_des_ = {0., 0., 0., 0.};    ///< @brief Desired base orientation {x, y, z, w}
 
-    std::array<double, 3> r_b_dot_des = {0., 0., 0.};
-    std::array<double, 3> r_b_ddot_des = {0., 0., 0.};
-    std::array<double, 3> omega_des = {0., 0., 0.};
+    std::string robot_name;
 
-    rclcpp::Publisher<generalized_pose_msgs::msg::GeneralizedPose>::SharedPtr des_gen_pose_pub_;
+    rclcpp::Subscription<gazebo_msgs::msg::ModelStates>::SharedPtr base_pose_sub_;
 
-    rclcpp::Subscription<gazebo_msgs::msg::LinkStates>::SharedPtr base_pose_sub_;
-
-    const rclcpp::Duration timer_period_ = rclcpp::Duration::from_seconds(1./25.);
-    rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::CallbackGroup::SharedPtr subscriber_cb_group_;
 };
+
+} // teleoperate_robot

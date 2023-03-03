@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-    <name>teleoperate_robot</name>
+    <name>velocity_command_msgs</name>
     <version>0.0.0</version>
-    <description>TODO: Package description</description>
+    <description>Messages for giving a velocity command to a planner</description>
     <maintainer email="davide.debenedittis@gmail.com">Davide De Benedittis</maintainer>
     <license>TODO: License declaration</license>
 
@@ -12,13 +12,12 @@
 
     <buildtool_depend>ament_cmake</buildtool_depend>
 
-    <depend>rclcpp</depend>
+    <!-- Message generation dependencies -->
+    <buildtool_depend>rosidl_default_generators</buildtool_depend>
+    <exec_depend>rosidl_default_runtime</exec_depend>
+    <member_of_group>rosidl_interface_packages</member_of_group>
 
-    <depend>gazebo_msgs</depend>
-    <depend>generalized_pose_msgs</depend>
     <depend>std_msgs</depend>
-    <depend>sensor_msgs</depend>
-    <depend>velocity_command_msgs</depend>
 
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>ament_lint_common</test_depend>
