@@ -23,6 +23,7 @@ def generate_launch_description():
     # ======================================================================== #
     
     launch_arguments = {
+        'robot_name': 'solo12',
         'package_name': 'solo_description',
         'robot_file_path': os.path.join('xacro', 'solo12.urdf.xacro'),
         'world_file_path': os.path.join('worlds', 'solo.world'),

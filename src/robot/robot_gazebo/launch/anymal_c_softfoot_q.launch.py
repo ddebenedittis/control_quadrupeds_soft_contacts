@@ -23,6 +23,7 @@ def generate_launch_description():
     # ======================================================================== #
     
     launch_arguments = {
+        'robot_name': 'anymal_c_softfoot_q',
         'package_name': 'anymal_c_softfoot_q_description',
         'robot_file_path': os.path.join('robot', 'anymal_c_softfoot_q.urdf.xacro'),
         'world_file_path': os.path.join('worlds', 'anymal_softfoot.world'),

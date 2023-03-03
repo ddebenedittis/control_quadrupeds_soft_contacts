@@ -27,6 +27,7 @@ def generate_launch_description():
     # ======================================================================== #
     
     launch_arguments = {
+        'robot_name': 'anymal_c',
         'package_name': 'anymal_c_simple_description',
         'robot_file_path': os.path.join('urdf', 'anymal.xacro'),
         'world_file_path': os.path.join('worlds', 'anymal.world'),

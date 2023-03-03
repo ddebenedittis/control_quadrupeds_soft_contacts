@@ -12,6 +12,8 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
+    
+    robot_name = LaunchConfiguration('robot_name', default='anymal_c')
 
     package_share_path = FindPackageShare(LaunchConfiguration('package_name', default="anymal_c_simple_description"))
 
@@ -76,7 +78,7 @@ def generate_launch_description():
         package = 'gazebo_ros',
         executable = 'spawn_entity.py',
         arguments = ['-topic', '/robot_description',
-                        '-entity', 'anymal',
+                        '-entity', robot_name,
                         '-x', '0', '-y', '0', '-z', height,
                         '-R', '0', '-P', '0', '-Y', '0'],
         parameters=[{'use_sim_time': use_sim_time}],

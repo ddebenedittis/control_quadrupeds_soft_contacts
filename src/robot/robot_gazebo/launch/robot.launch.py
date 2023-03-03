@@ -12,7 +12,9 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     
-    global package_share_path, robot_file_path, gazebo_config_file_path, terrain_file_path, multi_terrains_file_path, world_file_path
+    global robot_name, package_share_path, robot_file_path, gazebo_config_file_path, terrain_file_path, multi_terrains_file_path, world_file_path
+    
+    robot_name = LaunchConfiguration('robot_name', default='anymal_c')
 
     package_share_path = FindPackageShare(LaunchConfiguration('package_name', default="anymal_c_simple_description"))
 
@@ -135,7 +137,7 @@ def spawn_things(ld):
         package = 'gazebo_ros',
         executable = 'spawn_entity.py',
         arguments = ['-topic', '/robot_description',
-                        '-entity', 'anymal',
+                        '-entity', robot_name,
                         '-x', '0', '-y', '0', '-z', height,
                         '-R', '0', '-P', '0', '-Y', '0'],
         parameters=[{'use_sim_time': use_sim_time}],
@@ -223,6 +225,8 @@ def spawn_controllers(ld):
         executable='teleop_robot_base_node',
         name='teleoperate_robot',
         prefix=['xterm -fg white -bg black -e'],
+        output='screen',
+        parameters=[{'robot_name': robot_name}]
     )
     
     spawn_planner = Node(
@@ -241,7 +245,7 @@ def spawn_controllers(ld):
     spawn_planner_mjp = Node(
         condition=IfCondition(
             PythonExpression([
-                '"', gait, '"', ' == "walking_trot"'
+                '"', gait, '"', ' == "walking_trot" or ', '"', gait, '"', ' == "teleop_walking_trot"'
             ]),
         ),
         package='planners_python',
@@ -249,7 +253,21 @@ def spawn_controllers(ld):
         parameters=[{'use_sim_time': use_sim_time}],
         emulate_tty=True,
         output='screen',
-    ) 
+    )
+    
+    spawn_teleop_base = Node(
+        condition=IfCondition(
+            PythonExpression([
+                '"', gait, '"', ' == "teleop_walking_trot"'
+            ]),
+        ),
+        package='teleoperate_robot',
+        executable='teleop_velocity_command_node',
+        name='teleoperate_robot',
+        prefix=['xterm -fg white -bg black -e'],
+        output='screen',
+        parameters=[{'robot_name': robot_name}]
+    )
     
     spawn_whole_body_controller = Node(
         package = 'controller_manager',
@@ -278,7 +296,7 @@ def launch_estimator(ld):
     #     executable='pose_estimator_node',
     #     parameters=[
     #         {'use_sim_time': use_sim_time},
-    #         {'robot_name': 'anymal_c'}
+    #         {'robot_name': robot_name}
     #     ],
     #     emulate_tty=True,
     #     output='screen',
@@ -298,7 +316,8 @@ def launch_logger(ld):
         executable='logger_node',
         parameters=[
             {'use_sim_time': use_sim_time},
-            {'robot_name': 'anymal_c'}
+            {'robot_name': robot_name},
+            {'gait': gait}
         ],
         emulate_tty=True,
         output='screen',
