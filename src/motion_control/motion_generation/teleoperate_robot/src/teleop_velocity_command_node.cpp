@@ -18,7 +18,7 @@ TeleopSimpleVelocityCommand::TeleopSimpleVelocityCommand()
     this->get_parameter("scale_linear", l_scale_);
 
     pub_ = this->create_publisher<velocity_command_msgs::msg::SimpleVelocityCommand>(
-        "robot/simple_velocity_command", 1);
+        "/robot/simple_velocity_command", 1);
 
     print_instructions();
 }
@@ -26,6 +26,7 @@ TeleopSimpleVelocityCommand::TeleopSimpleVelocityCommand()
 
 void TeleopSimpleVelocityCommand::print_instructions()
 {
+    puts(u8"\033[2J\033[1;1H"); // clears the terminal (only on linux)
     puts("Reading from keyboard");
     puts("---------------------------");
     puts("Use the following keys (CASE SENSITIVE!) to move the robot base:");

@@ -60,7 +60,7 @@ colcon build --symlink-install
 
 - ANYmal C simulation:
 ```shell
-ros2 launch robot_gazebo anymal_c.launch.py [terrain:={rigid,soft,very_soft,multi_terrains}] [gait:={teleop_base,static_walk,walking_trot}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo anymal_c.launch.py [terrain:={rigid,soft,very_soft,multi_terrains}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
 ![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/anymal_c-trot-grass.gif)
@@ -78,7 +78,7 @@ ros2 launch robot_gazebo anymal_c_softfoot_q.launch.py [terrain:={rigid,soft,ver
 ```
 
 Optional arguments:
-- `gait`: select the gait type. With `teleop_base` the base pose can be teleoperated without moving the feet, `static_walk` implements a static walk, and `walking_trot` implements a dynamic gait. Currently, the walking trot gait is implemented only on the ANYmal C robot.
+- `gait`: select the gait type. With `teleop_base` the base pose can be teleoperated without moving the feet, `static_walk` implements a static walk, and `walking_trot` implements a dynamic gait. Currently, the walking trot gait is implemented only on the ANYmal C robot. With `teleop_walking_trot` the robot is teleoperated by giving it a velocity command.
 - `terrain`: select the terrain type: a rigid terrain (the gray one) or a soft terrain (the grass-like one).
 - `reset`: must be used in another terminal when there is an already running simulation. The simulation will be restarted. The time is not reset to avoid problems with the controllers.
 - `save_csv`: when `True`, some data is logged and saved in several .csv files in the `log/csv/` folder. This data can be plotted with `plot.py` (in the `logger_gazebo` package).

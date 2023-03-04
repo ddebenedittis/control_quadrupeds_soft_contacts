@@ -12,8 +12,7 @@ from gazebo_msgs.msg import ContactsState
 from generalized_pose_msgs.msg import GeneralizedPose
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
-
-import logger_gazebo.plot as plot
+from velocity_command_msgs.msg import SimpleVelocityCommand
 
 
 
@@ -29,9 +28,8 @@ def q_dist(q1, q2):
 # ================================= ParamName ================================ #
 
 class ParamName(Enum):
-    ROBOT_NAME = 0
-    STEP_LENGTH = 1
-    CYCLE_DURATION = 2
+    STEP_LENGTH = 0
+    CYCLE_DURATION = 1
 
 
 # ============================================================================ #
@@ -183,6 +181,53 @@ class LoggerSubscriber(Node):
         self.threshold = 0.001
         
         
+        # ==================== Read Other Nodes Parameters =================== #
+        
+        self.declare_parameter("robot_name", "anymal_c")
+        self.robot_name = self.get_parameter("robot_name").get_parameter_value().string_value
+        
+        self.declare_parameter("gait", "static_walk")
+        self.gait = self.get_parameter("gait").get_parameter_value().string_value
+        
+        if self.gait == "static_walk":
+            self.step_length = 0
+            self.cycle_duration = 0
+            
+            # Step length
+            self.client_step_length = self.create_client(
+                GetParameters, "/planner/get_parameters")
+            
+            request_step_length = GetParameters.Request()
+            request_step_length.names = ["step_length"]
+            
+            self.client_step_length.wait_for_service()
+            
+            future_step_length = self.client_step_length.call_async(request_step_length)
+            future_step_length.add_done_callback(self.callback_param_step_length)
+            
+            # Cycle duration
+            self.client_cycle_duration = self.create_client(
+                GetParameters, "/planner/get_parameters")
+            
+            request_cycle_duration = GetParameters.Request()
+            request_cycle_duration.names = ["cycle_duration"]
+            
+            self.client_cycle_duration.wait_for_service()
+            
+            future_cycle_duration = self.client_cycle_duration.call_async(request_cycle_duration)
+            future_cycle_duration.add_done_callback(self.callback_param_cycle_duration)
+        elif self.gait == "teleop_walking_trot":
+            self.vel_forward_cmd = 0.
+            self.vel_lateral_cmd = 0.
+            self.yaw_rate_cmd = 0.
+            
+            self.teleop_vel_cmd_subscription = self.create_subscription(
+                SimpleVelocityCommand,
+                "/robot/simple_velocity_command",
+                self.simple_velocity_command_callback,
+                1)
+                    
+        
         # ============================= Csv Data ============================= #
         
         # Approximate time over which data is saved. Approximate because it depends on the actual frequency of the timer_callback.
@@ -219,50 +264,10 @@ class LoggerSubscriber(Node):
         self.feet_positions_vector = np.zeros((self.n, 12))
         self.feet_velocities_vector = np.zeros((self.n, 12))
         
-        
-        # ==================== Read Other Nodes Parameters =================== #
-        
-        self.robot_name = ""
-        self.step_length = 0
-        self.cycle_duration = 0
-        
-        # Robot name
-        self.client_robot_name = self.create_client(
-            GetParameters, "/whole_body_controller/get_parameters")
-        
-        request_robot_name = GetParameters.Request()
-        request_robot_name.names = ["robot_name"]
-        
-        self.client_robot_name.wait_for_service()
-        
-        future_robot_name = self.client_robot_name.call_async(request_robot_name)
-        future_robot_name.add_done_callback(self.callback_param_robot_name)
-        
-        # Step length
-        self.client_step_length = self.create_client(
-            GetParameters, "/planner/get_parameters")
-        
-        request_step_length = GetParameters.Request()
-        request_step_length.names = ["step_length"]
-        
-        self.client_step_length.wait_for_service()
-        
-        future_step_length = self.client_step_length.call_async(request_step_length)
-        future_step_length.add_done_callback(self.callback_param_step_length)
-        
-        # Cycle duration
-        self.client_cycle_duration = self.create_client(
-            GetParameters, "/planner/get_parameters")
-        
-        request_cycle_duration = GetParameters.Request()
-        request_cycle_duration.names = ["cycle_duration"]
-        
-        self.client_cycle_duration.wait_for_service()
-        
-        future_cycle_duration = self.client_cycle_duration.call_async(request_cycle_duration)
-        future_cycle_duration.add_done_callback(self.callback_param_cycle_duration)
-        
+        if self.gait == "teleop_walking_trot":
+            self.simple_velocity_command_vector = np.zeros((self.n, 3))
 
+        
     # =============================== Callbacks ============================== #
 
     def optimal_joints_accelerations_callback(self, msg):
@@ -402,6 +407,12 @@ class LoggerSubscriber(Node):
         self.contact_state_callback(msg, "RH")
         
         
+    def simple_velocity_command_callback(self, msg):
+        self.vel_forward_cmd = msg.velocity_forward
+        self.vel_lateral_cmd = msg.velocity_lateral
+        self.yaw_rate_cmd = msg.yaw_rate
+        
+        
     def compute_slippage(self, contact_feet_names, feet_pos):
         # Shortened and ordered feet names
         feet_names = self.generic_feet_names
@@ -435,16 +446,10 @@ class LoggerSubscriber(Node):
         except Exception as e:
             self.get_logger().warn("service call failed %r" % (e,))
         else:
-            if   param_name == ParamName.ROBOT_NAME:
-                self.robot_name = result.values[0].string_value
-            elif param_name == ParamName.STEP_LENGTH:
+            if param_name == ParamName.STEP_LENGTH:
                 self.step_length = result.values[0].double_value
             elif param_name == ParamName.CYCLE_DURATION:
                 self.cycle_duration = result.values[0].double_value
-                
-                
-    def callback_param_robot_name(self, future):
-        self.callback_param(future, ParamName.ROBOT_NAME)
         
     def callback_param_step_length(self, future):
         self.callback_param(future, ParamName.STEP_LENGTH)
@@ -489,6 +494,9 @@ class LoggerSubscriber(Node):
         self.feet_positions_vector[self.i, :] = self.feet_positions.flatten('F')
         self.feet_velocities_vector[self.i, :] = self.feet_velocities
         
+        if self.gait == "teleop_walking_trot":
+            self.simple_velocity_command_vector[self.i, :] = np.array([self.vel_forward_cmd, self.vel_lateral_cmd, self.yaw_rate_cmd])
+        
         
         # ================= Save The Csv And Destroy The Node ================ #
         
@@ -525,14 +533,20 @@ class LoggerSubscriber(Node):
             np.savetxt(path+"feet_positions.csv", self.feet_positions_vector, delimiter=",")
             np.savetxt(path+"feet_velocities.csv", self.feet_velocities_vector, delimiter=",")
             
+            if self.gait == "teleop_walking_trot":
+                np.savetxt(path+"simple_velocity_command.csv", self.simple_velocity_command_vector, delimiter=",")
+            
             # ================================================================ #
             
-            speed = self.step_length / self.cycle_duration
+            speed = 0
+            if self.gait == "static_walk":
+                speed = self.step_length / self.cycle_duration
             
             
             # Save in a csv file
             with open(path+'params.csv', 'w+') as f:
                 f.write("%s,%s\n" %("robot_name", self.robot_name))
+                f.write("%s,%s\n" %("gait", self.gait))
                 f.write("%s,%f\n" %("speed", speed))
             
             

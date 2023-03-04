@@ -29,6 +29,16 @@ class Plot:
         
         # =========================== Read The CSVs ========================== #
         
+        with open(self.foldername + '/csv/params.csv') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            for row in csv_reader:
+                if row[0] == "robot_name":
+                    self.robot_name = row[1]
+                elif row[0] == "gait":
+                    self.gait = row[1]
+                elif row[0] == 'speed':
+                    self.speed = float(row[1])
+        
         self.contact_forces = np.loadtxt(self.foldername + '/csv/' + 'contact_forces' + '.csv', delimiter=",")
         self.contact_positions = np.loadtxt(self.foldername + '/csv/' + 'contact_positions' + '.csv', delimiter=",")
         self.depths = np.loadtxt(self.foldername + '/csv/' + 'depths' + '.csv', delimiter=",")
@@ -42,17 +52,11 @@ class Plot:
         self.optimal_torques = np.loadtxt(self.foldername + '/csv/' + 'optimal_torques' + '.csv', delimiter=",")
         self.orientation_error = np.loadtxt(self.foldername + '/csv/' + 'orientation_error' + '.csv', delimiter=",")
         self.position_error = np.loadtxt(self.foldername + '/csv/' + 'position_error' + '.csv', delimiter=",")
+        if self.gait == "teleop_walking_trot":
+            self.simple_velocity_command = np.loadtxt(self.foldername + '/csv/' + 'simple_velocity_command' + '.csv', delimiter=",")
         self.slippage = np.loadtxt(self.foldername + '/csv/' + 'slippage' + '.csv', delimiter=",")
         self.time = np.loadtxt(self.foldername + '/csv/' + 'time' + '.csv', delimiter=",")
         self.velocity_error = np.loadtxt(self.foldername + '/csv/' + 'velocity_error' + '.csv', delimiter=",")
-        
-        with open(self.foldername + '/csv/params.csv') as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter=',')
-            for row in csv_reader:
-                if row[0] == "robot_name":
-                    self.robot_name = row[1]
-                elif row[0] == 'speed':
-                    self.speed = float(row[1])
         
         # Get the indexes of time_init and time_end in the time vector.
         for i in range(len(self.time)):
@@ -77,8 +81,7 @@ class Plot:
         i_init = self.i_init
         i_end = self.i_end
         
-        robot_name = "anymal_c"
-        robot_model = RobotModel(robot_name)
+        robot_model = RobotModel(self.robot_name)
         
         # The generalized accelerations vector is integrated to obtain the generalized coordinates and velocities vectors. The integration is performed over k_vec steps.
         k_vec = [1]
@@ -353,6 +356,35 @@ class Plot:
             ax.set(title = "No, no, no.",)
             
             
+    def plot_reference_vs_measured_velocity(self, axs):
+        dir_names = ["forward", "lateral"]
+        
+        for i in range(3):
+            axs[i].plot(self.time_vector,
+                        self.simple_velocity_command[0:self.i_end-self.i_init, i])
+            
+            if i != 2:
+                axs[i].plot(self.time_vector,
+                            self.generalized_velocities[0:self.i_end-self.i_init, i])
+                axs[i].set(
+                    xlabel = "time [s]",
+                    ylabel = "velocity [m/s]",
+                    title = "commanded vs measured " + dir_names[i] + " velocity",
+                )
+            elif i == 2:
+                axs[i].plot(self.time_vector,
+                            self.generalized_velocities[0:self.i_end-self.i_init, 5])
+                
+                axs[i].set(
+                    xlabel = "time [s]",
+                    ylabel = "angular velocity [rad/s]",
+                    title = "commanded vs measured yaw rate"
+                )
+            
+            
+            axs[i].legend(["commanded", "measured"])
+            axs[i].set_xlim([self.time_init, self.time_end])
+            
             
     def megaplot(self):
         feet_names = ["LF", "RF", "LH", "RH"]
@@ -360,7 +392,7 @@ class Plot:
         os.makedirs(self.foldername + '/' + self.format, exist_ok=True)
         
         for i in range(len(feet_names)):
-            fig, axs = plt.subplots(4, 4, figsize=[3.5*self.x_size_def, 2.5*self.y_size_def])
+            fig, axs = plt.subplots(4, 4, figsize=[3.5*self.x_size_def, 2.5*self.y_size_def], layout="constrained")
         
             self.plot_meas_vs_opti_forces(axs[0:4, 0], i)
             self.plot_meas_vs_opti_depths(axs[0,1], i)
@@ -384,11 +416,14 @@ class Plot:
         
         # ==================================================================== #
         
-        fig, axs = plt.subplots(2, 1, figsize=[self.x_size_def, 2*self.y_size_def])
-        self.plot_slippage(axs[0])
-        self.plot_normalized_slippage(axs[1])
+        fig, axs = plt.subplots(3, 2, figsize=[self.x_size_def, 2*self.y_size_def])
+        self.plot_slippage(axs[0,0])
+        self.plot_normalized_slippage(axs[1,0])
         
-        plt.savefig(self.foldername + '/' + self.format + '/' + 'slippage' + '.' + self.format, bbox_inches="tight", format=self.format)
+        if self.gait == "teleop_walking_trot":
+            self.plot_reference_vs_measured_velocity(axs[0:3,1])
+        
+        plt.savefig(self.foldername + '/' + self.format + '/' + 'performance' + '.' + self.format, bbox_inches="tight", format=self.format)
         plt.close(fig)
             
         
@@ -410,6 +445,8 @@ def main():
     
     plt.rc("axes", grid=True)
     plt.rc("grid", linestyle='dotted', linewidth=0.25)
+    
+    plt.rcParams['figure.constrained_layout.use'] = True
     
     plot = Plot()
     plot.megaplot()
