@@ -64,7 +64,7 @@ set(PROJECT_DEPENDENCIES
     whole_body_controller
 )
 
-add_library(${PROJECT_NAME} SHARED src/hqp_controller.cpp)
+add_library(${PROJECT_NAME} SHARED src/hqp_controller.cpp src/hqp_publisher.cpp)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
