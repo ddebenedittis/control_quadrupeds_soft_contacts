@@ -94,6 +94,8 @@ public:
 
     double get_mass() {return control_tasks.get_mass();}
 
+    const double get_friction_coefficient() {return control_tasks.get_friction_coefficient();}
+
     const Eigen::MatrixXd& get_M()  {return control_tasks.get_M();}
     const Eigen::VectorXd& get_h()  {return control_tasks.get_h();}
     const Eigen::MatrixXd& get_Jc() {return control_tasks.get_Jc();}

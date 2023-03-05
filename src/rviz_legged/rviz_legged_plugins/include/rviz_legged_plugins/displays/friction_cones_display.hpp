@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Martin Idel and others
+ * Copyright (c) 2008, Willow Garage, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,80 +30,77 @@
 #pragma once
 
 #include <memory>
-#include <deque>
+#include <vector>
 
-#include "rviz_legged_msgs/msg/wrenches_stamped.hpp"
+#include "rviz_legged_msgs/msg/friction_cones.hpp"
 
 #include "rviz_common/message_filter_display.hpp"
-#include "rviz_default_plugins/visibility_control.hpp"
 
-namespace Ogre
-{
-class SceneNode;
-}
+#include "rviz_default_plugins/visibility_control.hpp"
 
 namespace rviz_rendering
 {
-class WrenchVisual;
-}
+class Shape;
+}  // namespace rviz_rendering
 
 namespace rviz_common
 {
+class QueueSizeProperty;
 namespace properties
 {
 class ColorProperty;
 class FloatProperty;
 class IntProperty;
-}
-}
+}  // namespace properties
+}  // namespace rviz_common
+
 
 namespace rviz_legged_plugins
 {
 namespace displays
 {
-
-
-class RVIZ_DEFAULT_PLUGINS_PUBLIC ExternalWrenchDisplay : public
-    rviz_common::MessageFilterDisplay<rviz_legged_msgs::msg::WrenchesStamped>
+/**
+ * \class FrictionConesDisplay
+ * \brief Displays a the friction cones of the feet in contact with the terrain.
+ */
+class RVIZ_DEFAULT_PLUGINS_PUBLIC FrictionConesDisplay : public
+    rviz_common::MessageFilterDisplay<rviz_legged_msgs::msg::FrictionCones>
 {
     Q_OBJECT
 
 public:
-    ExternalWrenchDisplay();
+    // TODO(botteroa-si): Constructor for testing. Remove once ros nodes can be mocked and
+    // initialize() can be called
+    explicit FrictionConesDisplay(rviz_common::DisplayContext * display_context);
 
-    ~ExternalWrenchDisplay() override;
+    FrictionConesDisplay();
 
-    void onInitialize() override;
+    ~FrictionConesDisplay() override;
 
     void reset() override;
 
-    void processMessage(rviz_legged_msgs::msg::WrenchesStamped::ConstSharedPtr msg) override;
+    void processMessage(rviz_legged_msgs::msg::FrictionCones::ConstSharedPtr msg) override;
 
-private
-    Q_SLOTS:
-    void updateWrenchVisuals();
-    void updateHistoryLength();
+protected:
+    void onInitialize() override;
+
+private Q_SLOTS:
+    void updateBufferLength();
+    void updateColorAndAlpha();
 
 private:
-    std::shared_ptr<rviz_rendering::WrenchVisual> createWrenchVisual(
-        const geometry_msgs::msg::WrenchStamped & msg,
-        const Ogre::Quaternion & orientation,
-        const Ogre::Vector3 & position);
+    int number_cones_ = 1;
 
-    std::deque<std::shared_ptr<rviz_rendering::WrenchVisual>> visuals_;
+    float getDisplayedRange(rviz_legged_msgs::msg::FrictionCones::ConstSharedPtr msg);
+    geometry_msgs::msg::Pose getPose(float displayed_range);
 
-    rviz_common::properties::BoolProperty * arrow_head_as_reference_;
-    rviz_common::properties::BoolProperty * accept_nan_values_;
-    rviz_common::properties::ColorProperty * force_color_property_;
-    rviz_common::properties::ColorProperty * torque_color_property_;
+    std::vector<std::shared_ptr<rviz_rendering::Shape>> cones_;
+
+    rviz_common::properties::FloatProperty * height_property_;
+    rviz_common::properties::ColorProperty * color_property_;
     rviz_common::properties::FloatProperty * alpha_property_;
-    rviz_common::properties::FloatProperty * force_scale_property_;
-    rviz_common::properties::FloatProperty * torque_scale_property_;
-    rviz_common::properties::FloatProperty * width_property_;
-    rviz_common::properties::IntProperty * history_length_property_;
-
-    int n_wrenches_ = 1;
+    rviz_common::properties::IntProperty * buffer_length_property_;
 };
 
-}   // namespace displays
-}   // namespace rviz_legged_plugins
+}  // namespace displays
+}  // namespace rviz_legged_plugins

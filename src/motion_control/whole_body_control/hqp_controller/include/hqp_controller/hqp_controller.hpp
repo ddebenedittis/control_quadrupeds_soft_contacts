@@ -12,6 +12,7 @@
 #include "geometry_msgs/msg/polygon_stamped.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include "rviz_legged_msgs/msg/friction_cones.hpp"
 #include "rviz_legged_msgs/msg/wrenches_stamped.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 
@@ -36,7 +37,8 @@ public:
         const Eigen::VectorXd& joints_accelerations, const Eigen::VectorXd& torques,
         const Eigen::VectorXd& forces, const Eigen::VectorXd& deformations,
         const Eigen::VectorXd& feet_positions, const Eigen::VectorXd& feet_velocities,
-        const std::vector<std::string> contact_feet_names, const std::vector<std::string> all_feet_names);
+        const std::vector<std::string> contact_feet_names, const std::vector<std::string> all_generic_feet_names, const std::vector<std::string> all_specific_feet_names,
+        const double friction_coefficient);
 
 private:
     std::vector<std::string> feet_names_;
@@ -51,6 +53,7 @@ private:
 
     rclcpp::Publisher<rviz_legged_msgs::msg::WrenchesStamped>::SharedPtr wrenches_stamped_publisher_;
     rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr polygon_stamped_publisher_;
+    rclcpp::Publisher<rviz_legged_msgs::msg::FrictionCones>::SharedPtr friction_cones_publisher_;
 };
 
 

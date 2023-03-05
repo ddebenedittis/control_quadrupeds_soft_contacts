@@ -53,13 +53,17 @@ HQPPublisher::HQPPublisher(const std::vector<std::string> feet_names)
 
     polygon_stamped_publisher_ = this->create_publisher<geometry_msgs::msg::PolygonStamped>(
         "/logging/polygon_stamped", 1);
+
+    friction_cones_publisher_ = this->create_publisher<rviz_legged_msgs::msg::FrictionCones>(
+        "/rviz/friction_cones", 1);
 }
 
 void HQPPublisher::publish_all(
     const Eigen::VectorXd& joints_accelerations, const Eigen::VectorXd& torques,
     const Eigen::VectorXd& forces, const Eigen::VectorXd& deformations,
     const Eigen::VectorXd& feet_positions, const Eigen::VectorXd& feet_velocities,
-    const std::vector<std::string> contact_feet_names, const std::vector<std::string> all_feet_names)
+    const std::vector<std::string> contact_feet_names, const std::vector<std::string> all_generic_feet_names, const std::vector<std::string> all_specific_feet_names,
+    const double friction_coefficient)
 {
     // Convert the joints accelerations to a ROS message and publish it
     auto joints_accelerations_message = std_msgs::msg::Float64MultiArray();
@@ -105,9 +109,9 @@ void HQPPublisher::publish_all(
 
     std::vector<int> contact_feet_indices(contact_feet_names.size());
     for (int i = 0; i < static_cast<int>(contact_feet_names.size()); i++) {
-        auto index = std::find(all_feet_names.begin(), all_feet_names.end(), contact_feet_names[i]);
-        if (index != all_feet_names.end()) {
-            contact_feet_indices[i] = index - all_feet_names.begin();
+        auto index = std::find(all_generic_feet_names.begin(), all_generic_feet_names.end(), contact_feet_names[i]);
+        if (index != all_generic_feet_names.end()) {
+            contact_feet_indices[i] = index - all_generic_feet_names.begin();
         }
     }
 
@@ -125,6 +129,18 @@ void HQPPublisher::publish_all(
         polygon_stamped_message.polygon.points[3] = temp;
     }
     polygon_stamped_publisher_->publish(polygon_stamped_message);
+
+    auto friction_cones_message = rviz_legged_msgs::msg::FrictionCones();
+    friction_cones_message.header.frame_id = "ground_plane_link";
+    friction_cones_message.friction_cones.resize(contact_feet_names.size());
+    for (auto i = 0; i < static_cast<int>(contact_feet_names.size()); i++) {
+        friction_cones_message.friction_cones[i].header.frame_id = all_specific_feet_names[contact_feet_indices[i]];
+        friction_cones_message.friction_cones[i].friction_coefficient = friction_coefficient;
+        friction_cones_message.friction_cones[i].normal_direction.x = 0.;
+        friction_cones_message.friction_cones[i].normal_direction.y = 0.;
+        friction_cones_message.friction_cones[i].normal_direction.z = 1.;
+    }
+    friction_cones_publisher_->publish(friction_cones_message);
 }
 
 
@@ -552,7 +568,8 @@ controller_interface::return_type HQPController::update(
                 wbc.get_v_dot_opt(), tau_,
                 wbc.get_f_c_opt(), wbc.get_d_des_opt(),
                 wbc.get_feet_positions(), wbc.get_feet_velocities(v_),
-                des_gen_pose_copy.contact_feet_names, wbc.get_generic_feet_names());
+                des_gen_pose_copy.contact_feet_names, wbc.get_generic_feet_names(), wbc.get_all_feet_names(),
+                wbc.get_friction_coefficient());
         }
     }
 

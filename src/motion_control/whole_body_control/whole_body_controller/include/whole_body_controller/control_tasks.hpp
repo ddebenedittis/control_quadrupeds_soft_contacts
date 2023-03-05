@@ -139,6 +139,8 @@ public:
 
     double get_mass() { return robot_model.get_mass(); }
 
+    const double get_friction_coefficient() { return mu; }
+
     const Eigen::MatrixXd& get_M()  { return M; }
     const Eigen::VectorXd& get_h()  { return h; }
     const Eigen::MatrixXd& get_Jc() { return Jc; }

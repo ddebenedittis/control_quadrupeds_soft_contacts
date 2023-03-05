@@ -11,4 +11,14 @@
         </description>
     </class>
 
+    <class
+        name="rviz_legged_plugins/FrictionCones"
+        type="rviz_legged_plugins::displays::FrictionConesDisplay"
+        base_class_type="rviz_common::Display"
+    >
+        <description>
+            Display the friction cone inside which the contact forces must lie to satisfy the friction limits.
+        </description>
+    </class>
+
 </library>

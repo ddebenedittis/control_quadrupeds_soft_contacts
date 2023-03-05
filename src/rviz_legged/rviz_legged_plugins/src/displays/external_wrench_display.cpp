@@ -53,6 +53,11 @@ namespace displays
 
 ExternalWrenchDisplay::ExternalWrenchDisplay()
 {
+    arrow_head_as_reference_ = new rviz_common::properties::BoolProperty(
+        "Arrow head as reference", false,
+        "Use the arrow head as reference for the position, instead of its tail.", this,
+        SLOT(updateWrenchVisuals()));
+    
     accept_nan_values_ = new rviz_common::properties::BoolProperty(
         "Accept NaN Values", false,
         "NaN values in incoming messages are converted to 0 to display wrench vector.", this,
@@ -141,6 +146,7 @@ void ExternalWrenchDisplay::processMessage(rviz_legged_msgs::msg::WrenchesStampe
 
         geometry_msgs::msg::WrenchStamped adjusted_msg;
         bool accept_nan = accept_nan_values_->getBool();
+        bool arrow_head_as_reference = arrow_head_as_reference_->getBool();
 
         if (!accept_nan) {
             if (!validateFloats(wrench_stamped_msg)) {
@@ -195,7 +201,10 @@ void ExternalWrenchDisplay::processMessage(rviz_legged_msgs::msg::WrenchesStampe
             static_cast<float>(wrench_stamped_msg.wrench.force.x),
             static_cast<float>(wrench_stamped_msg.wrench.force.y),
             static_cast<float>(wrench_stamped_msg.wrench.force.z));
-        position -= force_scale * 1.25 * force;
+        
+        if (arrow_head_as_reference == true) {
+            position -= force_scale * 1.25 * force;
+        }
 
         orientation = Ogre::Quaternion(1., 0., 0., 0.);
 

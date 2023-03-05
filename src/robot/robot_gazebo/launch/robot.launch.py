@@ -329,7 +329,7 @@ def launch_logger(ld):
 # ================================ Launch_rviz =============================== #
 
 def launch_rviz(ld):
-    rviz_legged_plugins = Node(
+    ground_to_base_frame_broadcaster = Node(
         condition=IfCondition(use_rviz),
         package='rviz_legged_plugins',
         executable='ground_to_base_frame_broadcaster_node.py',
@@ -349,5 +349,5 @@ def launch_rviz(ld):
         ])],
     )
     
-    ld.add_action(rviz_legged_plugins)
+    ld.add_action(ground_to_base_frame_broadcaster)
     ld.add_action(rviz2)

@@ -65,6 +65,7 @@ find_package(rviz_default_plugins REQUIRED)
 set(LIBRARY_NAME ${PROJECT_NAME})
 
 set(rviz_legged_plugins_headers_to_moc
+    include/rviz_legged_plugins/displays/friction_cones_display.hpp
     include/rviz_legged_plugins/displays/external_wrench_display.hpp
 )
 
@@ -73,28 +74,29 @@ foreach(header "${rviz_legged_plugins_headers_to_moc}")
 endforeach()
 
 set(rviz_legged_plugins_source_files
+    src/displays/friction_cones_display.cpp
     src/displays/external_wrench_display.cpp
 )
 
 
 add_library(${LIBRARY_NAME} SHARED
-  ${rviz_legged_plugins_moc_files}
-  ${rviz_legged_plugins_source_files}
+    ${rviz_legged_plugins_moc_files}
+    ${rviz_legged_plugins_source_files}
 )
 
 target_include_directories(${LIBRARY_NAME} PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
-  ${Qt5Widgets_INCLUDE_DIRS}
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+    ${Qt5Widgets_INCLUDE_DIRS}
 )
 
 target_link_libraries(${LIBRARY_NAME} PUBLIC
-  rviz_ogre_vendor::OgreMain
-  rviz_ogre_vendor::OgreOverlay
+    rviz_ogre_vendor::OgreMain
+    rviz_ogre_vendor::OgreOverlay
 )
 
 target_link_libraries(${LIBRARY_NAME} PRIVATE
-  ignition-math6
+    ignition-math6
 )
 
 # Causes the visibility macros to use dllexport rather than dllimport,
@@ -104,24 +106,24 @@ target_compile_definitions(${LIBRARY_NAME} PRIVATE ${LIBRARY_NAME}_BUILDING_LIBR
 pluginlib_export_plugin_description_file(rviz_common plugins_description.xml)
 
 ament_target_dependencies(${LIBRARY_NAME}
-  PUBLIC
-  rviz_legged_msgs
-  image_transport
-  interactive_markers
-  laser_geometry
-  map_msgs
-  nav_msgs
-  rclcpp
-  resource_retriever
-  rviz_common
-  rviz_rendering
-  sensor_msgs
-  tf2
-  tf2_geometry_msgs
-  tf2_ros
-  urdf
-  visualization_msgs
-  rviz_default_plugins
+    PUBLIC
+    rviz_legged_msgs
+    image_transport
+    interactive_markers
+    laser_geometry
+    map_msgs
+    nav_msgs
+    rclcpp
+    resource_retriever
+    rviz_common
+    rviz_rendering
+    sensor_msgs
+    tf2
+    tf2_geometry_msgs
+    tf2_ros
+    urdf
+    visualization_msgs
+    rviz_default_plugins
 )
 
 # Export old-style CMake variables
@@ -131,41 +133,41 @@ ament_export_include_directories("include/${PROJECT_NAME}")
 ament_export_targets(${LIBRARY_NAME} HAS_LIBRARY_TARGET)
 
 ament_export_dependencies(
-  rviz_legged_msgs
-  image_transport
-  interactive_markers
-  laser_geometry
-  map_msgs
-  nav_msgs
-  rclcpp
-  resource_retriever
-  rviz_common
-  rviz_ogre_vendor
-  sensor_msgs
-  tf2
-  tf2_geometry_msgs
-  tf2_ros
-  urdf
-  visualization_msgs
-  rviz_default_plugins
+    rviz_legged_msgs
+    image_transport
+    interactive_markers
+    laser_geometry
+    map_msgs
+    nav_msgs
+    rclcpp
+    resource_retriever
+    rviz_common
+    rviz_ogre_vendor
+    sensor_msgs
+    tf2
+    tf2_geometry_msgs
+    tf2_ros
+    urdf
+    visualization_msgs
+    rviz_default_plugins
 )
 
 install(
-  TARGETS ${LIBRARY_NAME}
-  EXPORT ${LIBRARY_NAME}
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
+    TARGETS ${LIBRARY_NAME}
+    EXPORT ${LIBRARY_NAME}
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
 )
 
 install(
-  DIRECTORY include/
-  DESTINATION include/${PROJECT_NAME}
+    DIRECTORY include/
+    DESTINATION include/${PROJECT_NAME}
 )
 
 install(
-  DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/icons"
-  DESTINATION "share/${PROJECT_NAME}"
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/icons"
+    DESTINATION "share/${PROJECT_NAME}"
 )
 
 
@@ -183,8 +185,8 @@ install(
 ament_python_install_package(${PROJECT_NAME})
 
 install(PROGRAMS
-  scripts/ground_to_base_frame_broadcaster_node.py
-  DESTINATION lib/${PROJECT_NAME}
+    scripts/ground_to_base_frame_broadcaster_node.py
+    DESTINATION lib/${PROJECT_NAME}
 )
 
 
@@ -195,5 +197,5 @@ if(BUILD_TESTING)
 endif()
 
 ament_package(
-  CONFIG_EXTRAS "rviz_legged_plugins-extras.cmake"
+    CONFIG_EXTRAS "rviz_legged_plugins-extras.cmake"
 )

@@ -32,6 +32,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 find_package(geometry_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 
 
 
@@ -42,12 +43,14 @@ find_package(geometry_msgs REQUIRED)
 # Declare the list of messages you want to generate
 set(msg_files
     "msg/WrenchesStamped.msg"
+    "msg/FrictionCone.msg"
+    "msg/FrictionCones.msg"
 )
 
 # Generate the messages
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}
-  DEPENDENCIES geometry_msgs
+  DEPENDENCIES geometry_msgs std_msgs
 )
 
 ament_export_dependencies(rosidl_default_runtime)
