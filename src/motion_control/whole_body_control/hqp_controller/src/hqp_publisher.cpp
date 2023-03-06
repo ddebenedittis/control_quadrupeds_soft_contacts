@@ -43,6 +43,9 @@ HQPPublisher::HQPPublisher(const std::vector<std::string> feet_names)
 
     friction_cones_publisher_ = this->create_publisher<rviz_legged_msgs::msg::FrictionCones>(
         "/rviz/friction_cones", 1);
+
+    com_publisher_ = this->create_publisher<geometry_msgs::msg::PointStamped>(
+        "/rviz/com_position", 1);
 }
 
 
@@ -79,7 +82,7 @@ inline void HQPPublisher::publish_wrenches_stamped(const Eigen::VectorXd& forces
 
 inline void HQPPublisher::publish_polygon_and_friction_cones(
     const Eigen::VectorXd& feet_positions, const std::vector<std::string>& contact_feet_names,
-    const std::vector<std::string>& all_generic_feet_names, const std::vector<std::string>& all_specific_feet_names,
+    const std::vector<std::string>& generic_feet_names, const std::vector<std::string>& all_specific_feet_names,
     const double friction_coefficient)
 {
     // Publish the support polygon message.
@@ -89,9 +92,9 @@ inline void HQPPublisher::publish_polygon_and_friction_cones(
 
     std::vector<int> contact_feet_indices(contact_feet_names.size());
     for (int i = 0; i < static_cast<int>(contact_feet_names.size()); i++) {
-        auto index = std::find(all_generic_feet_names.begin(), all_generic_feet_names.end(), contact_feet_names[i]);
-        if (index != all_generic_feet_names.end()) {
-            contact_feet_indices[i] = index - all_generic_feet_names.begin();
+        auto index = std::find(generic_feet_names.begin(), generic_feet_names.end(), contact_feet_names[i]);
+        if (index != generic_feet_names.end()) {
+            contact_feet_indices[i] = index - generic_feet_names.begin();
         }
     }
 
@@ -127,14 +130,31 @@ inline void HQPPublisher::publish_polygon_and_friction_cones(
 }
 
 
+/* ============================== Publish_point ============================= */
+
+void HQPPublisher::publish_point(const Eigen::Vector3d& point)
+{
+    auto point_message = geometry_msgs::msg::PointStamped();
+
+    point_message.header.frame_id = "ground_plane_link";
+
+    point_message.point.x = point[0];
+    point_message.point.y = point[1];
+    point_message.point.z = point[2];
+
+    com_publisher_->publish(point_message);
+}
+
+
 /* =============================== Publish_all ============================== */
 
 void HQPPublisher::publish_all(
     const Eigen::VectorXd& joints_accelerations, const Eigen::VectorXd& torques,
     const Eigen::VectorXd& forces, const Eigen::VectorXd& deformations,
     const Eigen::VectorXd& feet_positions, const Eigen::VectorXd& feet_velocities,
-    const std::vector<std::string>& contact_feet_names, const std::vector<std::string>& all_generic_feet_names,
-    const std::vector<std::string>& all_specific_feet_names, const double friction_coefficient)
+    const std::vector<std::string>& contact_feet_names, const std::vector<std::string>& generic_feet_names,
+    const std::vector<std::string>& specific_feet_names, const double friction_coefficient,
+    const Eigen::Vector3d& com_position)
 {
     publish_float64_multi_array(joints_accelerations, joints_accelerations_publisher_);
     publish_float64_multi_array(torques, torques_publisher_);
@@ -148,8 +168,10 @@ void HQPPublisher::publish_all(
 
     publish_polygon_and_friction_cones(
         feet_positions, contact_feet_names,
-        all_generic_feet_names, all_specific_feet_names,
+        generic_feet_names, specific_feet_names,
         friction_coefficient);
+
+    publish_point(com_position);
 }
 
 } // hqp_controller

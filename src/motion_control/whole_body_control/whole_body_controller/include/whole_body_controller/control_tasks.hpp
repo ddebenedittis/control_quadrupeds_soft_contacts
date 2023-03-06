@@ -141,6 +141,8 @@ public:
 
     const double get_friction_coefficient() { return mu; }
 
+    Eigen::Vector3d get_com_position() {return pinocchio::centerOfMass(get_model(), robot_model.get_data(), false);}
+
     const Eigen::MatrixXd& get_M()  { return M; }
     const Eigen::VectorXd& get_h()  { return h; }
     const Eigen::MatrixXd& get_Jc() { return Jc; }

@@ -443,7 +443,7 @@ controller_interface::return_type HQPController::update(
                 wbc.get_f_c_opt(), wbc.get_d_des_opt(),
                 wbc.get_feet_positions(), wbc.get_feet_velocities(v_),
                 des_gen_pose_copy.contact_feet_names, wbc.get_generic_feet_names(), wbc.get_all_feet_names(),
-                wbc.get_friction_coefficient());
+                wbc.get_friction_coefficient(), wbc.get_com_position());
         }
     }
 
