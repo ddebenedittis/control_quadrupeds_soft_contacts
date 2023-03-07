@@ -120,6 +120,11 @@ public:
         const Eigen::VectorXd& d_k1, const Eigen::VectorXd& d_k2
     );
 
+    /// @brief Enforce the non-singularity condition of the legs, by imposing that the knee joint does not change sign.
+    /// @param[out] C 
+    /// @param[out] d 
+    void task_joint_singularities(Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d);
+
     /// @brief Compute A and b that enforce the minimization of the energy (the square of the torques) and of the contact forces.
     /// @param[out] A 
     /// @param[out] b 
@@ -219,6 +224,9 @@ private:
     Eigen::Vector3d kd_terr = {1, 1, 1};        ///< @brief Damping of the soft foot in the three directions
 
     Eigen::Vector3d kc_v = {0, 0, 0};           ///< @brief Contact task: Jc * u_dot + Jc_dot * u = d_ddot - Kc_v * Jc * u, where Kc_v is the diagonal matrix whose diagonal is kc_v repeated nc number of times.
+
+    /// @brief 
+    Eigen::Vector4d knee_joint_sign = {0, 0, 0, 0};
 };
 
 } // namespace wbc

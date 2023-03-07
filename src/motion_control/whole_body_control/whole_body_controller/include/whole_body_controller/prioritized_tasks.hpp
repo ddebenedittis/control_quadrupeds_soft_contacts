@@ -50,6 +50,7 @@ enum class TasksNames {
     SwingFeetMotionTracking,
     ContactConstraints,
     EnergyAndForcesOptimization,
+    JointSingularities,
     SEPARATOR       // this should be the last element of the struct (used to count the number of control tasks too).
 };
 
@@ -153,6 +154,7 @@ private:
     /// @brief List of TaskNames used to specify the priority of every task.
     std::vector<TasksNames> prioritized_tasks_list = {
         TasksNames::FloatingBaseEOM, TasksNames::ContactConstraints, TasksNames::SEPARATOR,
+        TasksNames::JointSingularities, TasksNames::SEPARATOR,
         TasksNames::TorqueLimits, TasksNames::FrictionAndFcModulation, TasksNames::SEPARATOR,
         TasksNames::LinearBaseMotionTracking, TasksNames::AngularBaseMotionTracking, TasksNames::SwingFeetMotionTracking, TasksNames::SEPARATOR,
         TasksNames::EnergyAndForcesOptimization, TasksNames::SEPARATOR

@@ -99,6 +99,9 @@ void PrioritizedTasks::compute_task_p(
                 }
 
                 break;
+            case TasksNames::JointSingularities:
+                control_tasks.task_joint_singularities(C.middleRows(ni, ni_temp), d.segment(ni, ni_temp));
+                break;
             case TasksNames::EnergyAndForcesOptimization:
                 control_tasks.task_energy_forces_minimization(A.middleRows(ne, ne_temp), b.segment(ne, ne_temp));
                 break;
@@ -148,6 +151,8 @@ std::pair<int,int> PrioritizedTasks::get_task_dimension(TasksNames task_name)
             ne = control_tasks.get_nF();
         }
         break;
+    case TasksNames::JointSingularities:
+        ni = 4;
     case TasksNames::EnergyAndForcesOptimization:
         ne = control_tasks.get_nv() - 6 + control_tasks.get_nF() + control_tasks.get_nd();
         break;

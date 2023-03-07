@@ -52,3 +52,4 @@ Upcoming (2023-02-23)
 - Reorganized the gazebo launch files.
 - Added an heterogeneous terrain (multi_terrains).
 - New parameter in the controllers yaml file: `shift_base_height`. When `true`, we consider the fact that the terrain is soft and move the desired base height to take into account the terrain penetration.
+- New task that enforces limits on the knee joints coordinates.

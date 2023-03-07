@@ -293,6 +293,35 @@ void ControlTasks::task_contact_constraints_soft_kv(
 }
 
 
+/* ======================== Task_joint_singularities ======================== */
+
+void ControlTasks::task_joint_singularities(Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d)
+{
+    // Initialize knee_joint_sign if not already done. The desired knee joint angle sign is the same as the starting knee joint angle.
+    if (knee_joint_sign[0] == 0) {
+        for (int i = 0; i < 4; i++) {
+            if (q[7 + 2+3*i] >= 0) {
+                knee_joint_sign[i] = 1;
+            } else {
+                knee_joint_sign[i] = -1;
+            }
+        }
+    }
+
+    // C = [ - diag(knee_joint_sign) ]
+
+    // d = [ 2/dt^2 * (q_knees + v_knees * dt) * diag(knee_joint_sign) ]
+
+    C.setZero();
+    for (int i=0; i<4; i++) {
+        C(i, 6 + 2+3*i) = - knee_joint_sign[i];
+
+        d(i) = 2/(dt*dt) * (q(7 + 2+3*i) + v(6 + 2+3*i) * dt) * knee_joint_sign[i];
+    }
+
+}
+
+
 /* ===================== task_contact_constraints_rigid ===================== */
 
 void ControlTasks::task_contact_constraints_rigid(Ref<MatrixXd> A, Ref<VectorXd> b)
