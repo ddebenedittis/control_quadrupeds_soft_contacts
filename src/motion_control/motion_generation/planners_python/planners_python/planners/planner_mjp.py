@@ -2,6 +2,8 @@ import numpy as np
 from scipy.linalg import block_diag
 from quadprog import solve_qp
 
+from .interpolation import Interpolation, InterpolationMethod
+
 
 
 # Class used to compute the desired generalized pose with a trotting gait.
@@ -18,9 +20,6 @@ class MotionPlanner:
         # cost = sum 1/2 [ (xcom_dot - xcom_dot_des)^T Q (xcom_dot - xcom_dot_des) + (px - px_m)^T R (px - px_m) ]
         self.Q = 1000 * np.eye(self.N)
         self.R = 1 * np.eye(self.N)
-
-        # Swing phase duration
-        self.Ts = 0.2
 
         # Planner time step
         self.dt = 1 / 200
@@ -44,9 +43,14 @@ class MotionPlanner:
 
         # Current desired yaw
         self.dtheta = 0
-
-        # Spline order for the generation of the swing feet trajectoriesko
-        self.spline_order = 5
+        
+        self.interp = Interpolation()
+        self.interp.method = InterpolationMethod.spline_3rd
+        
+        # Swing phase duration
+        self.interp.Ts = 0.2
+        
+        self.interp.horizontal_delay = 0.1
 
 
         # Current feet position
@@ -60,6 +64,17 @@ class MotionPlanner:
 
         # Desired center of mass height
         self.zcom = 0.5
+        
+    
+    # ================================== Ts ================================== #
+    
+    def get_Ts(self):
+        return self.interp.Ts
+    
+    def set_Ts(self, value):
+        self.interp.Ts = value
+        
+    Ts = property(get_Ts, set_Ts)
 
 
     # ======================================================================== #
@@ -87,43 +102,6 @@ class MotionPlanner:
         ])
 
         return b
-
-
-    # ================================ _spline =============================== #
-
-    # Spline from pi to pf with parameter t in [0,1]
-    # With a fifth order spline it is possible to set both the velocity and the acceleration to zero at the start and at the end of the spline
-    # With a third order spline it is possible to set only the velocity of the point to zero at the start and at the end of the spline (in addition to setting the initial and final spline points).
-
-    def _spline(self, pi, pf, t):
-        
-        # Local time of transition phase and its derivatives
-        if self.spline_order == 5:
-
-            f_t = t**3 * (10 - 15 * t + 6 * t**2)
-
-            f_t_dot = 30 * t**2 - 60 * t**3 + 30 * t**4
-
-            f_t_ddot = 60 * t - 180 * t**2 + 120 * t**3
-
-        elif self.spline_order == 3:
-
-            f_t = t**2 * (3 - 2*t)
-
-            f_t_dot = 6*t - 6*t**2
-
-            f_t_ddot = 6 - 12*t
-
-
-        # Polynomial spline and its derivatives
-        p_t = (1 - f_t) * pi + f_t * pf
-
-        v_t = - f_t_dot * pi + f_t_dot * pf
-
-        a_t = - f_t_ddot * pi + f_t_ddot * pf
-
-
-        return p_t, v_t, a_t
 
 
     # ================================ _mpc_qp =============================== #
@@ -271,7 +249,7 @@ class MotionPlanner:
     def _foot_trajectory(self, p_swing_feet):
 
         phi = self.phi
-
+        
         all_feet = ['LF', 'RF', 'LH', 'RH']
 
         r_s_des = np.empty([0,])
@@ -281,27 +259,16 @@ class MotionPlanner:
         for i in range(4):
 
             if all_feet[i] in self.swing_feet:
-
-                if phi < 0.5:
-
-                    # The foot is rising
-                    r_s_des1, r_s_dot_des1, r_s_ddot_des1 = self._spline(np.zeros(3), np.array([0,0,self.step_height]), phi * 2)
-
-                else:
-
-                    # The foot is descending
-                    foot_penetration = 0.02
-                    r_s_des1, r_s_dot_des1, r_s_ddot_des1 = self._spline(np.array([0,0,self.step_height]), np.array([0,0,foot_penetration]), (phi - 0.5) * 2)
-
+                
                 p0 = self.p0_swing_feet[i]
                 pf = p_swing_feet[ self.swing_feet.index(all_feet[i]) ]
                 pf = np.concatenate((pf, np.array([0.0])))
-                
-                r_s_des2, r_s_dot_des2, r_s_ddot_des2 = self._spline(p0, pf, phi)
 
-                r_s_des = np.hstack((r_s_des, r_s_des1 + r_s_des2))
-                r_s_dot_des = np.hstack((r_s_dot_des, r_s_dot_des1 + r_s_dot_des2))
-                r_s_ddot_des = np.hstack((r_s_ddot_des, r_s_ddot_des1 + r_s_ddot_des2))
+                r_s_des_temp, r_s_dot_des_temp, r_s_ddot_des_temp = self.interp.interpolate(p0, pf, phi)
+                
+                r_s_des = np.hstack((r_s_des, r_s_des_temp))
+                r_s_dot_des = np.hstack((r_s_dot_des, r_s_dot_des_temp))
+                r_s_ddot_des = np.hstack((r_s_ddot_des, r_s_ddot_des_temp))
 
         return r_s_ddot_des, r_s_dot_des, r_s_des
 

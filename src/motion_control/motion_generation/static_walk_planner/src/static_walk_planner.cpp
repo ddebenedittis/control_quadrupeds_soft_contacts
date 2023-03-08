@@ -394,7 +394,7 @@ void StaticWalkPlanner::foot_trajectory_cycloid(
     phi_m = std::min(std::max(phi_m, 0.), 1.);
     double t_m = phi_m * T;
 
-    double x = + step_length_ * (t_m / T - 1 / (2 * M_PI) * sin(2 * M_PI * t_m / T));
+    double x = step_length_ * (t_m / T - 1 / (2 * M_PI) * sin(2 * M_PI * t_m / T));
     double x_dot = step_length_ / T * (1 - cos(2 * M_PI * t_m / T));
     double x_ddot = 2 * M_PI * step_length_ / std::pow(T, 2) * sin(2 * M_PI * t_m / T);
 
