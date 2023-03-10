@@ -291,7 +291,7 @@ def spawn_controllers(ld):
 # ============================= Launch_estimator ============================= #
 
 def launch_estimator(ld):
-    # pose_estimator_node = Node(
+    # pose_estimator = Node(
     #     package='pose_estimator',
     #     executable='pose_estimator_node',
     #     parameters=[
@@ -302,10 +302,19 @@ def launch_estimator(ld):
     #     output='screen',
     # )
     
-    # ld.add_action(pose_estimator_node)
+    terrain_estimator = Node(
+        package='terrain_estimator',
+        executable='terrain_estimator_node',
+        parameters=[
+            #         {'use_sim_time': use_sim_time},
+        ],
+        emulate_tty=True,
+        output='screen',
+    )
     
-    pass
-
+    # ld.add_action(pose_estimator)
+    ld.add_action(terrain_estimator)
+    
 
 # =============================== Launch_logger ============================== #
 
@@ -334,7 +343,14 @@ def launch_rviz(ld):
         package='rviz_legged_plugins',
         executable='ground_to_base_frame_broadcaster_node.py',
         parameters=[{'use_sim_time': use_sim_time}],
-        emulate_tty=True,
+        output='screen',
+    )
+    
+    terrain_projector = Node(
+        condition=IfCondition(use_rviz),
+        package='rviz_legged_plugins',
+        executable='terrain_projector_node.py',
+        parameters=[{'use_sim_time': use_sim_time}],
         output='screen',
     )
     
@@ -350,4 +366,5 @@ def launch_rviz(ld):
     )
     
     ld.add_action(ground_to_base_frame_broadcaster)
+    ld.add_action(terrain_projector)
     ld.add_action(rviz2)

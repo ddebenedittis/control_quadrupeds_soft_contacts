@@ -186,6 +186,7 @@ ament_python_install_package(${PROJECT_NAME})
 
 install(PROGRAMS
     scripts/ground_to_base_frame_broadcaster_node.py
+    scripts/terrain_projector_node.py
     DESTINATION lib/${PROJECT_NAME}
 )
 
