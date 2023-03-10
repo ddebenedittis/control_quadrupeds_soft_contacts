@@ -9,6 +9,7 @@ Control of quadrupedal robots with soft contact constraints.
 - [Dependencies](#dependencies)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Known Bugs](#known-bugs)
 - [Author](#author)
 
 
@@ -110,6 +111,11 @@ Add a new robot description package. It is recommended to place it in `src/robot
 Generate a new launch file similar to the ones already present in `src/robot/robot_gazebo/`.
 
 Create a new `effort_controller.yaml` file, similar to the ones already present in `robot_control/config`. Edit at least the `robot_name` field and the `joints` fields (according to the names of the joints of your robot).
+
+
+## Known Bugs
+
+- Sometimes, when the `soft_sim` contact constraint is used in the controller's .yaml files, the simulation stops instantly.
 
 
 ## Author
