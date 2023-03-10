@@ -57,7 +57,7 @@ public:
     double get_mass() {return prioritized_tasks.get_mass();}
 
     /// @brief Get the friction coefficient used in the optimization problem.
-    const double get_friction_coefficient() {return prioritized_tasks.get_friction_coefficient();}
+    double get_friction_coefficient() {return prioritized_tasks.get_friction_coefficient();}
 
     Eigen::Vector3d get_com_position() {return prioritized_tasks.get_com_position();}
 

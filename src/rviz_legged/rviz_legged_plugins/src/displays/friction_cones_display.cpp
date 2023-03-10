@@ -135,7 +135,7 @@ void FrictionConesDisplay::processMessage(const rviz_legged_msgs::msg::FrictionC
         Ogre::Vector3 position;
         Ogre::Quaternion orientation;
         float displayed_range = height_property_->getFloat();
-        auto pose = getPose(displayed_range);
+        auto pose = getPose();
 
         if (!context_->getFrameManager()->transform(
             friction_cone_msg.header.frame_id, friction_cone_msg.header.stamp, pose, position, orientation))
@@ -172,7 +172,7 @@ void FrictionConesDisplay::processMessage(const rviz_legged_msgs::msg::FrictionC
     }
 }
 
-geometry_msgs::msg::Pose FrictionConesDisplay::getPose(float displayed_range)
+geometry_msgs::msg::Pose FrictionConesDisplay::getPose(/*float displayed_range*/)
 {
     // float fudge_factor = 0.008824f;  // fudge factor measured, must be inaccuracy of cone model.
     geometry_msgs::msg::Pose pose;

@@ -153,6 +153,7 @@ std::pair<int,int> PrioritizedTasks::get_task_dimension(TasksNames task_name)
         break;
     case TasksNames::JointSingularities:
         ni = 4;
+        break;
     case TasksNames::EnergyAndForcesOptimization:
         ne = control_tasks.get_nv() - 6 + control_tasks.get_nF() + control_tasks.get_nd();
         break;

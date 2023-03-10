@@ -85,7 +85,7 @@ public:
     /// @param[in]  d_k2 Deformations of the feet in contact with the terrain at the second previous time step.
     void task_contact_constraints_soft_kv(
         Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b,
-        Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d,
+        Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> /*d*/,
         const Eigen::VectorXd& d_k1, const Eigen::VectorXd& d_k2
     );
 
@@ -144,7 +144,7 @@ public:
 
     double get_mass() { return robot_model.get_mass(); }
 
-    const double get_friction_coefficient() { return mu; }
+    double get_friction_coefficient() { return mu; }
 
     Eigen::Vector3d get_com_position() {return pinocchio::centerOfMass(get_model(), robot_model.get_data(), false);}
 

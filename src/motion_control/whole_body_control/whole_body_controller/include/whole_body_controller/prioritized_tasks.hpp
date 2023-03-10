@@ -95,7 +95,7 @@ public:
 
     double get_mass() {return control_tasks.get_mass();}
 
-    const double get_friction_coefficient() {return control_tasks.get_friction_coefficient();}
+    double get_friction_coefficient() {return control_tasks.get_friction_coefficient();}
 
     Eigen::Vector3d get_com_position() {return control_tasks.get_com_position();}
 

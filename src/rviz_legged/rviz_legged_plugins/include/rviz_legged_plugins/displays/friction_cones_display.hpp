@@ -92,7 +92,7 @@ private:
     int number_cones_ = 1;
 
     float getDisplayedRange(rviz_legged_msgs::msg::FrictionCones::ConstSharedPtr msg);
-    geometry_msgs::msg::Pose getPose(float displayed_range);
+    geometry_msgs::msg::Pose getPose(/*float displayed_range*/);
 
     std::vector<std::shared_ptr<rviz_rendering::Shape>> cones_;
 
