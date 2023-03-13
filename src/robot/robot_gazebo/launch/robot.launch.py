@@ -250,7 +250,10 @@ def spawn_controllers(ld):
         ),
         package='planners_python',
         executable='planner_mjp_node',
-        parameters=[{'use_sim_time': use_sim_time}],
+        parameters=[
+            {'use_sim_time': use_sim_time},
+            {'gait': gait},    
+        ],
         emulate_tty=True,
         output='screen',
     )

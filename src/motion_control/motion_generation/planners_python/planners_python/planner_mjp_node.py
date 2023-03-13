@@ -173,6 +173,12 @@ class Planner(Node):
         
         timer_period = self.planner.dt    # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
+        
+        self.declare_parameter('gait')
+        
+        self.teleoperate = False
+        if str(self.get_parameter('gait').value) == "teleop_walking_trot":
+            self.teleoperate = True
                 
     def timer_callback(self):        
         if self.minimal_subscriber.q_b.size == 0 or self.minimal_subscriber.a_b.size == 0:
@@ -199,17 +205,22 @@ class Planner(Node):
             a_b = - self.filter.filter(a_b_meas_body, Ts=self.planner.dt)
 
             # Horizontal velocity command and yaw rate command
-            # vel_cmd = np.array([0.0,0.0])
-            # vel_cmd = - np.array([
-            #     p_b[0],
-            #     p_b[1]
-            # ])
-            vel_cmd = np.array([
-                self.minimal_subscriber.velocity_forward,
-                self.minimal_subscriber.velocity_lateral,
-            ])
-            yaw_rate_cmd = self.minimal_subscriber.yaw_rate
-
+            vel_cmd = np.array([0., 0.])
+            yaw_rate_cmd = 0.
+            
+            if self.teleoperate == True:
+                vel_cmd = np.array([
+                    self.minimal_subscriber.velocity_forward,
+                    self.minimal_subscriber.velocity_lateral,
+                ])
+                yaw_rate_cmd = self.minimal_subscriber.yaw_rate
+            else:
+                vel_cmd = - 0.5 * np.array([
+                    p_b[0],
+                    p_b[1]
+                ])
+                yaw_rate_cmd = 0.
+            
             # Perform a single iteration of the model predictive control
             if self.time > self.init_time + self.zero_time:
                 # Planner output after the initialization phase has finished
@@ -218,7 +229,7 @@ class Planner(Node):
                 contactFeet = ['LF', 'RF', 'LH', 'RH']
 
                 # Base position quantities
-                r_b_des, r_b_dot_des, r_b_ddot_des = self.planner._spline(np.array([self.p_b_0[0], self.p_b_0[1], self.p_b_0[2]]), np.array([self.p_b_0[0], self.p_b_0[1], self.planner.zcom]), (self.time - self.zero_time)/self.init_time)
+                r_b_des, r_b_dot_des, r_b_ddot_des = self.planner.interp._spline(np.array([self.p_b_0[0], self.p_b_0[1], self.p_b_0[2]]), np.array([self.p_b_0[0], self.p_b_0[1], self.planner.zcom]), (self.time - self.zero_time)/self.init_time)
 
                 # Base angular quantities
                 omega_des = np.zeros(3)

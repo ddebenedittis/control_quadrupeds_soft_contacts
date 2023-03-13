@@ -37,6 +37,14 @@ void TeleopSimpleVelocityCommand::print_instructions()
     puts("u: positive yaw,          o: negative yaw");
     puts("---------------------------");
     puts("R: Reset to zero");
+
+    puts("");
+    puts("");
+    puts("");
+    puts("The commanded velocity is:");
+    printf("Forward velocity: %.2f\n", velocity_forward_);
+    printf("Lateral velocity: %.2f\n", velocity_lateral_);
+    printf("Yaw rate: %.2f\n", yaw_rate_);
 }
 
 
@@ -82,6 +90,12 @@ bool TeleopSimpleVelocityCommand::process_key(const char c)
     }
 
     return false;
+}
+
+
+void TeleopSimpleVelocityCommand::update_instructions()
+{
+    print_instructions();
 }
 
 

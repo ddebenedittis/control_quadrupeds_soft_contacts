@@ -45,12 +45,12 @@ class MotionPlanner:
         self.dtheta = 0
         
         self.interp = Interpolation()
-        self.interp.method = InterpolationMethod.spline_3rd
+        self.interp.method = InterpolationMethod.spline_5th
         
         # Swing phase duration
         self.interp.Ts = 0.2
         
-        self.interp.horizontal_delay = 0.1
+        self.interp.horizontal_delay = 0.0
 
 
         # Current feet position

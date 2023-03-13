@@ -38,6 +38,8 @@ private:
 
     virtual bool process_key(const char c) override;
 
+    virtual void update_instructions() override;
+
     virtual void update_message() override;
 
     KeyboardReader keyboard_reader_;
