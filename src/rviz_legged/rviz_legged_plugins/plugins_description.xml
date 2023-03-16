@@ -21,4 +21,14 @@
         </description>
     </class>
 
+    <class
+        name="rviz_legged_plugins/Paths"
+        type="rviz_legged_plugins::displays::PathsDisplay"
+        base_class_type="rviz_common::Display"
+    >
+        <description>
+            Display a list of paths.
+        </description>
+    </class>
+
 </library>

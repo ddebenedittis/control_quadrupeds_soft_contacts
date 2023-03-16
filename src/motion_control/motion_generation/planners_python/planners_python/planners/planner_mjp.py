@@ -60,6 +60,8 @@ class MotionPlanner:
             np.array([- 0.43,   0.3, 0.0]),     # LH
             np.array([- 0.43, - 0.3, 0.0]),     # RH         
         ]
+        
+        self.p_swing_feet = self.p0_swing_feet
 
 
         # Desired center of mass height
@@ -238,6 +240,8 @@ class MotionPlanner:
 
             elif i == 'RH':
                 p_swing_feet.append(p_star + r * np.array([- np.cos(self.theta0 + dtheta), - np.sin(self.theta0 + dtheta)]))
+                
+        self.p_swing_feet = p_swing_feet
 
         return p_swing_feet
 
@@ -312,7 +316,6 @@ class MotionPlanner:
         return r_b_ddot_des, r_b_dot_des, r_b_des
 
 
-
     # ================================== Mpc ================================= #
 
     def mpc(self, p_com, v_com, a_com, vel_cmd, yaw_rate_cmd):
@@ -365,3 +368,41 @@ class MotionPlanner:
             self._switch_swing_feet(p_swing_feet)
 
         return contactFeet, r_b_ddot_des, r_b_dot_des, r_b_des, omega_des, q_des, r_s_ddot_des, r_s_dot_des, r_s_des
+    
+    
+    # ======================= Trajectory_sample_points ======================= #
+    
+    def trajectory_sample_points(self):
+        """
+        _summary_
+        """
+        
+        all_feet = ['LF', 'RF', 'LH', 'RH']
+        
+        n_points = 25
+        
+        r_s_des = np.zeros((n_points, 2*3))
+        
+        feet_ids = []
+        
+        for i in range(4):
+            if all_feet[i] in self.swing_feet:
+                feet_ids.append(i)
+        
+        
+        for i in range(n_points):
+            
+            phi = i / (n_points - 1)
+
+            for j in feet_ids:
+                    
+                p0 = self.p0_swing_feet[j]
+                pf = self.p_swing_feet[ self.swing_feet.index(all_feet[j]) ]
+                pf = np.concatenate((pf, np.array([0.0])))
+
+                r_s_des_temp = self.interp.interpolate(p0, pf, phi)[0]
+                                
+                jj = feet_ids.index(j)
+                r_s_des[i, 3*jj:3*jj+3] = r_s_des_temp
+
+        return r_s_des

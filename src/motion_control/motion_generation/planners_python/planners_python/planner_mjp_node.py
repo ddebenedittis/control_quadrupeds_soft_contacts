@@ -3,9 +3,12 @@ import rclpy
 from rclpy.node import Node
 
 from gazebo_msgs.msg import LinkStates
+from geometry_msgs.msg import PoseStamped
 from generalized_pose_msgs.msg import GeneralizedPose
-from velocity_command_msgs.msg import SimpleVelocityCommand
+from nav_msgs.msg import Path
+from rviz_legged_msgs.msg import Paths
 from sensor_msgs.msg import Imu
+from velocity_command_msgs.msg import SimpleVelocityCommand
 
 from .planners.planner_mjp import MotionPlanner
 
@@ -100,7 +103,9 @@ class MinimalPublisher(Node):
     def __init__(self):
         super().__init__("minimal_publisher")
 
-        self.publisher_ = self.create_publisher(GeneralizedPose, 'robot/desired_generalized_pose', 1)
+        self.gen_pose_publisher_ = self.create_publisher(GeneralizedPose, 'robot/desired_generalized_pose', 1)
+        
+        self.feet_trajectory_publisher_ = self.create_publisher(Paths, 'rviz/feet_trajectory', 1)
 
     def publish_desired_gen_pose(
         self,
@@ -141,7 +146,27 @@ class MinimalPublisher(Node):
         msg.contact_feet = contactFeet
 
 
-        self.publisher_.publish(msg)
+        self.gen_pose_publisher_.publish(msg)
+        
+    
+    def publish_feet_trajectory(self, r_s_des):
+        msg = Paths()
+        
+        msg.header.frame_id = "ground_plane_link"
+        
+        n_points = np.shape(r_s_des)[0]
+        n_paths = np.shape(r_s_des)[1] // 3
+                
+        for i in range(n_paths):
+            msg.paths.append(Path())
+            
+            for j in range(n_points):
+                msg.paths[i].poses.append(PoseStamped())
+                msg.paths[i].poses[j].pose.position.x = r_s_des[j,3*i+0]
+                msg.paths[i].poses[j].pose.position.y = r_s_des[j,3*i+1]
+                msg.paths[i].poses[j].pose.position.z = r_s_des[j,3*i+2]
+        
+        self.feet_trajectory_publisher_.publish(msg)
         
         
         
@@ -225,6 +250,8 @@ class Planner(Node):
             if self.time > self.init_time + self.zero_time:
                 # Planner output after the initialization phase has finished
                 contactFeet, r_b_ddot_des, r_b_dot_des, r_b_des, omega_des, q_des, r_s_ddot_des, r_s_dot_des, r_s_des = self.planner.mpc(p_b, v_b, a_b, vel_cmd, yaw_rate_cmd)
+                
+                self.minimal_publisher.publish_feet_trajectory(self.planner.trajectory_sample_points())
             elif self.time > self.zero_time:
                 contactFeet = ['LF', 'RF', 'LH', 'RH']
 

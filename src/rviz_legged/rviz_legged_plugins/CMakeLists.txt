@@ -67,6 +67,7 @@ set(LIBRARY_NAME ${PROJECT_NAME})
 set(rviz_legged_plugins_headers_to_moc
     include/rviz_legged_plugins/displays/friction_cones_display.hpp
     include/rviz_legged_plugins/displays/external_wrench_display.hpp
+    include/rviz_legged_plugins/displays/paths_display.hpp
 )
 
 foreach(header "${rviz_legged_plugins_headers_to_moc}")
@@ -76,6 +77,7 @@ endforeach()
 set(rviz_legged_plugins_source_files
     src/displays/friction_cones_display.cpp
     src/displays/external_wrench_display.cpp
+    src/displays/paths_display.cpp
 )
 
 

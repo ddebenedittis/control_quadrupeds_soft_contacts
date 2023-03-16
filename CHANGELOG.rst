@@ -47,7 +47,7 @@
 
 Upcoming (2023-02-23)
 ------------------
-- Alpha version of a visualizer with RViz. The robot, the terrain, and the (optimal) contact forces are displayed. The support polygon is displayed. The friction cones are displayed. The COM (center of mass) and the ZMP (zero moment point) are displayed.
+- Alpha version of a visualizer with RViz. The robot, the terrain, and the (optimal) contact forces are displayed. The support polygon is displayed. The friction cones are displayed. The COM (center of mass) and the ZMP (zero moment point) are displayed. The feet trajectories are displayed.
 - Fixed the teleoperate_robot_base node. New teleoperate_velocity_command node that teleoperates the robot trotting (use `gait:=teleop_walking_trot`).
 - Reorganized the gazebo launch files.
 - Added an heterogeneous terrain (multi_terrains).
