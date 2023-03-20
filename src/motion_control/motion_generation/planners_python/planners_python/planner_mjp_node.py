@@ -197,7 +197,8 @@ class Planner(Node):
         self.zero_time = 1.     # time before the planner starts (no message is published).
         self.init_time = 0.5    # time during which the robot goes to the initial position, before the real planning starts.
         
-        self.p_b_0 = np.array([0., 0., 0.])
+        self.p_b_0 = np.zeros(0)
+        self.q_b_0 = np.zeros(0)
         
         self.rate = self.minimal_subscriber.create_rate(int(1 / self.planner.dt))
         
@@ -222,9 +223,18 @@ class Planner(Node):
                 
                 
     def timer_callback(self):        
-        if self.minimal_subscriber.q_b.size == 0 or self.minimal_subscriber.a_b.size == 0:
+        if self.minimal_subscriber.q_b.size == 0 or self.minimal_subscriber.a_b.size == 0 or self.p_b_0.size == 0:
             if self.minimal_subscriber.q_b.size != 0:
                 self.p_b_0 = self.minimal_subscriber.q_b[0:3]
+                self.q_b_0 = self.minimal_subscriber.q_b[3:7]
+                
+                q = self.q_b_0
+                dtheta = np.arctan2(
+                    2 * (q[3]*q[2] + q[0]*q[1]),
+                    1 - 2 * (q[1]*q[1] +  q[2]*q[2])
+                )
+                                                
+                self.planner.update_initial_conditions(self.p_b_0, dtheta)
                 
             self.rate.sleep()
         else:
@@ -248,7 +258,7 @@ class Planner(Node):
             # Horizontal velocity command and yaw rate command
             vel_cmd = np.array([0., 0.])
             yaw_rate_cmd = 0.
-            
+                        
             if self.teleoperate == True:
                 vel_cmd = np.array([
                     self.minimal_subscriber.velocity_forward,
@@ -276,7 +286,7 @@ class Planner(Node):
 
                 # Base angular quantities
                 omega_des = np.zeros(3)
-                q_des = np.array([0., 0., 0., 1.])
+                q_des = self.q_b_0
             
                 # Swing feet position quantities
                 r_s_ddot_des = np.array([])

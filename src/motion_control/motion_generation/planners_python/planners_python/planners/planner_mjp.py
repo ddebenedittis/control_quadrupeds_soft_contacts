@@ -62,7 +62,7 @@ class MotionPlanner:
         self.step_height = 0.1
 
         # Parameters used to describe the feet position with respect to the ZMP
-        self.theta0 = 0.61
+        self.theta0 = 0.64
         self.r = 0.5
 
         # Current desired yaw
@@ -78,14 +78,11 @@ class MotionPlanner:
 
 
         # Current feet position
-        self.p0_swing_feet = [
-            np.array([  0.43,   0.3, 0.0]),     # LF
-            np.array([  0.43, - 0.3, 0.0]),     # RF
-            np.array([- 0.43,   0.3, 0.0]),     # LH
-            np.array([- 0.43, - 0.3, 0.0]),     # RH         
-        ]
+        self.p0_swing_feet = []
         
-        self.p_swing_feet = self.p0_swing_feet
+        self.p_swing_feet = []
+        
+        self.update_initial_conditions()
 
 
         # Desired center of mass height
@@ -101,6 +98,22 @@ class MotionPlanner:
         self.interp.Ts = value
         
     Ts = property(get_Ts, set_Ts)
+    
+    
+    # ======================= Update_initial_conditions ====================== #
+    
+    def update_initial_conditions(self, p_0 = np.zeros(3), yaw = 0):
+        self.dtheta = yaw
+        
+        self.p0_swing_feet = [
+            np.array([  self.r * np.cos(self.theta0 + self.dtheta),   self.r * np.sin(self.theta0 + self.dtheta), 0.0]),     # LF
+            np.array([  self.r * np.cos(self.theta0 - self.dtheta), - self.r * np.sin(self.theta0 - self.dtheta), 0.0]),     # RF
+            np.array([- self.r * np.cos(self.theta0 - self.dtheta),   self.r * np.sin(self.theta0 - self.dtheta), 0.0]),     # LH
+            np.array([- self.r * np.cos(self.theta0 + self.dtheta), - self.r * np.sin(self.theta0 + self.dtheta), 0.0]),     # RH         
+        ]
+        self.p0_swing_feet += p_0
+        
+        self.p_swing_feet = self.p0_swing_feet
 
 
     # ======================================================================== #
@@ -355,11 +368,20 @@ class MotionPlanner:
         g = 9.81
         px_0 = p_com[0] - a_com[0] * self.zcom / g
         py_0 = p_com[1] - a_com[1] * self.zcom / g
+        
+        ph_0 =   px_0 * np.cos(self.dtheta) + py_0 * np.sin(self.dtheta)
+        pl_0 = - px_0 * np.sin(self.dtheta) + py_0 * np.cos(self.dtheta)
+        
+        Hcom_0 =   Xcom_0 * np.cos(self.dtheta) + Ycom_0 * np.sin(self.dtheta)
+        Lcom_0 = - Xcom_0 * np.sin(self.dtheta) + Ycom_0 * np.cos(self.dtheta)
 
         # Compute the x and y coordinates of the ZMP.
         xcom_dot_des = vel_cmd[0]; ycom_dot_des = vel_cmd[1]
-        p_x_star = self._mpc_qp(Xcom_0, px_0, xcom_dot_des)
-        p_y_star = self._mpc_qp(Ycom_0, py_0, ycom_dot_des)
+        p_h_star = self._mpc_qp(Hcom_0, ph_0, xcom_dot_des)
+        p_l_star = self._mpc_qp(Lcom_0, pl_0, ycom_dot_des)
+        
+        p_x_star = p_h_star * np.cos(self.dtheta) - p_l_star * np.sin(self.dtheta)
+        p_y_star = p_h_star * np.sin(self.dtheta) + p_l_star * np.cos(self.dtheta)
 
         # Optimal ZMP position.
         p_star = np.array([p_x_star, p_y_star])
