@@ -1,4 +1,3 @@
-import threading
 import rclpy
 from rclpy.node import Node
 
@@ -8,9 +7,10 @@ from generalized_pose_msgs.msg import GeneralizedPose
 from nav_msgs.msg import Path
 from rviz_legged_msgs.msg import Paths
 from sensor_msgs.msg import Imu
+from std_msgs.msg import Float64MultiArray
 from velocity_command_msgs.msg import SimpleVelocityCommand
 
-from .planners.planner_mjp import MotionPlanner
+from .planners.planner_mjp import DesiredGeneralizedPose, MotionPlanner
 
 from .utils.quat_math import q_mult
 from .utils.fading_filter import FadingFilter
@@ -33,8 +33,6 @@ class MinimalSubscriber(Node):
             self.link_states_callback,
             1)
         
-        self.link_states_subscription # prevent unused variable warning
-
         self.imu_subscription = self.create_subscription(
             Imu,
             "/imu_sensor_broadcaster/imu",
@@ -43,11 +41,15 @@ class MinimalSubscriber(Node):
         
         self.velocity_command_subscription = self.create_subscription(
             SimpleVelocityCommand,
-            "robot/simple_velocity_command",
+            "/robot/simple_velocity_command",
             self.vel_cmd_callback,
             1)
-
-        self.imu_subscription # prevent unused variable warning
+        
+        self.terrain_subscription = self.create_subscription(
+            Float64MultiArray,
+            "/state_estimator/terrain",
+            self.terrain_callback,
+            1)
 
         self.q_b = np.array([])     # base position
         self.v_b = np.array([])     # base velocity
@@ -56,6 +58,9 @@ class MinimalSubscriber(Node):
         self.velocity_forward = 0.
         self.velocity_lateral = 0.
         self.yaw_rate = 0.
+        
+        # The plane is z = a x + b y + c, where self.plane_coeffs = {a, b, c}.
+        self.plane_coeffs = np.zeros(3)
 
 
     # Save the base pose and twist
@@ -82,16 +87,22 @@ class MinimalSubscriber(Node):
         self.q_b = np.array([pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w])
         self.v_b = np.array([lin.x, lin.y, lin.z, ang.x, ang.y, ang.z])
 
+
     # Save the base acceleration
     def imu_callback(self, msg):
         acc = msg.linear_acceleration
 
         self.a_b = np.array([acc.x, acc.y, acc.z])
         
+        
     def vel_cmd_callback(self, msg):
         self.velocity_forward = msg.velocity_forward
         self.velocity_lateral = msg.velocity_lateral
         self.yaw_rate = msg.yaw_rate
+        
+        
+    def terrain_callback(self, msg):
+        self.plane_coeffs = msg.data
 
 
 
@@ -107,43 +118,37 @@ class MinimalPublisher(Node):
         
         self.feet_trajectory_publisher_ = self.create_publisher(Paths, 'rviz/feet_trajectory', 1)
 
-    def publish_desired_gen_pose(
-        self,
-        contactFeet,
-        r_b_ddot_des, r_b_dot_des, r_b_des,
-        omega_des, q_des,
-        r_s_ddot_des, r_s_dot_des, r_s_des
-    ):
+    def publish_desired_gen_pose(self, des_gen_pose: DesiredGeneralizedPose):
         # Initialize and fully populate the desired generalized pose message
 
         msg = GeneralizedPose()
 
-        msg.base_acc.x = r_b_ddot_des[0]
-        msg.base_acc.y = r_b_ddot_des[1]
-        msg.base_acc.z = r_b_ddot_des[2]
+        msg.base_acc.x = des_gen_pose.base_acc[0]
+        msg.base_acc.y = des_gen_pose.base_acc[1]
+        msg.base_acc.z = des_gen_pose.base_acc[2]
 
-        msg.base_vel.x = r_b_dot_des[0]
-        msg.base_vel.y = r_b_dot_des[1]
-        msg.base_vel.z = r_b_dot_des[2]
+        msg.base_vel.x = des_gen_pose.base_vel[0]
+        msg.base_vel.y = des_gen_pose.base_vel[1]
+        msg.base_vel.z = des_gen_pose.base_vel[2]
 
-        msg.base_pos.x = r_b_des[0]
-        msg.base_pos.y = r_b_des[1]
-        msg.base_pos.z = r_b_des[2]
+        msg.base_pos.x = des_gen_pose.base_pos[0]
+        msg.base_pos.y = des_gen_pose.base_pos[1]
+        msg.base_pos.z = des_gen_pose.base_pos[2]
 
-        msg.base_angvel.x = omega_des[0]
-        msg.base_angvel.y = omega_des[1]
-        msg.base_angvel.z = omega_des[2]
+        msg.base_angvel.x = des_gen_pose.base_angvel[0]
+        msg.base_angvel.y = des_gen_pose.base_angvel[1]
+        msg.base_angvel.z = des_gen_pose.base_angvel[2]
 
-        msg.base_quat.x = q_des[0]
-        msg.base_quat.y = q_des[1]
-        msg.base_quat.z = q_des[2]
-        msg.base_quat.w = q_des[3]
+        msg.base_quat.x = des_gen_pose.base_quat[0]
+        msg.base_quat.y = des_gen_pose.base_quat[1]
+        msg.base_quat.z = des_gen_pose.base_quat[2]
+        msg.base_quat.w = des_gen_pose.base_quat[3]
 
-        msg.feet_acc = r_s_ddot_des.tolist()
-        msg.feet_vel = r_s_dot_des.tolist()
-        msg.feet_pos = r_s_des.tolist()
+        msg.feet_acc = des_gen_pose.feet_acc.tolist()
+        msg.feet_vel = des_gen_pose.feet_vel.tolist()
+        msg.feet_pos = des_gen_pose.feet_pos.tolist()
 
-        msg.contact_feet = contactFeet
+        msg.contact_feet = des_gen_pose.contact_feet_names
 
 
         self.gen_pose_publisher_.publish(msg)
@@ -204,6 +209,17 @@ class Planner(Node):
         self.teleoperate = False
         if str(self.get_parameter('gait').value) == "teleop_walking_trot":
             self.teleoperate = True
+            
+    
+    def correct_with_terrain_height(self, des_gen_pose: DesiredGeneralizedPose):
+        plane_coeffs = self.minimal_subscriber.plane_coeffs
+        
+        delta_h = plane_coeffs[0] * des_gen_pose.base_pos[0] + plane_coeffs[1] * des_gen_pose.base_pos[1] + plane_coeffs[2]
+        
+        des_gen_pose.base_pos[2] += delta_h
+        
+        des_gen_pose.feet_pos[2::3] += delta_h
+                
                 
     def timer_callback(self):        
         if self.minimal_subscriber.q_b.size == 0 or self.minimal_subscriber.a_b.size == 0:
@@ -249,7 +265,7 @@ class Planner(Node):
             # Perform a single iteration of the model predictive control
             if self.time > self.init_time + self.zero_time:
                 # Planner output after the initialization phase has finished
-                contactFeet, r_b_ddot_des, r_b_dot_des, r_b_des, omega_des, q_des, r_s_ddot_des, r_s_dot_des, r_s_des = self.planner.mpc(p_b, v_b, a_b, vel_cmd, yaw_rate_cmd)
+                des_gen_pose = self.planner.mpc(p_b, v_b, a_b, vel_cmd, yaw_rate_cmd)
                 
                 self.minimal_publisher.publish_feet_trajectory(self.planner.trajectory_sample_points())
             elif self.time > self.zero_time:
@@ -266,19 +282,28 @@ class Planner(Node):
                 r_s_ddot_des = np.array([])
                 r_s_dot_des = np.array([])
                 r_s_des = np.array([])
+                
+                des_gen_pose = DesiredGeneralizedPose(
+                    base_acc=r_b_ddot_des,
+                    base_vel=r_b_dot_des,
+                    base_pos=r_b_des,
+                    base_angvel=omega_des,
+                    base_quat=q_des,
+                    feet_acc=r_s_ddot_des,
+                    feet_vel=r_s_dot_des,
+                    feet_pos=r_s_des,
+                    contact_feet_names=contactFeet
+                )
             else:
                 self.p_b_0[2] = self.minimal_subscriber.q_b[2]
                 
                 return
             
+            
+            self.correct_with_terrain_height(des_gen_pose)
 
             # Publish the desired generalized pose message
-            self.minimal_publisher.publish_desired_gen_pose(
-                contactFeet,
-                r_b_ddot_des, r_b_dot_des, r_b_des,
-                omega_des, q_des,
-                r_s_ddot_des, r_s_dot_des, r_s_des
-            )
+            self.minimal_publisher.publish_desired_gen_pose(des_gen_pose)
 
 
 

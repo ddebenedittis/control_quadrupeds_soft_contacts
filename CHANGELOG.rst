@@ -53,4 +53,4 @@ Upcoming (2023-02-23)
 - Added an heterogeneous terrain (multi_terrains).
 - New parameter in the controllers yaml file: `shift_base_height`. When `true`, we consider the fact that the terrain is soft and move the desired base height to take into account the terrain penetration.
 - New task that enforces limits on the knee joints coordinates.
-- The `terrain_estimator` package gives a very rough estimate of the contact plane.
+- The `terrain_estimator` package gives a very rough estimate of the contact plane. The local terrain height is used by the trotting planner to adjust the commanded height.

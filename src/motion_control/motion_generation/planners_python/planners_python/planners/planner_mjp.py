@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import numpy as np
 from scipy.linalg import block_diag
 from quadprog import solve_qp
@@ -5,6 +7,28 @@ from quadprog import solve_qp
 from .interpolation import Interpolation, InterpolationMethod
 
 
+
+# ============================================================================ #
+#                      DESIRED GENERALIZED POSE DATACLASS                      #
+# ============================================================================ #
+
+@dataclass
+class DesiredGeneralizedPose():
+    base_acc: np.ndarray
+    base_vel: np.ndarray
+    base_pos: np.ndarray
+    base_angvel: np.ndarray
+    base_quat: np.ndarray
+    feet_acc: np.ndarray
+    feet_vel: np.ndarray
+    feet_pos: np.ndarray
+    contact_feet_names: list[str]
+
+
+
+# ============================================================================ #
+#                                 MOTIONPLANNER                                #
+# ============================================================================ #
 
 # Class used to compute the desired generalized pose with a trotting gait.
 
@@ -366,8 +390,21 @@ class MotionPlanner:
         if self.phi >= 1:
             self.phi = 0
             self._switch_swing_feet(p_swing_feet)
+            
+            
+        des_gen_pose = DesiredGeneralizedPose(
+            base_acc=r_b_ddot_des,
+            base_vel=r_b_dot_des,
+            base_pos=r_b_des,
+            base_angvel=omega_des,
+            base_quat=q_des,
+            feet_acc=r_s_ddot_des,
+            feet_vel=r_s_dot_des,
+            feet_pos=r_s_des,
+            contact_feet_names=contactFeet
+        )
 
-        return contactFeet, r_b_ddot_des, r_b_dot_des, r_b_des, omega_des, q_des, r_s_ddot_des, r_s_dot_des, r_s_des
+        return des_gen_pose
     
     
     # ======================= Trajectory_sample_points ======================= #
@@ -379,7 +416,7 @@ class MotionPlanner:
         
         all_feet = ['LF', 'RF', 'LH', 'RH']
         
-        n_points = 25
+        n_points = 10
         
         r_s_des = np.zeros((n_points, 2*3))
         
