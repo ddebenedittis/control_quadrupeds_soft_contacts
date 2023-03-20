@@ -37,6 +37,7 @@ TeleopRobotBase::TeleopRobotBase()
 
 void TeleopRobotBase::print_instructions()
 {
+    puts(u8"\033[2J\033[1;1H"); // clears the terminal (only on linux)
     puts("Reading from keyboard");
     puts("---------------------------");
     puts("Use the following keys (CASE SENSITIVE!) to move the robot base:");
@@ -48,6 +49,13 @@ void TeleopRobotBase::print_instructions()
     puts("i: positive pitch,        k: negative pitch");
     puts("l: positive roll,         j: negative roll");
     puts("u: positive yaw,          o: negative yaw");
+
+    puts("");
+    puts("");
+    puts("");
+    puts("The commanded pose is:");
+    printf("Position (x, y, z): %.2f, %.2f, %.2f\n", base_pos_des_[0], base_pos_des_[1], base_pos_des_[2]);
+    printf("Orientation (qx, qy, qz, qw): %.3f, %.3f, %.3f, %.3f\n", base_quat_des_[0], base_quat_des_[1], base_quat_des_[2], base_quat_des_[3]);
 }
 
 
@@ -68,11 +76,11 @@ bool TeleopRobotBase::process_key(const char c)
         return true;
     case KEYCODE_d:
         RCLCPP_DEBUG(this->get_logger(), "TILT TO THE RIGHT\n");
-        l_twist_ = {0.0, 1.0, 0.0};
+        l_twist_ = {0.0, -1.0, 0.0};
         return true;
     case KEYCODE_a:
         RCLCPP_DEBUG(this->get_logger(), "TILT TO THE LEFT\n");
-        l_twist_ = {0.0, -1.0, 0.0};
+        l_twist_ = {0.0, 1.0, 0.0};
         return true;
     case KEYCODE_q:
         RCLCPP_DEBUG(this->get_logger(), "TILT UP\n");

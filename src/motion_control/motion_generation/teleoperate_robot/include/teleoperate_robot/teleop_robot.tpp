@@ -34,8 +34,6 @@ protected:
 
     virtual bool process_key(const char c) = 0;
 
-    virtual void update_instructions() {};
-
     virtual void update_message() = 0;
 
     virtual bool initialize_message() {return true;};
@@ -87,7 +85,7 @@ template <class T> void TeleopRobot<T>::teleop_callback()
         }
 
         if (init_complete == true) {
-            update_instructions();
+            print_instructions();
 
             update_message();
 

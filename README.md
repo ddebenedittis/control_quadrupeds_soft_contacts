@@ -116,6 +116,7 @@ Create a new `effort_controller.yaml` file, similar to the ones already present 
 ## Known Bugs
 
 - Sometimes, when the `soft_sim` contact constraint is used in the controller's .yaml files, the simulation stops instantly.
+- The controller does not work when the orientation is substantially different from zero roll, pitch, and yaw.
 
 
 ## Author

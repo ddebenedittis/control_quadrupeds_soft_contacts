@@ -258,7 +258,7 @@ def spawn_controllers(ld):
         output='screen',
     )
     
-    spawn_teleop_base = Node(
+    spawn_teleop_trot = Node(
         condition=IfCondition(
             PythonExpression([
                 '"', gait, '"', ' == "teleop_walking_trot"'
@@ -288,6 +288,7 @@ def spawn_controllers(ld):
     ld.add_action(spawn_teleop_base)
     ld.add_action(spawn_planner)
     ld.add_action(spawn_planner_mjp)
+    ld.add_action(spawn_teleop_trot)
     ld.add_action(spawn_whole_body_controller)
     
     

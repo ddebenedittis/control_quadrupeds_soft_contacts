@@ -64,11 +64,11 @@ bool TeleopSimpleVelocityCommand::process_key(const char c)
         return true;
     case KEYCODE_d:
         RCLCPP_DEBUG(this->get_logger(), "MOVE TO THE RIGHT\n");
-        velocity_lateral_ += l_scale_ * 0.01;
+        velocity_lateral_ -= l_scale_ * 0.01;
         return true;
     case KEYCODE_a:
         RCLCPP_DEBUG(this->get_logger(), "MOVE TO THE LEFT\n");
-        velocity_lateral_ -= l_scale_ * 0.01;
+        velocity_lateral_ += l_scale_ * 0.01;
         return true;
 
     // Angular movements of the base
@@ -90,12 +90,6 @@ bool TeleopSimpleVelocityCommand::process_key(const char c)
     }
 
     return false;
-}
-
-
-void TeleopSimpleVelocityCommand::update_instructions()
-{
-    print_instructions();
 }
 
 
