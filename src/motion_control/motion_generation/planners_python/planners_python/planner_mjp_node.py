@@ -19,6 +19,29 @@ import numpy as np
 
 
 
+# ========================= Get_quaternion_from_euler ======================== #
+
+def get_quaternion_from_euler(roll, pitch, yaw):
+  """
+  Convert an Euler angle to a quaternion.
+   
+  Input
+    :param roll: The roll (rotation around x-axis) angle in radians.
+    :param pitch: The pitch (rotation around y-axis) angle in radians.
+    :param yaw: The yaw (rotation around z-axis) angle in radians.
+ 
+  Output
+    :return qx, qy, qz, qw: The orientation in quaternion [x,y,z,w] format
+  """
+  qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+  qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
+  qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
+  qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+ 
+  return np.array([qx, qy, qz, qw])
+
+
+
 # ============================================================================ #
 #                            MINIMALSUBSCRIBER CLASS                           #
 # ============================================================================ #
@@ -175,6 +198,10 @@ class MinimalPublisher(Node):
         
         
         
+# ============================================================================ #
+#                                    PLANNER                                   #
+# ============================================================================ #
+
 class Planner(Node):
     def __init__(self):
         super().__init__("Planner")
@@ -212,16 +239,29 @@ class Planner(Node):
             self.teleoperate = True
             
     
-    def correct_with_terrain_height(self, des_gen_pose: DesiredGeneralizedPose):
+    # ========================= Correct_with_terrain ========================= #
+    
+    def correct_with_terrain(self, des_gen_pose: DesiredGeneralizedPose):
+        """
+        Change the desired base and feet height depending on the local terrain height.
+        Change the desired roll and pitch angles of the base to align them to the local terrain plane.
+        """
+        
         plane_coeffs = self.minimal_subscriber.plane_coeffs
         
+        # Local terrain height.
         delta_h = plane_coeffs[0] * des_gen_pose.base_pos[0] + plane_coeffs[1] * des_gen_pose.base_pos[1] + plane_coeffs[2]
         
+        # Shift the desired base and feet height.
         des_gen_pose.base_pos[2] += delta_h
-        
         des_gen_pose.feet_pos[2::3] += delta_h
-                
-                
+        
+        # Align the desired roll and pitch angles of the base to the local terrain plane.
+        des_gen_pose.base_quat = get_quaternion_from_euler(np.arctan(plane_coeffs[1]), - np.arctan(plane_coeffs[0]), self.planner.dtheta)
+
+    
+    # ============================ Timer_callback ============================ #
+    
     def timer_callback(self):        
         if self.minimal_subscriber.q_b.size == 0 or self.minimal_subscriber.a_b.size == 0 or self.p_b_0.size == 0:
             if self.minimal_subscriber.q_b.size != 0:
@@ -310,7 +350,7 @@ class Planner(Node):
                 return
             
             
-            self.correct_with_terrain_height(des_gen_pose)
+            self.correct_with_terrain(des_gen_pose)
 
             # Publish the desired generalized pose message
             self.minimal_publisher.publish_desired_gen_pose(des_gen_pose)
