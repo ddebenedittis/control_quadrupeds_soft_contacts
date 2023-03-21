@@ -7,12 +7,22 @@ from std_msgs.msg import Float64MultiArray
 
 
 
+class FadingFilter():
+    def __init__(self) -> None:
+        self.beta = 0.5
+        
+    def filter(self, old_estimate, measurement):
+        return self.beta * old_estimate + (1-self.beta) * measurement
+
+
+
 class TerrainEstimator(Node):
     def __init__(self):
         super().__init__("terrain_estimator_node")
         
         # ============================ Subscribers =========================== #
         
+        # Used to know which feet are in contact with the terrain.
         self.desired_generalized_pose_subscription = self.create_subscription(
             GeneralizedPose,
             "robot/desired_generalized_pose",
@@ -27,17 +37,23 @@ class TerrainEstimator(Node):
         
         # ================= Variables Saved By The Subscriber ================ #
         
+        # Save the position of each foot the last time they were in contact with the terrain. These positions are used to compute the plane coefficients.
         self.last_contact_feet_position = np.array([
              1.,  1., 0.,
              1., -1., 0.,
             -1.,  1., 0.,
-            -1., -1., 0.   
+            -1., -1., 0.
         ])
+        
+        # Low pass filter for the feet positions.
+        self.filter = FadingFilter()
+        self.filter.beta = 0.9
         
         self.feet_names = ["LF", "RF", "LH", "RH"]
         
         self.contact_feet_names = []
         
+        # The plane is z = a x + b y + c, where self.plane_coeffs = {a, b, c}.
         self.plane_coeff = np.zeros(3)
         
         # ============================= Publisher ============================ #
@@ -46,6 +62,7 @@ class TerrainEstimator(Node):
         
         # =============================== Timer ============================== #
         
+        # The plane coefficients are published with this period.
         timer_period = 1/25
         self.timer = self.create_timer(timer_period, self.timer_callback)
         
@@ -57,7 +74,10 @@ class TerrainEstimator(Node):
     def feet_positions_callback(self, msg):
         for i in range(4):
             if self.feet_names[i] in self.contact_feet_names:
-                self.last_contact_feet_position[3*i:3*i+3] = msg.data[3*i:3*i+3]
+                self.last_contact_feet_position[3*i:3*i+3] = self.filter.filter(
+                    self.last_contact_feet_position[3*i:3*i+3],
+                    np.array([msg.data[3*i:3*i+3]])
+                )
                 
     
     def compute_plane_eq(self):
