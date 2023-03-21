@@ -12,7 +12,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     
-    global robot_name, package_share_path, robot_file_path, gazebo_config_file_path, terrain_file_path, multi_terrains_file_path, world_file_path
+    global robot_name, package_share_path, robot_file_path, gazebo_config_file_path, rviz_config_file_path, terrain_file_path, multi_terrains_file_path, world_file_path
     
     robot_name = LaunchConfiguration('robot_name', default='anymal_c')
 
@@ -26,6 +26,14 @@ def generate_launch_description():
     gazebo_config_file_path = PathJoinSubstitution([
         FindPackageShare('robot_gazebo'),
         'config/gazebo_params.yaml'
+    ])
+    
+    rviz_config_file = LaunchConfiguration('rviz_config_file', default='config.rviz')
+    rviz_config_file_path = PathJoinSubstitution([
+        FindPackageShare('robot_gazebo'),
+        'config',
+        'rviz',
+        rviz_config_file
     ])
     
     terrain_file_path = PathJoinSubstitution([
@@ -75,7 +83,7 @@ def generate_launch_description():
         
         DeclareLaunchArgument('save_csv', default_value='False'),
         
-        DeclareLaunchArgument('use_rviz', default_value='False'),    
+        DeclareLaunchArgument('use_rviz', default_value='False'),
     ])
         
     launch_gazebo(ld)
@@ -137,9 +145,9 @@ def spawn_things(ld):
         package = 'gazebo_ros',
         executable = 'spawn_entity.py',
         arguments = ['-topic', '/robot_description',
-                        '-entity', robot_name,
-                        '-x', '0', '-y', '0', '-z', height,
-                        '-R', '0', '-P', '0', '-Y', '0'],
+                     '-entity', robot_name,
+                     '-x', '0', '-y', '0', '-z', height,
+                     '-R', '0', '-P', '0', '-Y', '0'],
         parameters=[{'use_sim_time': use_sim_time}],
         output = 'screen',
     )
@@ -363,10 +371,8 @@ def launch_rviz(ld):
         package='rviz2',
         executable='rviz2',
         name='rviz2',
-        arguments=['-d', PathJoinSubstitution([
-            FindPackageShare('rviz_legged_plugins'),
-            'config', 'rviz', 'config.rviz'
-        ])],
+        parameters=[{'use_sim_time': use_sim_time}],
+        arguments=['-d', rviz_config_file_path],
     )
     
     ld.add_action(ground_to_base_frame_broadcaster)

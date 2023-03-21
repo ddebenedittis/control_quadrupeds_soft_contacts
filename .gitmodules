@@ -17,3 +17,7 @@
 [submodule "src/robot/robots/anymal_c_softfoot_q_description"]
 	path = src/robot/robots/anymal_c_softfoot_q_description
 	url = https://github.com/ddebenedittis/anymal_c_softfoot_q_description
+[submodule "src/rviz_legged"]
+	path = src/rviz_legged
+	url = https://github.com/ddebenedittis/rviz_legged
+	branch = main

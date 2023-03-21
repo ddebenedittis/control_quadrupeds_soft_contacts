@@ -18,6 +18,9 @@ def generate_launch_description():
     save_csv = LaunchConfiguration('save_csv', default='False')
     
     terrain = LaunchConfiguration('terrain', default='rigid')
+    
+    use_rviz = LaunchConfiguration('use_rviz', default='False')
+    rviz_config_file = LaunchConfiguration('rviz_config_file', default="solo12_config.rviz")
 
     
     # ======================================================================== #
@@ -31,6 +34,8 @@ def generate_launch_description():
         'height': '0.34',
         'save_csv': save_csv,
         'terrain': terrain,
+        'use_rviz': use_rviz,
+        'rviz_config_file': rviz_config_file,
     }.items()
 
 

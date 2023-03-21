@@ -7,7 +7,7 @@
     <maintainer email="davide.debenedittis@gmail.com">Davide De Benedittis</maintainer>
     <license>TODO: License declaration</license>
 
-    <url>https://github.com/ddebenedittis/control_quadrupeds_soft_contacts</url>
+    <url>https://github.com/ddebenedittis/rviz_legged</url>
     <author email="davide.debenedittis@gmail.com">Davide De Benedittis</author>
 
     <buildtool_depend>ament_cmake</buildtool_depend>

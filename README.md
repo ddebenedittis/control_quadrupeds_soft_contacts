@@ -85,8 +85,8 @@ Optional arguments:
 - `save_csv`: when `True`, some data is logged and saved in several .csv files in the `log/csv/` folder. This data can be plotted with `plot.py` (in the `logger_gazebo` package).
 - `use_rviz`: when `True`, RViz is used to display the contact forces of the robot (still in Alpha version).
 
-<img src="https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/rviz_legged_walk.gif" width="500">
-<img src="https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/rviz_legged_trot.gif" width="500">
+<img src="https://raw.githubusercontent.com/ddebenedittis/media/main/rviz_legged/gif/rviz_legged_walk.gif" width="500">
+<img src="https://raw.githubusercontent.com/ddebenedittis/media/main/rviz_legged/gif/rviz_legged_trot.gif" width="500">
 
 - `contact_constraint_type`: not working. Must be changed directly in the specific robot config .yaml file.
 
@@ -116,6 +116,7 @@ Create a new `effort_controller.yaml` file, similar to the ones already present 
 ## Known Bugs
 
 - Sometimes, when the `soft_sim` contact constraint is used in the controller's .yaml files, the simulation stops instantly.
+- Sometimes, the SOLO12 simulation does not start correctly.
 
 
 ## Author

@@ -8,6 +8,11 @@ from std_msgs.msg import Float64MultiArray
 
 
 class FadingFilter():
+    """
+    A fading filter is a low pass filter that estimates a variable x as: \\
+    x_new = beta * x_old + (1 - beta) * measurement
+    """
+    
     def __init__(self) -> None:
         self.beta = 0.5
         
@@ -17,6 +22,11 @@ class FadingFilter():
 
 
 class TerrainEstimator(Node):
+    """
+    Estimate the contact plane using the feet positions and the list of feet in contact with the terrain. \\
+    The plane equation is z = a x + b y + c. The plane coefficients are published in the /state_estimator/terrain topic as {a, b, c}.
+    """
+    
     def __init__(self):
         super().__init__("terrain_estimator_node")
         
@@ -74,6 +84,7 @@ class TerrainEstimator(Node):
     def feet_positions_callback(self, msg):
         for i in range(4):
             if self.feet_names[i] in self.contact_feet_names:
+                # Filter the measurement
                 self.last_contact_feet_position[3*i:3*i+3] = self.filter.filter(
                     self.last_contact_feet_position[3*i:3*i+3],
                     np.array([msg.data[3*i:3*i+3]])
@@ -82,6 +93,16 @@ class TerrainEstimator(Node):
     
     def compute_plane_eq(self):
         # Plane equation: z = a x + b y + c
+        
+        #     [ x0 y0 1 ]
+        # A = [ x1 y1 1 ]
+        #     [ ...     ]
+        #     [ xn yn 1 ]
+        
+        #     [ z0  ]
+        # b = [ z1  ]
+        #     [ ... ]
+        #     [ zn  ]
         
         A = np.block([
             self.last_contact_feet_position.reshape((4, 3))[:, 0:2], np.ones((4,1))

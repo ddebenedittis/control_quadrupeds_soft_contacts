@@ -29,31 +29,32 @@ class FramePublisher(Node):
 
     def handle_base_pose(self, msg):        
         t = TransformStamped()
-
-        # Read message content and assign it to
-        # corresponding tf variables
+        
         t.header.stamp = self.get_clock().now().to_msg()
         t.header.frame_id = 'ground_plane_link'
-        t.child_frame_id = 'base'
         
-        base_id = -1
+        entities = ["ground_plane"]
         
         for i in range(len(msg.name)):
-            if "base" in msg.name[i]:
-                base_id = i
-                break
+            entity_name = msg.name[i].split("::")[0]
             
-        t.transform.translation.x = msg.pose[base_id].position.x
-        t.transform.translation.y = msg.pose[base_id].position.y
-        t.transform.translation.z = msg.pose[base_id].position.z
+            if entity_name not in entities:
+                entities.append(entity_name)
+                
+                t.child_frame_id = msg.name[i].split("::")[1]
+                
+                t.transform.translation.x = msg.pose[i].position.x
+                t.transform.translation.y = msg.pose[i].position.y
+                t.transform.translation.z = msg.pose[i].position.z
 
-        t.transform.rotation.x = msg.pose[base_id].orientation.x
-        t.transform.rotation.y = msg.pose[base_id].orientation.y
-        t.transform.rotation.z = msg.pose[base_id].orientation.z
-        t.transform.rotation.w = msg.pose[base_id].orientation.w
+                t.transform.rotation.x = msg.pose[i].orientation.x
+                t.transform.rotation.y = msg.pose[i].orientation.y
+                t.transform.rotation.z = msg.pose[i].orientation.z
+                t.transform.rotation.w = msg.pose[i].orientation.w
 
-        # Send the transformation
-        self.tf_broadcaster.sendTransform(t)
+                # Send the transformation
+                self.tf_broadcaster.sendTransform(t)
+
 
 
 def main():
