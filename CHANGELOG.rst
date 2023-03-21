@@ -47,10 +47,11 @@
 
 0.1.4 (2023-03-21)
 ------------------
-- Alpha version of a visualizer with RViz. The robot, the terrain, and the (optimal) contact forces are displayed. The support polygon is displayed. The friction cones are displayed. The COM (center of mass) and the ZMP (zero moment point) are displayed. The feet trajectories are displayed.
+- New submodule: visualizer with RViz. The robot, the terrain, and the (optimal) contact forces are displayed. The support polygon is displayed. The friction cones are displayed. The COM (center of mass) and the ZMP (zero moment point) are displayed. The feet trajectories are displayed.
 - Fixed the teleoperate_robot_base node. New teleoperate_velocity_command node that teleoperates the robot trotting (use `gait:=teleop_walking_trot`).
 - Reorganized the gazebo launch files.
 - Added an heterogeneous terrain (multi_terrains).
-- New parameter in the controllers yaml file: `shift_base_height`. When `true`, we consider the fact that the terrain is soft and move the desired base height to take into account the terrain penetration.
+- New parameter in the controllers yaml file: `shift_base_height`. When `true`, we consider the fact that the terrain is soft and move the desired base height to take into account the terrain penetration. Currently deprecated, due to the use of the terrain height.
 - New task that enforces limits on the knee joints coordinates.
 - The `terrain_estimator` package gives a very rough estimate of the contact plane. The local terrain height is used by the trotting planner to adjust the commanded height.
+- Important bug fix in the whole-body controller. Previously, it did not work when the orientation was very different from zero roll, pitch, and yaw.
