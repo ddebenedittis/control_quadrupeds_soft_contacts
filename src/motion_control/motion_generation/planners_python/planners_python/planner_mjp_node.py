@@ -218,8 +218,8 @@ class Planner(Node):
         
         # Instantiate the fading filter class (used to filter the base acceleration)
         self.filter = FadingFilter()
-        self.filter.order = 2
-        self.filter.beta = 0.5
+        self.filter._order = 2
+        self.filter._beta = 0.5
         
         self.zero_time = 1.     # time before the planner starts (no message is published).
         self.init_time = 0.5    # time during which the robot goes to the initial position, before the real planning starts.
@@ -251,6 +251,7 @@ class Planner(Node):
         
         # Local terrain height.
         delta_h = plane_coeffs[0] * des_gen_pose.base_pos[0] + plane_coeffs[1] * des_gen_pose.base_pos[1] + plane_coeffs[2]
+        print(delta_h)
         
         # Shift the desired base and feet height.
         des_gen_pose.base_pos[2] += delta_h
