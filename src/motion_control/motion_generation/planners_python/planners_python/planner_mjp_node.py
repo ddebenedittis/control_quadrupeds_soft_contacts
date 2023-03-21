@@ -251,7 +251,6 @@ class Planner(Node):
         
         # Local terrain height.
         delta_h = plane_coeffs[0] * des_gen_pose.base_pos[0] + plane_coeffs[1] * des_gen_pose.base_pos[1] + plane_coeffs[2]
-        print(delta_h)
         
         # Shift the desired base and feet height.
         des_gen_pose.base_pos[2] += delta_h

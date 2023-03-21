@@ -197,7 +197,7 @@ void ControlTasks::task_linear_motion_tracking(
     A.leftCols(nv) = Jb.topRows(3);
 
     b =   r_b_ddot_des 
-        + kd_b_pos.asDiagonal() * (r_b_dot_des - Jb.topRows(3) * v)
+        + kd_b_pos.asDiagonal() * (r_b_dot_des - v.head(3))
         + kp_b_pos.asDiagonal() * (r_b_des - q.head(3))
         - Jb_dot_times_v.topRows(3);
 }
@@ -219,7 +219,7 @@ void ControlTasks::task_angular_motion_tracking(
 
     A.leftCols(nv) = Jb.bottomRows(3);
 
-    b =   kd_b_ang.asDiagonal() * (omega_des - oRb * v.segment(3, 3))        // omega in in body frame with Pinocchio, I want it is inertial frame
+    b =   kd_b_ang.asDiagonal() * (omega_des - v.segment(3, 3))        // omega in in body frame with Pinocchio, I want it is inertial frame
         + kp_b_ang.asDiagonal() * (pinocchio::log3(quat_des.toRotationMatrix() * quat.toRotationMatrix().transpose()))
         - Jb_dot_times_v.bottomRows(3);
 }
