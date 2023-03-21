@@ -1,4 +1,0 @@
-#
-std_msgs/Header header
-geometry_msgs/Vector3 normal_direction
-float64 friction_coefficient
