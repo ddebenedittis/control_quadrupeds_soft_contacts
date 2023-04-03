@@ -89,33 +89,33 @@ public:
         const Eigen::VectorXd& d_k1, const Eigen::VectorXd& d_k2
     );
 
-    int get_nv() {return control_tasks.get_nv();}
-    int get_nF() {return control_tasks.get_nF();}
-    int get_nd() {return control_tasks.get_nd();}
+    int get_nv() const {return control_tasks.get_nv();}
+    int get_nF() const {return control_tasks.get_nF();}
+    int get_nd() const {return control_tasks.get_nd();}
 
-    double get_mass() {return control_tasks.get_mass();}
+    double get_mass() const {return control_tasks.get_mass();}
 
-    double get_friction_coefficient() {return control_tasks.get_friction_coefficient();}
+    double get_friction_coefficient() const {return control_tasks.get_friction_coefficient();}
 
     Eigen::Vector3d get_com_position() {return control_tasks.get_com_position();}
 
-    const Eigen::MatrixXd& get_M()  {return control_tasks.get_M();}
-    const Eigen::VectorXd& get_h()  {return control_tasks.get_h();}
-    const Eigen::MatrixXd& get_Jc() {return control_tasks.get_Jc();}
+    const Eigen::MatrixXd& get_M()  const {return control_tasks.get_M();}
+    const Eigen::VectorXd& get_h()  const {return control_tasks.get_h();}
+    const Eigen::MatrixXd& get_Jc() const {return control_tasks.get_Jc();}
 
-    const Eigen::VectorXd get_feet_positions() { return control_tasks.get_feet_positions(); }
+    Eigen::VectorXd get_feet_positions() { return control_tasks.get_feet_positions(); }
 
-    const Eigen::VectorXd get_feet_velocities(const Eigen::VectorXd& v) { return control_tasks.get_feet_velocities(v); }
+    Eigen::VectorXd get_feet_velocities(const Eigen::VectorXd& v) { return control_tasks.get_feet_velocities(v); }
 
     const std::vector<std::string>& get_generic_feet_names() const {return control_tasks.get_generic_feet_names();}
 
     const std::vector<std::string>& get_all_feet_names() const {return control_tasks.get_all_feet_names();}
 
-    int get_max_priority() {return *max_element(tasks_vector.begin(), tasks_vector.end());}
+    int get_max_priority() const {return *max_element(tasks_vector.begin(), tasks_vector.end());}
 
-    auto get_contact_constraint_type() {return this->contact_constraint_type;}
+    auto get_contact_constraint_type() const {return this->contact_constraint_type;}
 
-    const Eigen::Vector3d get_kp_terr() {return control_tasks.get_kp_terr();}
+    const Eigen::Vector3d& get_kp_terr() const {return control_tasks.get_kp_terr();}
 
 
     /* =============================== Setters ============================== */

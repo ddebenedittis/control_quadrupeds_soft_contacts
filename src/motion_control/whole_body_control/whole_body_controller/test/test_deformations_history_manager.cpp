@@ -11,7 +11,7 @@ int main()
 
     std::vector<std::string> all_feet_names {"LF", "RF", "LF", "RH"};
 
-    DeformationsHistoryManager def(all_feet_names);
+    DeformationsHistoryManager def;
 
     std::vector<std::string> contact_feet {"RF"};
 

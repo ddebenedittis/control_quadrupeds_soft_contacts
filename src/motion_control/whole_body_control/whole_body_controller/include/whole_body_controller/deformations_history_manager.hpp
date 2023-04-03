@@ -13,7 +13,7 @@ namespace wbc {
 class DeformationsHistoryManager {
 public:
     /// @brief Construct a new DeformationsHistoryManager class.
-    DeformationsHistoryManager(const std::vector<std::string>& all_feet_names);
+    DeformationsHistoryManager() = default;
 
     /// @brief Shrink or expand the vector representing the history of the deformations when the feet in contact with the terrain change. If a new foot is in contact with the terrain, d_k1 and d_k2 are initialized to a zero vector (for that specific foot).
     /// @param[in] new_contact_feet_names 
@@ -27,7 +27,7 @@ public:
     /// @return std::pair<Eigen::VectorXd, Eigen::VectorXd> 
     std::pair<Eigen::VectorXd, Eigen::VectorXd> get_deformations_history();
 
-    int get_def_size() {return def_size;}
+    int get_def_size() const {return def_size;}
 
     void set_def_size(int def_size) {this->def_size = def_size;}
 
@@ -38,9 +38,6 @@ public:
         this->contact_feet_names = contact_feet_names;
     }
 private:
-    /// @brief The names of all the robot feet.
-    std::vector<std::string> all_feet_names;
-
     /// @brief The names of the robot feet in contact with the terrain.
     std::vector<std::string> contact_feet_names;
 

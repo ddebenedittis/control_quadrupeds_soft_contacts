@@ -241,7 +241,7 @@ void RobotModel::get_Js_dot_times_v(Eigen::VectorXd& Js_dot_times_v)
 
 /* =============================== Compute_oRb ============================== */
 
-void RobotModel::get_oRb(Eigen::Matrix3d& oRb)
+void RobotModel::get_oRb(Eigen::Matrix3d& oRb) const
 {
     pinocchio::FrameIndex base_id = 1;
 
@@ -251,7 +251,7 @@ void RobotModel::get_oRb(Eigen::Matrix3d& oRb)
 
 /* ================================= get_r_s ================================ */
 
-void RobotModel::get_r_s(Eigen::VectorXd& r_s)
+void RobotModel::get_r_s(Eigen::VectorXd& r_s) const
 {
     for (size_t i = 0; i < swing_feet_names.size(); i++) {
         pinocchio::FrameIndex frame_id = model.getFrameId(swing_feet_names[i]);
@@ -263,7 +263,7 @@ void RobotModel::get_r_s(Eigen::VectorXd& r_s)
 
 /* ============================ get_feet_positions =========================== */
 
-Eigen::VectorXd RobotModel::get_feet_positions()
+Eigen::VectorXd RobotModel::get_feet_positions() const
 {
     Eigen::VectorXd feet_position(12);
 

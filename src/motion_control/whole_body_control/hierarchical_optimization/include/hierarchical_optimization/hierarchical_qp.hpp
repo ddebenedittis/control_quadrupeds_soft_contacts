@@ -33,7 +33,7 @@ private:
     /// @brief Compute the null space projector of a matrix M.
     /// @param[in] M 
     /// @return Eigen::MatrixXd Square matrix of dimension (A_cols, A_cols)
-    Eigen::MatrixXd null_space_projector(Eigen::MatrixXd M);
+    static Eigen::MatrixXd null_space_projector(const Eigen::MatrixXd& M);
 
     /// @brief Reset the class attributes before starting a new optimization problem.
     /// @param[in] solDim dimension of the optimization vector

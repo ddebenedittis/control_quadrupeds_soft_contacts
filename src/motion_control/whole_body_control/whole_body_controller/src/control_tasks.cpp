@@ -37,10 +37,9 @@ Eigen::VectorXd tile(const Eigen::VectorXd& v, int repeat)
 
 ControlTasks::ControlTasks(const std::string& robot_name, float dt)
 : robot_model(robot_name),
+  nv(robot_model.get_model().nv),
   dt(dt)
-{
-    nv = robot_model.get_model().nv;
-}
+{}
 
 
 /* ================================== reset ================================= */
@@ -135,7 +134,7 @@ void ControlTasks::task_torque_limits(Ref<MatrixXd> C, Ref<VectorXd> d)
 
 /* ======================= Task_friction_Fc_modulation ====================== */
 
-void ControlTasks::task_friction_Fc_modulation(Ref<MatrixXd> C, Ref<VectorXd> d)
+void ControlTasks::task_friction_Fc_modulation(Ref<MatrixXd> C, Ref<VectorXd> d) const
 {
     // For example, with nc = 3:
     //      [ 1 0 0 0 0 0 0 0 0 ]
@@ -208,14 +207,14 @@ void ControlTasks::task_linear_motion_tracking(
 void ControlTasks::task_angular_motion_tracking(
     Ref<MatrixXd> A, Ref<VectorXd> b,
     const Vector3d& omega_des, const Vector4d& q_des
-) {
+) const {
     // TODO check that this is correct. It depends on how I define q_des.
     // Quaternion<double>(w, x, y, z);
     Quaterniond quat_des = Quaternion<double>(q_des(3), q_des(0), q_des(1), q_des(2));
     Quaterniond quat = Quaternion<double>(q(6), q(3), q(4), q(5));
 
-    pinocchio::FrameIndex base_id = 1;
-    MatrixXd oRb = robot_model.get_data().oMi[base_id].rotation();
+    // pinocchio::FrameIndex base_id = 1;
+    // MatrixXd oRb = robot_model.get_data().oMi[base_id].rotation();
 
     A.leftCols(nv) = Jb.bottomRows(3);
 
@@ -442,7 +441,7 @@ void ControlTasks::task_contact_constraints_soft_sim(
 
 /* ===================== Task_energy_forces_optimization ==================== */
 
-void ControlTasks::task_energy_forces_minimization(Ref<MatrixXd> A, Ref<VectorXd> b)
+void ControlTasks::task_energy_forces_minimization(Ref<MatrixXd> A, Ref<VectorXd> b) const
 {
     //     [ M_a, -Jc_a.T, 0 ]      joint torques minimization
     // A = [   0,       I, 0 ]      contact forces minimization

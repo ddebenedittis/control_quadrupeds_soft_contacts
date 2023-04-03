@@ -7,15 +7,6 @@
 namespace wbc {
 
 /* ========================================================================== */
-/*                   DEFORMATIONSHISTORYMANAGER CONSTRUCTOR                   */
-/* ========================================================================== */
-
-DeformationsHistoryManager::DeformationsHistoryManager(const std::vector<std::string>& all_feet_names)
-: all_feet_names(all_feet_names) {}
-
-
-
-/* ========================================================================== */
 /*                   INITIALIZE_DEFORMATIONS_AFTER_PLANNING                   */
 /* ========================================================================== */
 
@@ -64,8 +55,6 @@ void DeformationsHistoryManager::initialize_deformations_after_planning(const st
     contact_feet_names = new_contact_feet_names;
     d_k1 = d_k1_temp;
     d_k2 = d_k2_temp;
-
-    return;
 }
 
 
@@ -90,4 +79,4 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd> DeformationsHistoryManager::get_defo
     return std::make_pair(d_k1, d_k2);
 }
 
-}
+} // wbc

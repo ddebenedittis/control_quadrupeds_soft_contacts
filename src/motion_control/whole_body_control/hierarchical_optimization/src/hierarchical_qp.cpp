@@ -271,7 +271,7 @@ PseudoInverseType<MatType> pseudoinverse(const MatType &a, double epsilon = std:
 
 /* ========================== null_space_projector ========================== */
 
-MatrixXd HierarchicalQP::null_space_projector(MatrixXd M)
+MatrixXd HierarchicalQP::null_space_projector(const MatrixXd& M)
 {
     // return   Eigen::MatrixXd::Identity(M.cols(), M.cols())
     //        - pseudoinverse(M) * M;

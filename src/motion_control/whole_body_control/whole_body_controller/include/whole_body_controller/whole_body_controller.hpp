@@ -11,7 +11,7 @@ namespace wbc {
 /// @class @brief 
 class WholeBodyController {
 public:
-    WholeBodyController(std::string robot_name, float dt);
+    WholeBodyController(const std::string& robot_name, float dt);
 
     ///@brief 
     ///
@@ -24,19 +24,19 @@ public:
     /* =============================== Getters ============================== */
 
     /// @brief Return the optimal value of the optimization vector.
-    Eigen::VectorXd& get_x_opt() {return x_opt;}
+    const Eigen::VectorXd& get_x_opt() const {return x_opt;}
 
     /// @brief Return the optimal torques.
-    Eigen::VectorXd& get_tau_opt() {return tau_opt;}
+    const Eigen::VectorXd& get_tau_opt() const {return tau_opt;}
 
     /// @brief Return the optimal generalized acceleration vector.
-    Eigen::Ref<Eigen::VectorXd> get_v_dot_opt() {return x_opt.segment(0, prioritized_tasks.get_nv());}
+    const Eigen::Ref<Eigen::VectorXd> get_v_dot_opt() {return x_opt.segment(0, prioritized_tasks.get_nv());}
 
     /// @brief Return the optimal contact forces.
-    Eigen::VectorXd& get_f_c_opt() {return f_c_opt;}
+    const Eigen::VectorXd& get_f_c_opt() const {return f_c_opt;}
 
     /// @brief Return the optimal deformations vector.
-    Eigen::VectorXd& get_d_des_opt() {return d_des_opt;}
+    const Eigen::VectorXd& get_d_des_opt() const {return d_des_opt;}
 
     /// @brief Return the feet positions in world frame.
     const Eigen::VectorXd get_feet_positions() { return prioritized_tasks.get_feet_positions(); }
@@ -51,20 +51,20 @@ public:
     const std::vector<std::string>& get_all_feet_names() {return prioritized_tasks.get_all_feet_names();}
 
     /// @brief Get the dimension of the generalized velocities vector.
-    int get_nv() {return prioritized_tasks.get_nv();}
+    int get_nv() const {return prioritized_tasks.get_nv();}
 
     /// @brief Get the mass of the robot. 
-    double get_mass() {return prioritized_tasks.get_mass();}
+    double get_mass() const {return prioritized_tasks.get_mass();}
 
     /// @brief Get the friction coefficient used in the optimization problem.
-    double get_friction_coefficient() {return prioritized_tasks.get_friction_coefficient();}
+    double get_friction_coefficient() const {return prioritized_tasks.get_friction_coefficient();}
 
     Eigen::Vector3d get_com_position() {return prioritized_tasks.get_com_position();}
 
     /// @brief Get the size of the deformations of the single foot. This depends on the contact model used: 3 for the kv model, 1 for the soft_sim model, and 0 for the rigid model.
-    int get_def_size() {return deformations_history_manager.get_def_size();}
+    int get_def_size() const {return deformations_history_manager.get_def_size();}
 
-    const Eigen::Vector3d get_kp_terr() {return prioritized_tasks.get_kp_terr();}
+    const Eigen::Vector3d& get_kp_terr() const {return prioritized_tasks.get_kp_terr();}
 
 
     /* =============================== Setters ============================== */
@@ -142,7 +142,7 @@ private:
 
     Eigen::VectorXd d_des_opt;  /// @brief Optimal desired feet deformations
 
-    ContactConstraintType contact_constraint_type;
+    ContactConstraintType contact_constraint_type = ContactConstraintType::rigid;
 };
 
 }

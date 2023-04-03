@@ -9,9 +9,8 @@ namespace wbc {
 /*                       WHOLEBODYCONTROLLER CONSTRUCTOR                      */
 /* ========================================================================== */
 
-WholeBodyController::WholeBodyController(std::string robot_name, float dt)
+WholeBodyController::WholeBodyController(const std::string& robot_name, float dt)
 : prioritized_tasks(robot_name, dt),
-  deformations_history_manager(prioritized_tasks.get_all_feet_names()),
   hierarchical_qp(prioritized_tasks.get_max_priority()),
   f_c_opt(12),
   d_des_opt(12)

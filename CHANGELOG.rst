@@ -58,4 +58,4 @@
 
 Upcoming (2023-04-02)
 ------------------
-- Started using clang-tidy
+- Started using clang-tidy.

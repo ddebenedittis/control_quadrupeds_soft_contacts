@@ -47,9 +47,7 @@ public:
     // CallbackReturn on_error(const rclcpp_lifecycle::State& previous_state) override;
     // CallbackReturn on_shutdown(const rclcpp_lifecycle::State& previous_state) override;
 
-
-
-protected:
+private:
     wbc::WholeBodyController wbc;
 
     std::vector<std::string> joint_names_;

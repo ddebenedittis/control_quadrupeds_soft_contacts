@@ -42,7 +42,7 @@ public:
     /// @brief Compute C and d that enforce the friction limits and the limits on the normal component of the contact forces.
     /// @param[out] C
     /// @param[out] d
-    void task_friction_Fc_modulation(Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d);
+    void task_friction_Fc_modulation(Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d) const;
 
     /// @brief Compute A and b that enforce the tracking of the reference base linear trajectory.
     /// @param[out] A
@@ -63,7 +63,7 @@ public:
     void task_angular_motion_tracking(
         Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b,
         const Eigen::Vector3d& omega_des, const Eigen::Vector4d& q_des
-    );
+    ) const;
 
     /// @brief Compute A and b that enforce the trajectory tracking of the reference swing feet motion.
     /// @param[out] A 
@@ -128,33 +128,33 @@ public:
     /// @brief Compute A and b that enforce the minimization of the energy (the square of the torques) and of the contact forces.
     /// @param[out] A 
     /// @param[out] b 
-    void task_energy_forces_minimization(Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b);
+    void task_energy_forces_minimization(Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b) const;
 
 
     /* =============================== Getters ============================== */
 
-    int get_nv() {return nv;}
-    int get_nc() {return nc;}
-    int get_nF() {return nF;}
-    int get_nd() {return nd;}
+    int get_nv() const {return nv;}
+    int get_nc() const {return nc;}
+    int get_nF() const {return nF;}
+    int get_nd() const {return nd;}
 
-    const pinocchio::Model& get_model() { return robot_model.get_model(); }
+    const pinocchio::Model& get_model() const { return robot_model.get_model(); }
     
     const pinocchio::Data& get_data() { return robot_model.get_data(); }
 
-    double get_mass() { return robot_model.get_mass(); }
+    double get_mass() const { return robot_model.get_mass(); }
 
-    double get_friction_coefficient() { return mu; }
+    double get_friction_coefficient() const { return mu; }
 
     Eigen::Vector3d get_com_position() {return pinocchio::centerOfMass(get_model(), robot_model.get_data(), false);}
 
-    const Eigen::MatrixXd& get_M()  { return M; }
-    const Eigen::VectorXd& get_h()  { return h; }
-    const Eigen::MatrixXd& get_Jc() { return Jc; }
+    const Eigen::MatrixXd& get_M()  const { return M; }
+    const Eigen::VectorXd& get_h()  const { return h; }
+    const Eigen::MatrixXd& get_Jc() const { return Jc; }
 
-    const Eigen::VectorXd get_feet_positions() { return robot_model.get_feet_positions(); }
+    Eigen::VectorXd get_feet_positions() const{ return robot_model.get_feet_positions(); }
 
-    const Eigen::VectorXd get_feet_velocities(const Eigen::VectorXd& v) { return robot_model.get_feet_velocities(v); }
+    Eigen::VectorXd get_feet_velocities(const Eigen::VectorXd& v) { return robot_model.get_feet_velocities(v); }
 
     /// @brief Return the generic feet names. The generic feet names are the same for all quadrupedal robots: LF, RF, LH, and RH.
     const std::vector<std::string>& get_generic_feet_names() const {return robot_model.get_generic_feet_names();}
@@ -162,7 +162,7 @@ public:
     /// @brief Return the feet names of the specific robot. These are the names of the links used for computing the contact point.
     const std::vector<std::string>& get_all_feet_names() const {return robot_model.get_all_feet_names();}
 
-    const Eigen::Vector3d get_kp_terr() {return this->kp_terr;}
+    const Eigen::Vector3d& get_kp_terr() const {return this->kp_terr;}
 
 
     /* =============================== Setters ============================== */
@@ -189,10 +189,10 @@ public:
 private:
     robot_wrapper::RobotModel robot_model;
 
-    int nv;     ///< @brief Dimension of the generalized velocity vector
-    int nc;     ///< @brief Number of feet in contact with the terrain
-    int nF;     ///< @brief Dimension of the stack of the contact forces with the terrain (= 3*nc)
-    int nd;     ///< @brief Dimension of the stack of the desired feet deformations (= 3*nc iff a soft contact model is used)
+    int nv = 18;    ///< @brief Dimension of the generalized velocity vector
+    int nc =  0;    ///< @brief Number of feet in contact with the terrain
+    int nF =  0;    ///< @brief Dimension of the stack of the contact forces with the terrain (= 3*nc)
+    int nd =  0;    ///< @brief Dimension of the stack of the desired feet deformations (= 3*nc iff a soft contact model is used)
 
     Eigen::VectorXd q;      ///< @brief Generalized coordinates vector
     Eigen::VectorXd v;      ///< @brief Generalized velocities vector
