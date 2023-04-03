@@ -41,5 +41,6 @@ docker run \
     `# Logging.` \
     -v /home/$USER/.ros:/home/$USER/.ros \
     -v /home/$USER/.vscode:/home/$USER/.vscode \
+    -v /home/$USER/.config/Code:/home/$USER/.config/Code \
     ${IMAGE_NAME} \
     bash

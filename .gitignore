@@ -1,12 +1,11 @@
 .vscode/
+.cache/
 
-__pycache__
+__pycache__/
 
 template_pkg/
-
 test_pkg/
 
 build/
 install/
 log/
-.vscode/

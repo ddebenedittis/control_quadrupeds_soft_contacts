@@ -55,3 +55,7 @@
 - New task that enforces limits on the knee joints coordinates.
 - The `terrain_estimator` package gives a very rough estimate of the contact plane. The local terrain height is used by the trotting planner to adjust the commanded height.
 - Important bug fix in the whole-body controller. Previously, it did not work when the orientation was very different from zero roll, pitch, and yaw.
+
+Upcoming (2023-04-02)
+------------------
+- Started using clang-tidy
