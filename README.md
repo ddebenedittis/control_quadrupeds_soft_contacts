@@ -23,9 +23,9 @@ Clone the repo:
 ```shell
 git clone --recursive https://github.com/ddebenedittis/control_quadrupeds_soft_contacts
 ```
-Build the docker image (-r option to rebuild the underlying images) (-l to install all the dependencies to use plot; the resulting image is bigger):
+Build the docker image (-d to install additional packages for development) (-l to install all the dependencies to use plot; the resulting image is bigger) (-r option to rebuild the underlying images):
 ```shell
-./build.bash [-r] [-l]
+./build.bash [d] [-l] [-r]
 ```
 Run the container:
 ```shell

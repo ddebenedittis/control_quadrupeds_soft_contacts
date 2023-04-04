@@ -30,8 +30,14 @@ RUN apt-get update && apt-get install -qqy \
     ros-humble-joint-state-publisher-gui \
     ros-humble-ros2-control \
     ros-humble-ros2-controllers \
-    ros-humble-xacro \
-    && rm -rf /var/lib/apt/lists/*
+    ros-humble-xacro
+
+# If $DEVELOPMENT is 1, install additional development packages.
+ARG DEVELOPMENT=0
+RUN if [ "${DEVELOPMENT}" = "1" ] ; then \
+        apt-get update && apt-get install --no-install-recommends -qqy \
+        ros-humble-ament-clang-tidy ; \
+    fi
 
 # If $LATEX is 1, install the packages required to use plot.py in the container.
 ARG LATEX=0
@@ -40,8 +46,7 @@ RUN if [ "${LATEX}" = "1" ] ; then \
         dvipng \
         texlive-latex-extra \
         texlive-fonts-recommended \
-        cm-super \
-        && rm -rf /var/lib/apt/lists/* ; \
+        cm-super ; \
     fi
 
 

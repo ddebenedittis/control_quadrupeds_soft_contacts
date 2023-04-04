@@ -58,4 +58,4 @@
 
 Upcoming (2023-04-02)
 ------------------
-- Started using clang-tidy.
+- Started using clang-tidy. The docker image installs ament-clang-tidy if the image is built with the `-d` option.
