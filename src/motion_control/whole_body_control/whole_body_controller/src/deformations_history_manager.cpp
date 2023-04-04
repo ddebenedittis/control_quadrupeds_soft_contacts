@@ -62,7 +62,7 @@ void DeformationsHistoryManager::initialize_deformations_after_planning(const st
 /*                   UPDATE_DEFORMATIONS_AFTER_OPTIMIZATION                   */
 /* ========================================================================== */
 
-void DeformationsHistoryManager::update_deformations_after_optimization(const Eigen::Ref<const Eigen::VectorXd> d_k)
+void DeformationsHistoryManager::update_deformations_after_optimization(const Eigen::Ref<const Eigen::VectorXd>& d_k)
 {
     d_k2 = d_k1;
     d_k1 = d_k;

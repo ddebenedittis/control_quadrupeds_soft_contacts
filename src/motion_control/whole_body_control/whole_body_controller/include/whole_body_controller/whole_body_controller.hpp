@@ -30,7 +30,7 @@ public:
     const Eigen::VectorXd& get_tau_opt() const {return tau_opt;}
 
     /// @brief Return the optimal generalized acceleration vector.
-    const Eigen::Ref<Eigen::VectorXd> get_v_dot_opt() {return x_opt.segment(0, prioritized_tasks.get_nv());}
+    const Eigen::Ref<const Eigen::VectorXd> get_v_dot_opt() {return x_opt.segment(0, prioritized_tasks.get_nv());}
 
     /// @brief Return the optimal contact forces.
     const Eigen::VectorXd& get_f_c_opt() const {return f_c_opt;}

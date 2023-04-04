@@ -85,7 +85,7 @@ public:
     /// @param[in]  d_k2 Deformations of the feet in contact with the terrain at the second previous time step.
     void task_contact_constraints_soft_kv(
         Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b,
-        Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> /*d*/,
+        Eigen::Ref<Eigen::MatrixXd> C, const Eigen::Ref<const Eigen::VectorXd>& /*d*/,
         const Eigen::VectorXd& d_k1, const Eigen::VectorXd& d_k2
     );
 

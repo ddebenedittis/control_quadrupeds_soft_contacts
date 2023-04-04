@@ -252,7 +252,7 @@ void ControlTasks::task_swing_feet_tracking(
 
 void ControlTasks::task_contact_constraints_soft_kv(
     Ref<MatrixXd> A, Ref<VectorXd> b,
-    Ref<MatrixXd> C, Ref<VectorXd> /*d*/,
+    Ref<MatrixXd> C, const Ref<const VectorXd>& /*d*/,
     const VectorXd& d_k1, const VectorXd& d_k2
 ) {
     // Fc = Kp d + Kd d_dot

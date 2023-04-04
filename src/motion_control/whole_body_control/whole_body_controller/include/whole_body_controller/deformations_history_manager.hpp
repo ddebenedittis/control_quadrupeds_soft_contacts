@@ -21,7 +21,7 @@ public:
 
     /// @brief Update the history of the feet (desired) deformations after a whole optimization step has been solved.
     /// @param[in] d_k 
-    void update_deformations_after_optimization(const Eigen::Ref<const Eigen::VectorXd> d_k);
+    void update_deformations_after_optimization(const Eigen::Ref<const Eigen::VectorXd>& d_k);
 
     /// @brief Get the deformations history vectors.
     /// @return std::pair<Eigen::VectorXd, Eigen::VectorXd> 
