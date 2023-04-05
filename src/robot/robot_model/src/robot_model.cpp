@@ -3,7 +3,6 @@
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
 #include "pinocchio/parsers/urdf.hpp"
-#include "pinocchio/algorithm/kinematics.hpp"
 #include "pinocchio/algorithm/crba.hpp"
 #include "pinocchio/algorithm/rnea.hpp"
 #include "pinocchio/algorithm/frames.hpp"
@@ -64,16 +63,16 @@ CharContainer file_get_contents(const char *filename)
 
 RobotModel::RobotModel(const std::string& robot_name)
 : feet_names(4),
-  feet_displacement(3)
+  feet_displacements(3)
 {
     // Location of the file containing some info on the robots
-    std::string file_path = ament_index_cpp::get_package_share_directory("robot_model") + std::string{"/robots/all_robots.yaml"};
+    const std::string file_path = ament_index_cpp::get_package_share_directory("robot_model") + std::string{"/robots/all_robots.yaml"};
 
     // Parse the yaml file
-    std::string contents = file_get_contents<std::string>(file_path.c_str());
-    ryml::Tree tree = ryml::parse_in_arena(ryml::to_csubstr(contents)); // immutable (csubstr) overload
+    const std::string contents = file_get_contents<std::string>(file_path.c_str());
+    const ryml::Tree tree = ryml::parse_in_arena(ryml::to_csubstr(contents)); // immutable (csubstr) overload
 
-    ryml::NodeRef root = tree.rootref();
+    const ryml::NodeRef root = tree.rootref();
     ryml::NodeRef root_robot;
 
     // Find where the robot name is in the file.
@@ -86,7 +85,7 @@ RobotModel::RobotModel(const std::string& robot_name)
 
     std::string pkg_name;
     ryml::from_chars(root_robot["pkg_name"].val(), &pkg_name);
-    std::string package_share_directory = ament_index_cpp::get_package_share_directory(pkg_name);
+    const std::string package_share_directory = ament_index_cpp::get_package_share_directory(pkg_name);
 
     // Populate the urdf_path attribute
     ryml::from_chars(root_robot["urdf_path"].val(), &this->urdf_path);
@@ -97,22 +96,22 @@ RobotModel::RobotModel(const std::string& robot_name)
         ryml::from_chars(root_robot["feet_names"][i].val(), &this->feet_names[i]);
     }
 
-    // Populate the feet_displacement attribute. Local scope for the temp_string variable.
+    // Populate the feet_displacements attribute. Local scope for the temp_string variable.
     {
         std::string temp_string;
 
         for(int i=0; i<3; i++) {
             ryml::from_chars(root_robot["ankle_feet_displacement"][i].val(), &temp_string);
-            this->feet_displacement(i) = std::stof(temp_string);
+            this->feet_displacements(i) = std::stof(temp_string);
         }
     }
 
     // Load the urdf model
-    pinocchio::JointModelFreeFlyer root_joint;
+    const pinocchio::JointModelFreeFlyer root_joint;
     pinocchio::urdf::buildModel(urdf_path, root_joint, model);
 
     // Create the data required by the algorithms
-    pinocchio::Data data(model);
+    const pinocchio::Data data(model);
     this->data = data;
 }
 
@@ -256,7 +255,7 @@ void RobotModel::get_r_s(Eigen::VectorXd& r_s) const
     for (size_t i = 0; i < swing_feet_names.size(); i++) {
         pinocchio::FrameIndex frame_id = model.getFrameId(swing_feet_names[i]);
 
-        r_s.segment(3*i, 3) = data.oMf[frame_id].translation() + feet_displacement;
+        r_s.segment(3*i, 3) = data.oMf[frame_id].translation() + feet_displacements;
     }
 }
 
@@ -270,7 +269,7 @@ Eigen::VectorXd RobotModel::get_feet_positions() const
     for (size_t i = 0; i < feet_names.size(); i++) {
         pinocchio::FrameIndex frame_id = model.getFrameId(feet_names[i]);
 
-        feet_position.segment(3*i, 3) = data.oMf[frame_id].translation() + feet_displacement;
+        feet_position.segment(3*i, 3) = data.oMf[frame_id].translation() + feet_displacements;
     }
 
     return feet_position;
@@ -298,18 +297,36 @@ Eigen::VectorXd RobotModel::get_feet_velocities(const Eigen::VectorXd& v)
 }
 
 
-/* ======================== compute_swing_feet_names ======================== */
+/* ============================= Set_feet_names ============================= */
 
-void RobotModel::set_swing_feet_names()
+void RobotModel::set_feet_names(const std::vector<std::string>& generic_contact_feet_names)
 {
+    this->contact_feet_names = generic_to_specific_feet_names(generic_contact_feet_names);
+
     swing_feet_names = {};
 
     for (size_t i = 0; i < 4; i++) {
-        if ( std::find(contact_feet_names.begin(), contact_feet_names.end(), feet_names[i]) == contact_feet_names.end() ) {
+        if ( std::find(this->contact_feet_names.begin(), this->contact_feet_names.end(), feet_names[i]) == this->contact_feet_names.end() ) {
             // The foot name is NOT a member of the contact_feet_names vector, hence it is a swing foot.
             swing_feet_names.push_back(feet_names[i]);
         }
     }
+}
+
+
+/* ===================== Generic_to_specific_feet_names ===================== */
+
+std::vector<std::string> RobotModel::generic_to_specific_feet_names(std::vector<std::string> generic_names)
+{
+    for (auto & foot_name : generic_names) {
+        auto it = std::find(this->generic_feet_names.begin(), this->generic_feet_names.end(), foot_name);
+
+        int index = std::distance(this->generic_feet_names.begin(), it);
+
+        foot_name = this->feet_names[index];
+    }
+
+    return generic_names;
 }
 
 } // robot_wrapper

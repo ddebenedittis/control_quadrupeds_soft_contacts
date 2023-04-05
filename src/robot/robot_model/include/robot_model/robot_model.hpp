@@ -37,6 +37,9 @@ public:
     /// @attention This function must be called before calling the various J_i_dot_times_v.
     void compute_second_order_FK(const Eigen::VectorXd& q, const Eigen::VectorXd& v);
 
+
+    /* =============================== Getters ============================== */
+    
     /// @brief Get the stack of the contact jacobians Jc.
     /// @param[out] Jc [3*nc, nv]
     /// @warning Compute_EOM must have been previously called.
@@ -92,37 +95,24 @@ public:
     
     pinocchio::Data& get_data() { return data; }
 
+    /// @brief Return the generic names of a quadrupedal robot's feet: LF, RF, LH, RH. 
     const std::vector<std::string>& get_generic_feet_names() const {return generic_feet_names;}
 
+    /// @brief Return the link names of all the robot's feet in the URDF.
     const std::vector<std::string>& get_all_feet_names() const {return feet_names;}
 
-    void set_feet_names(const std::vector<std::string>& contact_feet_names) {
-        this->contact_feet_names = generic_to_specific_feet_names(contact_feet_names);
 
-        set_swing_feet_names();
-    }
+    /* =============================== Setters ============================== */
 
-    std::vector<std::string> generic_to_specific_feet_names(std::vector<std::string> generic_names) {
-        for (auto & foot_name : generic_names) {
-            auto it = std::find(this->generic_feet_names.begin(), this->generic_feet_names.end(), foot_name);
-
-            int index = std::distance(this->generic_feet_names.begin(), it);
-
-            foot_name = this->feet_names[index];
-        }
-
-        return generic_names;
-    }
+    /// @brief Compute the names of the feet in contact and swing phase.
+    /// @param[in] generic_contact_feet_names Generic (i.e. LF, RF, etc.) names of the feet in contact with the terrain.
+    /// @details The feet in swing phase are all and only the feet not in contact with the terrain.
+    void set_feet_names(const std::vector<std::string>& generic_contact_feet_names);
 
 
-
-
-/* ====================================================================== */
 
 private:
-    /// @brief Compute the names of the feet in swing phase.
-    /// @details The feet in swing phase are all and only the feet not in contact with the terrain.
-    void set_swing_feet_names();
+    std::vector<std::string> generic_to_specific_feet_names(std::vector<std::string> generic_names);
 
     pinocchio::Model model;
     
@@ -133,7 +123,7 @@ private:
     /// @brief The generic names of a quadrupedal robot's feet: LF, RF, LH, RH
     std::vector<std::string> generic_feet_names = {"LF", "RF", "LH", "RH"};
 
-    /// @brief The link names of all the robot's feet.
+    /// @brief The link names of all the robot's feet in the URDF.
     std::vector<std::string> feet_names;
 
     /// @brief The link names of the robot's feet in contact with the terrain.
@@ -144,7 +134,7 @@ private:
 
     /// @brief The position of the feet contact point with the terrain relative to the position of the feet frame, in inertial frame. 
     /// @details The position of the foot link computed from the robot model is not necessarly equal to the expected position of the point of contact with the terrain.
-    Eigen::VectorXd feet_displacement;
+    Eigen::VectorXd feet_displacements;
 };
 
 } // robot_wrapper
