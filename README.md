@@ -115,7 +115,6 @@ Create a new `effort_controller.yaml` file, similar to the ones already present 
 
 ## Known Bugs
 
-- Sometimes, when the `soft_sim` contact constraint is used in the controller's .yaml files, the simulation stops instantly.
 - Sometimes, the SOLO12 simulation does not start correctly.
 
 
