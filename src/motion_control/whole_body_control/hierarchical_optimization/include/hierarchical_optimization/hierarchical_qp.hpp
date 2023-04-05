@@ -11,7 +11,9 @@ class HierarchicalQP {
 public:
     /// @brief Construct a new Hierarchical QP object.
     /// @param[in] nTasks the total number of tasks with different priorities of the Hierarchical QP 
-    HierarchicalQP(int n_tasks);
+    HierarchicalQP(int n_tasks)
+    : n_tasks_(n_tasks)
+    {}
 
     /// @brief Solve a single prioritized task of the hierarchical QP problem.
     void solve_qp(

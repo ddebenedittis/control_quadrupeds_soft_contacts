@@ -15,15 +15,6 @@ using namespace Eigen;
 
 
 /* ========================================================================== */
-/*                              CLASS CONSTRUCTOR                             */
-/* ========================================================================== */
-
-HierarchicalQP::HierarchicalQP(int n_tasks)
-: n_tasks_(n_tasks) {}
-
-
-
-/* ========================================================================== */
 /*                                   SOLVEQP                                  */
 /* ========================================================================== */
 
@@ -78,8 +69,8 @@ void HierarchicalQP::solve_qp(
 {
     /* =================== Setup The Optimization Problem =================== */
 
-    int A_cols = static_cast<int>(A.cols());    // Dimension of the optimization vector (not counting the slack variables)
-    int C_rows = static_cast<int>(C.rows());    // Number of the inequality constraints of this optimization step
+    const int A_cols = static_cast<int>(A.cols());    // Dimension of the optimization vector (not counting the slack variables)
+    const int C_rows = static_cast<int>(C.rows());    // Number of the inequality constraints of this optimization step
 
     if (priority == 0) {
         reset_qp(A_cols);
@@ -117,7 +108,7 @@ void HierarchicalQP::solve_qp(
         C_stack_ = C_w;
         d_stack_ = d_w;
     } else if (C_rows > 0) {
-        int C_stack_rows = static_cast<int>(C_stack_.rows());
+        const int C_stack_rows = static_cast<int>(C_stack_.rows());
 
         C_stack_.conservativeResize(C_stack_rows + C_rows, NoChange);
         C_stack_.bottomRows(C_rows) = C_w;
@@ -126,7 +117,7 @@ void HierarchicalQP::solve_qp(
         d_stack_.tail(C_rows) = d_w;
     }
 
-    int C_stack_rows = static_cast<int>(C_stack_.rows());
+    const int C_stack_rows = static_cast<int>(C_stack_.rows());
 
 
     /* ========================== Compute G And g0 ========================== */
@@ -204,7 +195,7 @@ void HierarchicalQP::solve_qp(
     // VectorXd ce0 = VectorXd::Zero(0);
     
     // /*EiquadprogFast_status status = */qp.solve_quadprog(
-    int result = solve_quadprog(
+    const int result = solve_quadprog(
         G,
         g0,
         CI,
@@ -235,7 +226,7 @@ void HierarchicalQP::solve_qp(
 
     // Update the stack of the w_opt slack variables (only if it is not the last task, and if there are inequality constraints in the current task).
     if (priority < n_tasks_ && C_rows > 0) {
-        int w_opt_stack_rows = static_cast<int>(w_opt_stack_.rows());
+        const int w_opt_stack_rows = static_cast<int>(w_opt_stack_.rows());
         w_opt_stack_.conservativeResize(w_opt_stack_rows + C_rows, NoChange);
         w_opt_stack_.tail(C_rows) = xi_opt.tail(C_rows);
     }
@@ -253,9 +244,9 @@ void HierarchicalQP::solve_qp(
 
 template<typename MatType>
 using PseudoInverseType = Eigen::Matrix<typename MatType::Scalar, MatType::ColsAtCompileTime, MatType::RowsAtCompileTime>;
-template<typename MatType>
 
-PseudoInverseType<MatType> pseudoinverse(const MatType &a, double epsilon = std::numeric_limits<double>::epsilon())
+template<typename MatType>
+inline PseudoInverseType<MatType> pseudoinverse(const MatType &a, double epsilon = std::numeric_limits<double>::epsilon())
 {
     using WorkingMatType = Eigen::Matrix<typename MatType::Scalar, Eigen::Dynamic, Eigen::Dynamic, 0,
     MatType::MaxRowsAtCompileTime, MatType::MaxColsAtCompileTime>;
@@ -271,7 +262,7 @@ PseudoInverseType<MatType> pseudoinverse(const MatType &a, double epsilon = std:
 
 /* ========================== null_space_projector ========================== */
 
-MatrixXd HierarchicalQP::null_space_projector(const MatrixXd& M)
+inline MatrixXd HierarchicalQP::null_space_projector(const MatrixXd& M)
 {
     // return   Eigen::MatrixXd::Identity(M.cols(), M.cols())
     //        - pseudoinverse(M) * M;
@@ -286,7 +277,7 @@ MatrixXd HierarchicalQP::null_space_projector(const MatrixXd& M)
 /*                                   RESETQP                                  */
 /* ========================================================================== */
 
-void HierarchicalQP::reset_qp(int sol_dim)
+inline void HierarchicalQP::reset_qp(int sol_dim)
 {
     sol_ = VectorXd::Zero(sol_dim);
     Z_ = MatrixXd::Identity(sol_dim, sol_dim);

@@ -70,26 +70,22 @@ install(
 #                                   ADD TESTS                                   
 # ==============================================================================
 
-add_executable(TestHierarchicalOptimization test/test_hierarchical_optimization.cpp)
-
-target_include_directories(TestHierarchicalOptimization PUBLIC
-    ${EIGEN3_INCLUDE_DIRS}
-)
-
-target_link_libraries(TestHierarchicalOptimization PUBLIC ${PROJECT_NAME})
-ament_target_dependencies(TestHierarchicalOptimization PUBLIC Eigen3 quadprog)
-
-
-
 if(BUILD_TESTING)
-    find_package(ament_lint_auto REQUIRED)
-    # the following line skips the linter which checks for copyrights
-    # uncomment the line when a copyright and license is not present in all source files
-    #set(ament_cmake_copyright_FOUND TRUE)
-    # the following line skips cpplint (only works in a git repo)
-    # uncomment the line when this package is not in a git repo
-    #set(ament_cmake_cpplint_FOUND TRUE)
-    ament_lint_auto_find_test_dependencies()
+    # find_package(ament_lint_auto REQUIRED)
+    # ament_lint_auto_find_test_dependencies()
+
+    find_package(ament_cmake_gtest REQUIRED)
+    ament_add_gtest(${PROJECT_NAME}_test test/test_hierarchical_optimization.cpp)
+
+    target_include_directories(${PROJECT_NAME}_test PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+        ${EIGEN3_INCLUDE_DIRS}
+    )
+    ament_target_dependencies(${PROJECT_NAME}_test Eigen3 quadprog)
+    target_link_libraries(${PROJECT_NAME}_test ${PROJECT_NAME})
 endif()
+
+
 
 ament_package()
