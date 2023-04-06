@@ -15,7 +15,7 @@ DEVELOPMENT=0
 LATEX=0
 REBUILD=0
 
-while getopts 'd:l:r' opt
+while getopts 'dlr' opt
 do
     case $opt in
         d) DEVELOPMENT=1 ;;
