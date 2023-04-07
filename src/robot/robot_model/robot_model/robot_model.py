@@ -25,6 +25,7 @@ class RobotModel:
         
         self.generic_feet_names = ["LF", "RF", "LH", "RH"]
         self.feet_names = doc[robot_name]["feet_names"]
+        self.ordered_joint_names = doc[robot_name]["ordered_joint_names"]
         self.ankle_feet_displacement = doc[robot_name]["ankle_feet_displacement"]
         
         

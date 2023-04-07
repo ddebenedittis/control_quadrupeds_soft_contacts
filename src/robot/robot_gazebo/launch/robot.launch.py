@@ -136,7 +136,7 @@ def spawn_things(ld):
         executable = 'robot_state_publisher',
         parameters = [
             {'use_sim_time': use_sim_time},
-            {'robot_description': ParameterValue(Command(['xacro', ' ', robot_file_path]), value_type=str)}
+            {'robot_description': ParameterValue(Command(['xacro', ' ', robot_file_path]), value_type=str)},
         ],
         output = 'screen',
     )
@@ -194,8 +194,21 @@ def spawn_things(ld):
         output = 'screen',
     )
     
+    robot_rsp_state_estimator = Node(
+        package = 'robot_state_publisher',
+        executable = 'robot_state_publisher',
+        namespace = 'state_estimator',
+        parameters = [
+            {'use_sim_time': use_sim_time},
+            {'robot_description': ParameterValue(Command(['xacro', ' ', robot_file_path, ' ', 'use_gazebo:=False']), value_type=str)},
+            {"frame_prefix": "state_estimator/"},
+        ],
+        output = 'screen',
+    )
+    
     ld.add_action(robot_rsp)
     ld.add_action(spawn_robot)
+    ld.add_action(robot_rsp_state_estimator)
     
     ld.add_action(terrain_rsp)
     ld.add_action(multi_terrain_rsp)
@@ -234,7 +247,7 @@ def spawn_controllers(ld):
         name='teleoperate_robot',
         prefix=['xterm -fg white -bg black -e'],
         output='screen',
-        parameters=[{'robot_name': robot_name}]
+        parameters=[{'robot_name': robot_name}],
     )
     
     spawn_planner = Node(
@@ -277,7 +290,7 @@ def spawn_controllers(ld):
         name='teleoperate_robot',
         prefix=['xterm -fg white -bg black -e'],
         output='screen',
-        parameters=[{'robot_name': robot_name}]
+        parameters=[{'robot_name': robot_name}],
     )
     
     spawn_whole_body_controller = Node(
@@ -303,16 +316,16 @@ def spawn_controllers(ld):
 # ============================= Launch_estimator ============================= #
 
 def launch_estimator(ld):
-    # pose_estimator = Node(
-    #     package='pose_estimator',
-    #     executable='pose_estimator_node',
-    #     parameters=[
-    #         {'use_sim_time': use_sim_time},
-    #         {'robot_name': robot_name}
-    #     ],
-    #     emulate_tty=True,
-    #     output='screen',
-    # )
+    pose_estimator = Node(
+        package='pose_estimator',
+        executable='pose_estimator_node',
+        parameters=[
+            {'use_sim_time': use_sim_time},
+            {'robot_name': robot_name}
+        ],
+        emulate_tty=True,
+        output='screen',
+    )
     
     terrain_estimator = Node(
         package='terrain_estimator',
@@ -324,7 +337,7 @@ def launch_estimator(ld):
         output='screen',
     )
     
-    # ld.add_action(pose_estimator)
+    ld.add_action(pose_estimator)
     ld.add_action(terrain_estimator)
     
 

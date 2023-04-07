@@ -15,9 +15,10 @@ Control of quadrupedal robots with soft contact constraints.
 
 ## Installation with Docker
 
-Install [Docker Community Edition](https://docs.docker.com/engine/install/ubuntu/) (ex Docker Engine) with post-installation steps for Linux.
+Install [Docker Community Edition](https://docs.docker.com/engine/install/ubuntu/) (ex Docker Engine) and [Manage Docker as a non-root user](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
 
-Install [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) (nvidia-docker2) for NVIDIA support in the container. In order not to use NVIDIA, edit the Docker image and the `run.bash` script, removing the envs for NVIDIA support. In addition, remove the `additional_env` from the Gazebo process in `robot_launch/launch/robot.launch.py`.
+Install [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#setting-up-nvidia-container-toolkit) (nvidia-docker2) for NVIDIA support in the container. \
+If you do not want to use NVIDIA, edit the Docker image and the `run.bash` script, removing the envs for NVIDIA support. In addition, remove the `additional_env` from the Gazebo process in `robot_launch/launch/robot.launch.py`.
 
 Clone the repo:
 ```shell
@@ -33,7 +34,7 @@ Run the container:
 ```
 Build the ROS workspace:
 ```shell
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release && source install/setup.bash
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && source install/setup.bash
 ```
 
 
@@ -44,6 +45,7 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release && source
 - `ROS2 Humble`, and the following ROS2 packages: `ros2-control`, `ros2-controllers`, `gazebo-ros-pkgs`, `gazebo-ros2-control`, `xacro`, `joint-state-publisher`, `joint-state-publisher-gui`
 - [`Pinocchio`](https://github.com/stack-of-tasks/pinocchio)
 - `numpy`, `scipy`, `numpy_quaternion`, [`quadprog`](https://github.com/quadprog/quadprog)
+- `latex` only for plotting some figures.
 
 
 ## Installation
@@ -51,7 +53,7 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release && source
 ```shell
 git clone --recursive https://github.com/ddebenedittis/Quadruped_Control_Soft_Contacts Quadruped_Control_Soft_Contacts/src
 cd Quadruped_Control_Soft_Contacts
-colcon build --symlink-install
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && source install/setup.bash
 ```
 
 
@@ -68,22 +70,22 @@ ros2 launch robot_gazebo anymal_c.launch.py [terrain:={rigid,soft,very_soft,mult
 
 - SOLO12 static walk simulation:
 ```shell
-ros2 launch robot_gazebo solo12.launch.py [terrain:={rigid,soft,very_soft,multi_terrains}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo solo12.launch.py [terrain:={rigid,soft,very_soft,multi_terrains}] [gait:={teleop_base,static_walk}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
 ![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/solo12-walk-rigid.gif)
 
 - ANYmal C with SoftFoot-Qs static walk simulation:
 ```shell
-ros2 launch robot_gazebo anymal_c_softfoot_q.launch.py [terrain:={rigid,soft,very_soft,multi_terrains}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo anymal_c_softfoot_q.launch.py [terrain:={rigid,soft,very_soft,multi_terrains}] [gait:={teleop_base,static_walk}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
 Optional arguments:
-- `gait`: select the gait type. With `teleop_base` the base pose can be teleoperated without moving the feet, `static_walk` implements a static walk, and `walking_trot` implements a dynamic gait. Currently, the walking trot gait is implemented only on the ANYmal C robot. With `teleop_walking_trot` the robot is teleoperated by giving it a velocity command.
 - `terrain`: select the terrain type: a rigid terrain (the gray one) or a soft terrain (the grass-like one).
-- `reset`: must be used in another terminal when there is an already running simulation. The simulation will be restarted. The time is not reset to avoid problems with the controllers.
-- `save_csv`: when `True`, some data is logged and saved in several .csv files in the `log/csv/` folder. This data can be plotted with `plot.py` (in the `logger_gazebo` package).
+- `gait`: select the gait type. With `teleop_base` the base pose can be teleoperated without moving the feet, `static_walk` implements a static walk, and `walking_trot` implements a dynamic gait. Currently, the walking trot gait is implemented only on the ANYmal C robot. With `teleop_walking_trot` the robot is teleoperated by giving it a velocity command.
 - `use_rviz`: when `True`, RViz is used to display the contact forces of the robot (still in Alpha version).
+- `save_csv`: when `True`, some data is logged and saved in several .csv files in the `log/csv/` folder. This data can be plotted with `plot.py` (in the `logger_gazebo` package).
+- `reset`: must be used in another terminal when there is an already running simulation. The simulation will be restarted. The time is not reset to avoid problems with the controllers.
 
 <img src="https://raw.githubusercontent.com/ddebenedittis/media/main/rviz_legged/gif/rviz_legged_walk.gif" width="500">
 <img src="https://raw.githubusercontent.com/ddebenedittis/media/main/rviz_legged/gif/rviz_legged_trot.gif" width="500">
@@ -116,6 +118,7 @@ Create a new `effort_controller.yaml` file, similar to the ones already present 
 ## Known Bugs
 
 - Sometimes, the SOLO12 simulation does not start correctly.
+- The pose_estimator does not estimate the pose correctly.
 
 
 ## Author

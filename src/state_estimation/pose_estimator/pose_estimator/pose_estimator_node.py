@@ -6,10 +6,11 @@ import quaternion
 
 import rclpy
 from rclpy.node import Node
+from tf2_ros import TransformBroadcaster
 
 from gazebo_msgs.msg import LinkStates
 from generalized_pose_msgs.msg import GeneralizedPose
-from geometry_msgs.msg import Pose, Twist
+from geometry_msgs.msg import Pose, Twist, TransformStamped
 from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import JointState, Imu
 
@@ -60,6 +61,20 @@ class PoseEstimatorNode(Node):
         self.gen_pose_subscription      # prevent unused variable warning
         
         
+        # ========================== Node Parameters ========================= #
+        
+        self.declare_parameter("robot_name")
+        
+        
+        # ============================== Filter ============================== #
+        
+        self.filter = KalmanFilter(
+            robot_name = str(self.get_parameter('robot_name').value)
+        )
+        
+        self.joint_names = self.filter._robot_model.ordered_joint_names
+        
+        
         # ================= Variables Saved By The Subscriber ================ #
 
         self.q_b = np.zeros(7)
@@ -69,6 +84,9 @@ class PoseEstimatorNode(Node):
         self.v_j = np.zeros(12)             # joints velocity
         self.a_b = np.array([0.,0.,9.81])   # base acceleration in body frame
         self.w_b = np.array([0.,0.,0.])     # base angular velocity in body frame
+        
+        self.joint_states_msg = JointState()
+        self.joint_states_msg.name = self.joint_names
         
         # names of the feet in contact with the ground
         self.contact_feet_names = ['LF', 'RF', 'LH', 'RH']
@@ -81,6 +99,10 @@ class PoseEstimatorNode(Node):
         self._pose_publisher = self.create_publisher(Pose, '/state_estimator/pose', 1)
         self._twist_publisher = self.create_publisher(Twist, '/state_estimator/twist', 1)
         
+        self._joint_states_publisher = self.create_publisher(JointState, '/state_estimator/joint_states', 1)
+        
+        self.tf_broadcaster = TransformBroadcaster(self)
+        
         
         # =============================== Timer ============================== #
 
@@ -88,26 +110,19 @@ class PoseEstimatorNode(Node):
         self.timer = self.create_timer(timer_period, self.timer_callback)
         
         
-        # ============================== Filter ============================== #
         
-        self.filter = KalmanFilter(robot_name)
-        
-        
-        
-    def joint_states_callback(self, msg):
+    def joint_states_callback(self, msg: JointState):
         """
         Read, reorder and save the joint states.
-        The joints are saved in the following order: LF_(HAA -> HFE -> KFE) -> LH -> RF -> RH,
+        The joints are saved in the following order: LF_(HAA -> HFE -> KFE) -> LH -> RF -> RH
+        In addition, save the JointState header to republish it.
         """
-
-        joint_names = ["LF_HAA", "LF_HFE", "LF_KFE",
-                       "LH_HAA", "LH_HFE", "LH_KFE",
-                       "RF_HAA", "RF_HFE", "RF_KFE",
-                       "RH_HAA", "RH_HFE", "RH_KFE"]
-        
-        for i in range(len(joint_names)):
-            self.q_j[joint_names.index(msg.name[i])] = msg.position[i]
-            self.v_j[joint_names.index(msg.name[i])] = msg.velocity[i]
+                
+        for i in range(len(self.joint_names)):
+            self.q_j[self.joint_names.index(msg.name[i])] = msg.position[i]
+            self.v_j[self.joint_names.index(msg.name[i])] = msg.velocity[i]
+            
+        self.joint_states_msg.header = msg.header
 
 
     def link_states_callback(self, msg):
@@ -173,7 +188,28 @@ class PoseEstimatorNode(Node):
         self._twist_publisher.publish(twist_msg)
         
         
-    def timer_callback(self):        
+    def broadcast_transform(self, p, q):
+        t = TransformStamped()
+        
+        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.frame_id = 'ground_plane_link'
+        
+        t.child_frame_id = "state_estimator/" + str(self.filter._robot_model._model.frames[2].name)
+        
+        t.transform.translation.x = p[0]
+        t.transform.translation.y = p[1]
+        t.transform.translation.z = p[2]
+
+        t.transform.rotation.x = q[1]
+        t.transform.rotation.y = q[2]
+        t.transform.rotation.z = q[3]
+        t.transform.rotation.w = q[0]
+
+        # Send the transformation
+        self.tf_broadcaster.sendTransform(t)
+        
+        
+    def timer_callback(self):
         self.filter.predict(self.w_b, self.a_b, self.time)
 
         self.filter.fuse_odo(self.q_j, self.v_j, self.contact_feet_names.copy())
@@ -181,6 +217,11 @@ class PoseEstimatorNode(Node):
         omega = self.w_b - self.filter._state[4:7]
         
         self.publish_pose_twist(self.filter._state[10:13], self.filter._state[0:4], self.filter._state[13:16], omega)
+        
+        self.broadcast_transform(self.filter._state[10:13], self.filter._state[0:4])
+        
+        self.joint_states_msg.position = self.q_j.tolist()
+        self._joint_states_publisher.publish(self.joint_states_msg)
                 
         # Get the yaw, pitch, and roll angles from the orientation quaternion and print them.
         # q = quaternion.from_float_array(filter._state[0:4])

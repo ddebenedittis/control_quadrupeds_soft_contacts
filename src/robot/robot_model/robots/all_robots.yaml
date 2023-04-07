@@ -3,6 +3,7 @@
 #   pkg_name: name of the package that contains the robot urdf description.
 #   urdf_path: path to the urdf of the model used by the controller. This model may be a simplified one (as for ANYmal C Softfoot-Q).
 #   feet_names: list of the names of all the robot's feet.
+#   ordered_joint_names: names of the actuader robot joints in alphabetical order. (Same as the order in the ros_control config file)
 #   ankle_feet_displacement: the feet_names do not necessarly specify the position of the expected touchdown point. For example, with ANYmal C with SoftFeet-Q, the feet_names of choice are the ankle links.
 
 ### ANYmal C
@@ -14,15 +15,19 @@ anymal_c:
         - RF_FOOT
         - LH_FOOT
         - RH_FOOT
-    leg_identifiers:
-        - LF
-        - RF
-        - LH
-        - RH
-    joint_types:
-        - HAA
-        - HFE
-        - KFE
+    ordered_joint_names:
+        - LF_HAA
+        - LF_HFE
+        - LF_KFE
+        - LH_HAA
+        - LH_HFE
+        - LH_KFE
+        - RF_HAA
+        - RF_HFE
+        - RF_KFE
+        - RH_HAA
+        - RH_HFE
+        - RH_KFE
     ankle_feet_displacement:
         - 0.    # x
         - 0.    # y
@@ -37,15 +42,19 @@ anymal_c_softfoot_q:
         - softfoot_RF_foot_ankle_link
         - softfoot_LH_foot_ankle_link
         - softfoot_RH_foot_ankle_link
-    leg_identifiers:
-        - LF
-        - RF
-        - LH
-        - RH
-    joint_types:
-        - HAA
-        - HFE
-        - KFE
+    ordered_joint_names:
+        - LF_HAA
+        - LF_HFE
+        - LF_KFE
+        - LH_HAA
+        - LH_HFE
+        - LH_KFE
+        - RF_HAA
+        - RF_HFE
+        - RF_KFE
+        - RH_HAA
+        - RH_HFE
+        - RH_KFE
     ankle_feet_displacement:
         - 0.
         - 0.
@@ -60,15 +69,19 @@ solo12:
         - FR_FOOT
         - HL_FOOT
         - HR_FOOT
-    leg_identifiers:
-        - FL
-        - FR
-        - HL
-        - HR
-    joint_types:
-        - HAA
-        - HFE
-        - KFE
+    ordered_joint_names:
+        - FL_HAA
+        - FL_HFE
+        - FL_KFE
+        - FR_HAA
+        - FR_HFE
+        - FR_KFE
+        - HL_HAA
+        - HL_HFE
+        - HL_KFE
+        - HR_HAA
+        - HR_HFE
+        - HR_KFE
     ankle_feet_displacement:
         - 0.
         - 0.
