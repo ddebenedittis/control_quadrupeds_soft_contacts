@@ -5,6 +5,8 @@ from rclpy.node import Node
 from generalized_pose_msgs.msg import GeneralizedPose
 from std_msgs.msg import Float64MultiArray
 
+from terrain_estimator.plane_estimator import PlaneEstimator
+
 
 
 class FadingFilter():
@@ -47,13 +49,7 @@ class TerrainEstimator(Node):
         
         # ================= Variables Saved By The Subscriber ================ #
         
-        # Save the position of each foot the last time they were in contact with the terrain. These positions are used to compute the plane coefficients.
-        self.last_contact_feet_position = np.array([
-             1.,  1., 0.,
-             1., -1., 0.,
-            -1.,  1., 0.,
-            -1., -1., 0.
-        ])
+        self.plane_estimator = PlaneEstimator()
         
         # Low pass filter for the feet positions.
         self.filter = FadingFilter()
@@ -62,9 +58,6 @@ class TerrainEstimator(Node):
         self.feet_names = ["LF", "RF", "LH", "RH"]
         
         self.contact_feet_names = []
-        
-        # The plane is z = a x + b y + c, where self.plane_coeffs = {a, b, c}.
-        self.plane_coeff = np.zeros(3)
         
         # ============================= Publisher ============================ #
         
@@ -85,40 +78,18 @@ class TerrainEstimator(Node):
         for i in range(4):
             if self.feet_names[i] in self.contact_feet_names:
                 # Filter the measurement
-                self.last_contact_feet_position[3*i:3*i+3] = self.filter.filter(
-                    self.last_contact_feet_position[3*i:3*i+3],
+                self.plane_estimator.last_contact_feet_position[3*i:3*i+3] = self.filter.filter(
+                    self.plane_estimator.last_contact_feet_position[3*i:3*i+3],
                     np.array([msg.data[3*i:3*i+3]])
                 )
                 
-    
-    def compute_plane_eq(self):
-        # Plane equation: z = a x + b y + c
-        
-        #     [ x0 y0 1 ]
-        # A = [ x1 y1 1 ]
-        #     [ ...     ]
-        #     [ xn yn 1 ]
-        
-        #     [ z0  ]
-        # b = [ z1  ]
-        #     [ ... ]
-        #     [ zn  ]
-        
-        A = np.block([
-            self.last_contact_feet_position.reshape((4, 3))[:, 0:2], np.ones((4,1))
-        ])
-        
-        b = self.last_contact_feet_position.reshape((4, 3))[:, 2]
-        
-        self.plane_coeff = np.linalg.lstsq(A, b, rcond=None)[0]
-                
         
     def timer_callback(self):
-        msg = Float64MultiArray()
-                
-        self.compute_plane_eq()
+        # The plane is z = a x + b y + c, where self.plane_coeffs = {a, b, c}.
+        plane_coeffs = self.plane_estimator.compute_plane_eq()
         
-        msg.data = self.plane_coeff.tolist()
+        msg = Float64MultiArray()
+        msg.data = plane_coeffs.tolist()
         
         self._plane_publisher.publish(msg)
         
