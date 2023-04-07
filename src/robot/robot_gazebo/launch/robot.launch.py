@@ -136,7 +136,7 @@ def spawn_things(ld):
         executable = 'robot_state_publisher',
         parameters = [
             {'use_sim_time': use_sim_time},
-            {'robot_description': ParameterValue(Command(['xacro', ' ', robot_file_path]), value_type=str)},
+            {'robot_description': ParameterValue(Command(['xacro', ' ', robot_file_path, ' remove_collisions:=True']), value_type=str)},
         ],
         output = 'screen',
     )

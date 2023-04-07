@@ -10,7 +10,7 @@
 [submodule "src/robot/robots/anymal_c_simple_description"]
 	path = src/robot/robots/anymal_c_simple_description
 	url = https://github.com/ddebenedittis/anymal_c_simple_description
-	branch = no_shank_collision
+	branch = master
 [submodule "src/robot/robots/softfoot_thing"]
 	path = src/robot/robots/softfoot_thing
 	url = https://github.com/ddebenedittis/softfoot_thing
