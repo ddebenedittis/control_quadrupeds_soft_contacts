@@ -246,7 +246,7 @@ template<typename MatType>
 using PseudoInverseType = Eigen::Matrix<typename MatType::Scalar, MatType::ColsAtCompileTime, MatType::RowsAtCompileTime>;
 
 template<typename MatType>
-inline PseudoInverseType<MatType> pseudoinverse(const MatType &a, double epsilon = std::numeric_limits<double>::epsilon())
+PseudoInverseType<MatType> pseudoinverse(const MatType &a, double epsilon = std::numeric_limits<double>::epsilon())
 {
     using WorkingMatType = Eigen::Matrix<typename MatType::Scalar, Eigen::Dynamic, Eigen::Dynamic, 0,
     MatType::MaxRowsAtCompileTime, MatType::MaxColsAtCompileTime>;
@@ -277,7 +277,7 @@ inline MatrixXd HierarchicalQP::null_space_projector(const MatrixXd& M)
 /*                                   RESETQP                                  */
 /* ========================================================================== */
 
-inline void HierarchicalQP::reset_qp(int sol_dim)
+void HierarchicalQP::reset_qp(int sol_dim)
 {
     sol_ = VectorXd::Zero(sol_dim);
     Z_ = MatrixXd::Identity(sol_dim, sol_dim);

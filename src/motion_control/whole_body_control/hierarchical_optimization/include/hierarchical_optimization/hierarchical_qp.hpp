@@ -27,7 +27,7 @@ public:
     );
 
     /// @brief Get the QP problem solution
-    Eigen::VectorXd get_sol() {return sol_;}
+    Eigen::VectorXd get_sol() const {return sol_;}
 
     void set_regularization(double reg) {this->regularization_ = reg;}
     
