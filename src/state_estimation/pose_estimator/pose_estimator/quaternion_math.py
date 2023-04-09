@@ -5,14 +5,14 @@ import quaternion
 
 
 
-def quat_rot(v, q):
+def quat_rot(q, v):
     """
     Rotate a three dimensional vector v with quaternion q.
     
     params
     ----
-    v: Vector to be rotated
-    q: Quaternion
+    q: quaternion
+    v: vector to be rotated
     
     return
     ----
@@ -33,11 +33,12 @@ def quat_exp(q):
     q: quaternion
     
     return
+    ----
     e^q = e^w ( cos(|v|) + v / |v| sin(|v|) )
     """
     
     v = quaternion.as_vector_part(q)
     
     return exp(q.w) * quaternion.from_float_array(np.concatenate((
-        np.array([cos(norm(v))]), v / norm(v) * sin(norm(v))
+        np.array([cos(norm(v))]), np.sign(v) * sin(norm(v))
     )))

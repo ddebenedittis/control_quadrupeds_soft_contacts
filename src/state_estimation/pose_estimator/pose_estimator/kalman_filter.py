@@ -1,22 +1,48 @@
 import numpy as np
+from numpy import ndarray
 import quaternion
 
-from .vector_math import skew
-from .quaternion_math import quat_rot, quat_exp
 from robot_model.robot_model import RobotModel
+
+from .quaternion_math import quat_rot, quat_exp
+from .vector_math import skew
+
+
+
+# ============================================================================ #
+#                                  CONVENTIONS                                 #
+# ============================================================================ #
+
+# Quaternion conventions: Hamilton
+# See Quaternion kinematics for the error-state Kalman filter
+# See https://www.iri.upc.edu/people/jsola/JoanSola/objectes/notes/kinematics.pdf
+
+# Real part first
+# q = [q_w, q_x, q_y, q_z] = [q_w, q_v]
+
+# Right handed: i j = - j i = k
+
+# Passive: rotate frames
+
+# Local to global
+# q = q_nb = rotates a vector from the base frame to the navigation frame.
+# R_nb = quaternion.as_rotation_matrix(q) = (qw^2 + |qv|^2) I + 2 qw skew(qv) + 2 qv qv^T
 
 
 
 class KalmanFilter:
     """
-    Implements a kalman filter for a quadrupedal robot.
+    Kalman filter for a quadrupedal robot.
+    
+    Methods:
+        update_private_properties
     """
     
     # ======================================================================== #
     #                             CLASS CONSTRUCTOR                            #
     # ======================================================================== #
     
-    def __init__(self, robot_name):
+    def __init__(self, robot_name: str):
         
         # ========================= RobotModel Class ========================= #
         
@@ -24,41 +50,43 @@ class KalmanFilter:
         
         # ========================== Time Properties ========================= #
         
-        self.previous_time = 0
+        self._previous_time = 0
         self.sample_time = 1/100
                 
-        self.decimation_factor = 1   # Number of IMU samples joined together to reduce the computational cost
-        self._imu_counter = 0
+        # The imu correction is done every decimation_factor samples received by the imu sensor.
+        self.decimation_factor = 1
+        # When _imu_counter == decimation_factor, the imu correction is performed.
+        self._imu_counter = 1
         
         # ========================= Sensor Properties ======================== #
         
         # Gyroscope
-        self.gyro_noise = 1e-3                       # [rad^2/s^2]
-        self.gyro_drift_noise = 1e-6                 # [(rad/s)^2/s]
-        # self.q_sens_gyro = np.quaternion(1, 0, 0, 0) # orientation of the gyroscope sensor frame wrt body frame
+        self.gyro_noise = 1e-3                          # [rad^2/s^2]
+        self.gyro_drift_noise = 1e-12                   # [(rad/s)^2/s]
+        # self.q_sens_gyro = np.quaternion(1, 0, 0, 0)  # orientation of the gyroscope sensor frame wrt body frame
         
         # Accelerometer
-        self.acc_noise = 1e-3;                       # [(m/s^2)^2]
-        self.acc_drift_noise = 1e-9                  # [(m/s^2)^2/s]
-        # self.q_sens_acc = np.quaternion(1, 0, 0, 0)  # orientation of the acceleration sensor frame wrt body frame
+        self.acc_noise = 1e-3                           # [(m/s^2)^2]
+        self.acc_drift_noise = 1e-12                    # [(m/s^2)^2/s]
+        # self.q_sens_acc = np.quaternion(1, 0, 0, 0)   # orientation of the acceleration sensor frame wrt body frame
         
         # Joint encoders
-        self.enc_noise = 1e-3                        # [rad^2/s^2]
-        self.leg_length = 1                          # [m]
+        self.enc_noise = 1e-3                           # [rad^2/s^2]
+        self.leg_length = 1                             # [m]
         
         # ===================== Kalman Filter Properties ===================== #
         
         # Position and velocity process noises
-        self.pos_noise = 1e-0;                       # [m^2/s^2]
-        self.vel_noise = 1e-0;                       # [(m/s)^2/s]
+        self.pos_noise = 1e-0                           # [m^2/s^2]
+        self.vel_noise = 1e-0                           # [(m/s)^2/s]
         
         # Initial process noise P0
         self.init_process_noise = np.diag(np.concatenate((
             1e-10 * np.ones(3),
-            1e-0 * np.ones(3),
-            1e-0 * np.ones(3),
             1e-10 * np.ones(3),
-            1e-10 * np.ones(3)
+            1e-10 * np.ones(3),
+            1e-10 * np.ones(3),
+            1e-10 * np.ones(3),
         )))
         
         # ========================= Earth Parameters ========================= #
@@ -69,28 +97,28 @@ class KalmanFilter:
         
         # State:
         #         ⌈ quaternion orientation |   ⌈ q   ⌉
-        #         | gyroscope bias         |   | ω_b |
-        # state = | accelerometer bias     | = | a_b | ∈ R^16
         #         | position               |   | p   |
-        #         | velocity               |   ⌊ v   ⌋
+        # state = | velocity               | = | v   | ∈ R^16
+        #         | gyroscope bias         |   | ω_b |
+        #         | accelerometer bias     |   ⌊ a_b ⌋
         self._state = np.zeros(16)
         self._state[0] = 1  # ! q_w figlio di troia
-        
+
         # Error state:
-        #             ⌈ orientation error          ⌉   ⌈ θ_ε   ⌉
-        #             | gyroscope bias error       |   | ω_b_ε |
-        # state_err = | accelerometer bias error   | = | a_b_ε | ∈ R^15
-        #             | position error             |   | p_ε   |
-        #             ⌊ velocity error             ⌋   ⌊ v_ε   ⌋
+        #             ⌈ orientation error        ⌉   ⌈ θ_ε   ⌉
+        #             | position error           |   | p_ε   |
+        # state_err = | velocity error           | = | v_ε   | ∈ R^15
+        #             | gyroscope bias error     |   | ω_b_ε |
+        #             ⌊ accelerometer bias error ⌋   ⌊ a_b_ε ⌋
         
         # Angular velocity at the previous time step
         self._ang_vel_old = np.zeros(3)
         
-        # Average of the measured acceleration over decimation_factor steps
-        self._acc_meas_avg = np.zeros(3)
-        
         # Low passed gyroscope measurement. Used for the correction with odometry.
         self._gyro_meas_avg = np.zeros(3)
+        
+        # Average of the measured acceleration over decimation_factor steps
+        self._acc_meas_avg = np.zeros(3)
         
         self._state_covariance = np.zeros((15,15))
         
@@ -102,32 +130,95 @@ class KalmanFilter:
 
         # ================ Feet Position Correction Parameters =============== #
 
-        self._flag_fuse_odo_pos = True
+        # When True, the correction is performed the position of the feet in addition to their velocity.
+        self.flag_fuse_odo_pos = True
         
+        # Names of the contact feet.
         self._last_contact_feet_names = []
+        # Touchdown positions of the feet (by row).
         self._touchdown_positions = np.zeros((4,3))
         
         
         
+    # ======================================================================== #
+    #                                  GETTERS                                 #
+    # ======================================================================== #
+    
+    @property
+    def orientation(self) -> ndarray:
+        """
+        Orientation of the robot base as a quaternion.\\
+        Expresses the rotation from the base frame to the navigation frame (q_nb).
+
+        Returns:
+            ndarray: [q_w, q_x, q_y, q_z]]
+        """
+
+        return quaternion.from_float_array(self._state[0:4])
+    
+    @property
+    def orientation_as_float_array(self) -> ndarray:
+        return self._state[0:4]
+    
+    @property
+    def position(self) -> ndarray:
+        """
+        Position of the robot base in inertial frame.
+
+        Returns:
+            ndarray: [p_x, p_y, p_z]
+        """
+        
+        return self._state[4:7]
+    
+    @position.setter
+    def position(self, p: ndarray):
+        if p.size != 3:
+            raise ValueError("The position is not a vector of size 3.")
+        
+        self._state[4:7] = p
+    
+    @property
+    def velocity(self) -> ndarray:
+        """
+        Velocity of the robot base in inertial frame.
+
+        Returns:
+            ndarray: [v_x, v_y, v_z]
+        """
+        
+        return self._state[7:10]
+    
+    @property
+    def gyro_bias(self) -> ndarray:
+        return self._state[10:13]
+    
+    @property
+    def acc_bias(self) -> ndarray:
+        return self._state[13:16]
+    
+    
+        
     def update_private_properties(self):
         """
-        Update the process covariance and the measurement covariance after changing some filter properties.
+        Update the process covariance and the measurement covariance. \\
+        Must be performed after changing some changing the filter properties.
         """
         
         dt = self.sample_time
         
         self._process_covariance = np.diag(np.concatenate((
             self.gyro_noise * dt**2 * np.ones(3),
+            self.pos_noise * dt**2 * np.ones(3),
+            self.vel_noise * dt * np.ones(3),
             self.gyro_drift_noise * dt * np.ones(3),
             self.acc_drift_noise * dt * np.ones(3),
-            self.pos_noise * dt**2 * np.ones(3),
-            self.vel_noise * dt * np.ones(3)
         )))
         
         self._measurement_covariance = np.diag(np.concatenate((
             self.acc_noise * np.ones(3),
             self.enc_noise * self.leg_length * np.ones(1),
-            self.enc_noise * self.leg_length * np.ones(1)/20
+            self.enc_noise * self.leg_length * np.ones(1)/20,
         )))
         
         
@@ -136,38 +227,51 @@ class KalmanFilter:
     #                                  PREDICT                                 #
     # ======================================================================== #
     
-    def predict(self, gyro_meas, acc_meas, time):
+    def predict(self, gyro_meas: ndarray, acc_meas: ndarray, time: float):
         """
-        Predict the state and the state covariance by using the IMU measurements.
-        Update the average of measured acceleration over (decimation_factor) steps.
+        Predict the state and the state covariance using the IMU measurements. \\
+        Update the average measured acceleration over (decimation_factor) steps.
+
+        Args:
+            gyro_meas (ndarray): gyroscope measurement.
+            acc_meas (ndarray): accelerometer measurement.
+            time (float): time of the imu measurements.
         """
         
-        #
-        self.sample_time = time - self.previous_time
-        self.previous_time = time
+        # Only the nanoseconds are passed.
+        self.sample_time = time - self._previous_time
+        self._previous_time = time
         if self.sample_time < 0:
             self.sample_time += 1
         
+        # Just to be sure, redo this.
         self.update_private_properties()
         
+        # Run this code only if new measurements have been received.
         if self.sample_time > 0:
             # Update the state and the state covariance using the IMU measurements.
             self.__state_predict(gyro_meas, acc_meas)
             self.__state_cov_predict(gyro_meas, acc_meas)
             
-            # Compute the average acceleration over (decimation_factor) steps. This average acceleration takes into account the rotation of the accelerometer between the time-steps. Used for the correction step, doing this reduces the computational cost and the measurement noise.
-            gyro_bias = self._state[4:7]
+            # Compute the average acceleration over (decimation_factor) steps.
+            # This average acceleration takes into account the rotation of the accelerometer between the time-steps. Used for the correction step, doing this reduces the computational cost and the measurement noise.
+            
+            gyro_bias = self.gyro_bias
             dt = self.sample_time
-            # R = quaternion.as_rotation_matrix(np.exp(1/2*dt * quaternion.from_vector_part(gyro_meas - gyro_bias)))
             
-            # self._acc_meas_avg = R.T @ self._acc_meas_avg + (acc_meas / self.decimation_factor)
-            self._acc_meas_avg = quat_rot(self._acc_meas_avg, quat_exp(1/2*dt*quaternion.from_vector_part(gyro_meas - gyro_bias))) + (acc_meas / self.decimation_factor)
+            # Quaternion representing the rotation during the timestep
+            q_rot = quat_exp(1/2*dt*quaternion.from_vector_part(gyro_meas - gyro_bias))
+            # Rotate and add the new measured acceleration
+            self._acc_meas_avg = quat_rot(q_rot, self._acc_meas_avg) + (acc_meas / self.decimation_factor)
             
+            # Perform the imu correction only after decimation_factor timesteps.
             if self._imu_counter < self.decimation_factor:
                 self._imu_counter += 1
             else:
                 self.__fuse_imu()
-                self._imu_counter = 0
+                
+                # Reset the counter and the average measured acceleration.
+                self._imu_counter = 1
                 self._acc_meas_avg = np.zeros(3)
       
       
@@ -178,41 +282,36 @@ class KalmanFilter:
     
     def __fuse_imu(self):
         """
-        Fuse the accelerometer measurement to estimate to estimate the orientation from how the gravity is aligned.
+        Fuse the accelerometer measurement to estimate to estimate the orientation from how the gravity is aligned. \n
         The accelerometer is fused every (decimation_factor) steps. This reduces the computational cost and also reduces the accelerometer noise, since the measurement is averaged over multiple steps.
         """
         
         # ========================= Measurement Model ======================== #
         
-        q = quaternion.from_float_array(self._state[0:4])
-        acc_bias = self._state[7:10]
-        acc_meas_avg = self._acc_meas_avg
-        g_n = np.array([0, 0, - self.gravity])    # gravity in navigation frame
+        q = self.orientation
+        acc_bias = self.acc_bias
         
-        # Reset the average measured acceleration to zero
-        self._acc_meas_avg = np.zeros(3)
+        # Gravity in navigation frame.
+        g_n = np.array([0., 0., - self.gravity])
         
-        # R_bn = quaternion.as_rotation_matrix(q).T = rotation matrix from n to b 
-        g_b = quat_rot(g_n, q.conj())
+        # Gravity in base frame
+        g_b = quat_rot(q.conj(), g_n)
         
         # Error model
-        z = acc_meas_avg - (acc_bias - g_b)
+        z = self._acc_meas_avg - (acc_bias - g_b)
         
         
         # ========================= Observation Model ======================== #
         
         Xdx = self.__X_delta_x(q, 12)
         
-        dRgdq = self.gravity * np.block([
-            [-2*q.y,  2*q.z, -2*q.w, 2*q.x],
-            [ 2*q.x,  2*q.w,  2*q.z, 2*q.y],
-            [ 2*q.w, -2*q.x, -2*q.y, 2*q.z]
-        ])
+        # Derivative of g_b (= R_bn g_n) w.r.t. the orientation q
+        dRgdq = self.__dRvdq(q, g_n)
         
         # Measurementt matrix computation
-        #x = [   θ_ε,           ω_b_ε,    acc_b_ε,             p_ε,           v_ε ].T
+        #x = [     θ_ε;             p_ε;             v_ε;           ω_b_ε;   acc_b_ε,  ]
         Hx = np.block([
-             [ dRgdq, np.zeros((3,3)),  np.eye(3), np.zeros((3,3)), np.zeros((3,3))]
+             [ - dRgdq, np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3)), np.eye(3), ],
         ])
 
         Hk = Hx @ Xdx
@@ -233,21 +332,22 @@ class KalmanFilter:
     
     def fuse_odo(self, qj, qj_dot, contact_feet_names):
         """
-        Fuse the measurements from the robot odometry.
+        Fuse the measurements from the robot odometry. \n
+        Can use both velocity and position (if flag_fuse_odo_pos is True) measurements of the joints.
         """
         
         if self.sample_time > 0:
         
             # ========================= Measurement Model ======================== #
             
-            q = quaternion.from_float_array(self._state[0:4])
-            gyro_bias = self._state[4:7]
-            v = self._state[13:16]
+            q = self.orientation
+            v = self.velocity
+            omega = self._gyro_meas_avg - self.gyro_bias
             
             [B_r_fb, B_v_fb] = self._robot_model.compute_feet_pos_vel(
                 np.concatenate((np.zeros(6), np.array([1]), qj)),
                 np.concatenate((np.zeros(6), qj_dot)),
-                contact_feet_names
+                contact_feet_names,
             )
                     
             # Error model
@@ -262,32 +362,21 @@ class KalmanFilter:
                 r_fb = B_r_fb[i, :]
                 v_fb = B_v_fb[i, :]
                 
-                z[3*i:3*i+3] = - v_fb - np.cross((self._gyro_meas_avg - gyro_bias), r_fb) - quat_rot(v, q.conj())
+                z[3*i:3*i+3] = - v_fb - np.cross(r_fb, omega) - quat_rot(q.conj(), v)
                         
             # ========================= Observation Model ======================== #
             
-            Xdx = self.__X_delta_x(q, 12)
-            
-            qw = q.w; qx = q.x; qy = q.y; qz = q.z
-            
+            Xdx = self.__X_delta_x(q, 12)            
+                        
             Hx = np.zeros((3*nc, 16))
             
             for i in range(nc):
-                r = B_r_fb[i, :]
-                
-                rx = r[0]; ry = r[1]; rz = r[2]
-                
-                # d/dq (R * B_r_fb)
-                dRrdq = np.array([
-                    [2*rx*qw + 2*ry*qz - 2*rz*qy, 2*rx*qx + 2*ry*qy + 2*rz*qz, 2*ry*qx - 2*rx*qy - 2*rz*qw, 2*ry*qw - 2*rx*qz + 2*rz*qx],
-                    [2*ry*qw - 2*rx*qz + 2*rz*qx, 2*rx*qy - 2*ry*qx + 2*rz*qw, 2*rx*qx + 2*ry*qy + 2*rz*qz, 2*rz*qy - 2*ry*qz - 2*rx*qw],
-                    [2*rx*qy - 2*ry*qx + 2*rz*qw, 2*rx*qz - 2*ry*qw - 2*rz*qx, 2*rx*qw + 2*ry*qz - 2*rz*qy, 2*rx*qx + 2*ry*qy + 2*rz*qz]
-                ])
+                dRvdq = self.__dRvdq(q, v)
                 
                 # Measurement matrix computation
-                #x = [   θ_ε,           ω_b_ε,         acc_b_ε,             p_ε,  v_ε ].T
+                # x = [ θ_ε,             p_ε,  v_ε,           ω_b_ε,         acc_b_ε, ].T
                 Hx[3*i:3*i+3, :] = np.block([
-                    [ -dRrdq, np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3)), R_bn ]
+                    [ dRvdq, np.zeros((3,3)), R_bn, np.zeros((3,3)), np.zeros((3,3)), ]
                 ])
             
             Hk = Hx @ Xdx
@@ -303,7 +392,7 @@ class KalmanFilter:
             
             # ========= Fuse The Information Regarding The Foot Positions ======== #
             
-            if self._flag_fuse_odo_pos == True:
+            if self.flag_fuse_odo_pos:
                 self.__fuse_odo_pos(contact_feet_names, B_r_fb)
 
 
@@ -319,8 +408,8 @@ class KalmanFilter:
         
         # ========================= Measurement Model ======================== #
         
-        q = quaternion.from_float_array(self._state[0:4])
-        p = self._state[10:13]
+        q = self.orientation
+        p = self.position
                 
         R_nb = quaternion.as_rotation_matrix(q)
         
@@ -343,28 +432,18 @@ class KalmanFilter:
         # ========================= Observation Model ======================== #
         
         Xdx = self.__X_delta_x(q, 12)
-        
-        # R = R_b^n = R_nb = R_bn.T, thus we take the conjugate of the quaternion
-        qw = q.w; qx = - q.x; qy = - q.y; qz = - q.z
-        
+               
         Hx = np.zeros((3*nc, 16))
         
         for i in range(nc):
             r = B_r_fb[i, :]
             
-            rx = r[0]; ry = r[1]; rz = r[2]
-            
-            # d/dq (- R_nb * B_r_fb)
-            dRrdq = np.array([
-                [2*rx*qw + 2*ry*qz - 2*rz*qy, 2*rx*qx + 2*ry*qy + 2*rz*qz, 2*ry*qx - 2*rx*qy - 2*rz*qw, 2*ry*qw - 2*rx*qz + 2*rz*qx],
-                [2*ry*qw - 2*rx*qz + 2*rz*qx, 2*rx*qy - 2*ry*qx + 2*rz*qw, 2*rx*qx + 2*ry*qy + 2*rz*qz, 2*rz*qy - 2*ry*qz - 2*rx*qw],
-                [2*rx*qy - 2*ry*qx + 2*rz*qw, 2*rx*qz - 2*ry*qw - 2*rz*qx, 2*rx*qw + 2*ry*qz - 2*rz*qy, 2*rx*qx + 2*ry*qy + 2*rz*qz]
-            ])
+            dRrdq = self.__dRvdq(q.conj(), r)
             
             # Measurement matrix computation
-            #x = [    θ_ε,           ω_b_ε,         acc_b_ε,       p_ε,  v_ε ].T
+            # x = [    θ_ε,       p_ε,             v_ε,           ω_b_ε,         acc_b_ε, ].T
             Hx[3*i:3*i+3, :] = np.block([
-                 [ -dRrdq, np.zeros((3,3)), np.zeros((3,3)), np.eye(3), np.zeros((3,3)) ]
+                 [ - dRrdq, np.eye(3), np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3)), ]
             ])
         
         Hk = Hx @ Xdx
@@ -399,7 +478,7 @@ class KalmanFilter:
                         self._last_contact_feet_names.index(contact_feet_names[i]),:]
                 else:
                     # This foot just entered in contact with the terrain
-                    new_touchdown_positions[i,:] = R_nb @ B_r_fb[i,:] + self._state[10:13]
+                    new_touchdown_positions[i,:] = R_nb @ B_r_fb[i,:] + self.position
                     new_touchdown_positions[i,2] = 0
                     
             self._last_contact_feet_names = contact_feet_names
@@ -421,11 +500,12 @@ class KalmanFilter:
         dt = self.sample_time
         
         # States
-        q = quaternion.from_float_array(self._state[0:4])
-        w_b = self._state[4:7]
-        acc_b = self._state[7:10]
-        p = self._state[10:13]
-        v = self._state[13:16]
+        q = self.orientation
+        p = self.position
+        v = self.velocity
+        w_b = self.gyro_bias
+        acc_b = self.acc_bias
+        
         
         # Obtain the new, old and average angular velocities. They are used for integrating the quaternion.
         w_new = gyro_meas - w_b
@@ -445,13 +525,19 @@ class KalmanFilter:
         
         R_nb = quaternion.as_rotation_matrix(q)
         
-        p += v*dt + 1/2*dt**2 * (R_nb @ (acc_meas - acc_b) + g)
-        v += dt * (R_nb @ (acc_meas - acc_b) + g)
+        p += v*dt + 1/2 * (R_nb @ (acc_meas - acc_b) + g) * dt**2
+        v += (R_nb @ (acc_meas - acc_b) + g) * dt
         
         
         # ============= Update The State And The Angular Velocity ============ #
         
-        self._state = np.concatenate((quaternion.as_float_array(q), w_b, acc_b, p, v))
+        self._state = np.concatenate((
+            quaternion.as_float_array(q),
+            p,
+            v,
+            w_b,
+            acc_b,
+        ))
         
         self._ang_vel_old = w_new
         
@@ -470,20 +556,29 @@ class KalmanFilter:
         
         dt = self.sample_time
 
-        gyro_bias = self._state[4:7]        
-        acc_bias = self._state[7:10]
+        # gyro_bias = self.gyro_bias
+        acc_bias = self.acc_bias
         
-        R = quaternion.as_rotation_matrix(quaternion.from_float_array(self._state[0:4]))
+        R = quaternion.as_rotation_matrix(self.orientation)
         
         
         # ============= Compute The Error State Transition Matrix ============ #
         
+        # This version is slightly more accurate (u sure?) but has a higher computational cost.
+        # F_err = np.block([
+        #     [ np.eye(3) - skew(gyro_meas - gyro_bias)*dt,  np.zeros((3,3)),  np.zeros((3,3)),            -R*dt,  np.zeros((3,3)), ],
+        #     [     -1/2*R*skew(acc_meas - acc_bias)*dt**2,        np.eye(3),     np.eye(3)*dt,  np.zeros((3,3)),      1/2*R*dt**2, ],
+        #     [            -R*skew(acc_meas - acc_bias)*dt,  np.zeros((3,3)),        np.eye(3),  np.zeros((3,3)),             R*dt, ],
+        #     [                            np.zeros((3,3)),  np.zeros((3,3)),  np.zeros((3,3)),        np.eye(3),  np.zeros((3,3)), ],
+        #     [                            np.zeros((3,3)),  np.zeros((3,3)),  np.zeros((3,3)),  np.zeros((3,3)),        np.eye(3), ],
+        # ])
+        
         F_err = np.block([
-            [np.eye(3) - dt*skew(gyro_meas - gyro_bias),        -dt*np.eye(3), np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))],
-            [                           np.zeros((3,3)),            np.eye(3), np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))],
-            [                           np.zeros((3,3)),      np.zeros((3,3)),       np.eye(3), np.zeros((3,3)), np.zeros((3,3))],
-            [         -1/2*dt**2*R*skew(acc_meas + acc_bias), np.zeros((3,3)),     1/2*dt**2*R,       np.eye(3),    dt*np.eye(3)],
-            [                -dt*R*skew(acc_meas + acc_bias), np.zeros((3,3)),            dt*R, np.zeros((3,3)),       np.eye(3)]
+            [                           np.eye(3),  np.zeros((3,3)),  np.zeros((3,3)),            -R*dt,  np.zeros((3,3)), ],
+            [                     np.zeros((3,3)),        np.eye(3),     np.eye(3)*dt,  np.zeros((3,3)),  np.zeros((3,3)), ],
+            [ -skew(R @ (acc_meas - acc_bias))*dt,  np.zeros((3,3)),        np.eye(3),  np.zeros((3,3)),            -R*dt, ],
+            [                     np.zeros((3,3)),  np.zeros((3,3)),  np.zeros((3,3)),        np.eye(3),  np.zeros((3,3)), ],
+            [                     np.zeros((3,3)),  np.zeros((3,3)),  np.zeros((3,3)),  np.zeros((3,3)),        np.eye(3), ],
         ])
         
         
@@ -507,8 +602,8 @@ class KalmanFilter:
         [x_err, P_cor] = self.__kalman_eq(self._state_covariance, R, Hk, z)
 
         Gk = np.block([
-            [np.eye(3) - skew(1/2*x_err[0:3]), np.zeros((3,12))],
-            [                np.zeros((12,3)),       np.eye(12)]
+            [np.eye(3) + skew(1/2*x_err[0:3]), np.zeros((3,12))],
+            [                np.zeros((12,3)),       np.eye(12)],
         ])
         
         P_cor = Gk @ P_cor @ Gk.T
@@ -526,15 +621,15 @@ class KalmanFilter:
     #                                  CORRECT                                 #
     # ======================================================================== #
     
-    def __correct(self, state_err):
+    def __correct(self, state_err: ndarray):
         """
-        Correct the filter state using the error state:
-            state_corr = state ⊕ state_err
+        Correct the filter state using the error state:\\
+        state_corr = state ⊕ state_err
         """
         
         # Sum the rotation vector error to the orientation quaternion
         self._state[0:4] = quaternion.as_float_array(
-            quaternion.from_float_array(self._state[0:4]) * quaternion.from_rotation_vector(state_err[0:3])
+            quaternion.from_rotation_vector(state_err[0:3]) * self.orientation
         )
         
         self._state[4:] += state_err[3:]
@@ -546,10 +641,13 @@ class KalmanFilter:
     # ========================================================================= #
     
     @staticmethod
-    def __kalman_eq(P, R, H, z):
+    def __kalman_eq(P, R, H, z) -> tuple[ndarray, ndarray]:
         """
-        Compute the Kalman equations. \n
-        return [x_err, P]
+        Compute the Kalman equations.
+        
+        Returns:
+            x_err (ndarray): 
+            P (ndarray): 
         """
         
         # Innovation covariance
@@ -558,35 +656,69 @@ class KalmanFilter:
         # Kalman gain
         K = P @ H.T @ np.linalg.inv(S)
         
-        # Error estimate covariance update
-        P = P - K @ H @ P
-        
         x_err = K @ z
+        
+        # Error estimate covariance update
+        # P = P - K @ H @ P     # simple form
+        # P = P - K @ S @ K.T   # symmetric form
+        
+        # Joseph form (symmetric and positive definite)
+        I = np.eye(P.shape[0])
+        P = (I - K @ H) @ P @ (I - K @ H).T + K @ R @ K.T
         
         return [x_err, P]
     
     
     @staticmethod
-    def __X_delta_x(q, n):
-        """
-        Computes X_dx. Necessary because quaternions are used.
-        """
+    def __Q_delta_theta(q: ndarray) -> ndarray:
+        qw = q.w; qx = q.x; qy = q.y; qz = q.z
         
-        # Quaternion parts
-        qw = q.w
-        qv = quaternion.as_vector_part(q)
-        
-        # Quaternion matrix form (NOT a rotation matrix)
-        q_matrix = np.block([
-            [               qw,                     -qv],
-            [qv.reshape((3,1)), qw*np.eye(3) + skew(qv)]
+        Q_delta_theta = 1/2 * np.array([
+            [-qx, -qy, -qz,],
+            [ qw,  qz, -qy,],
+            [-qz,  qw,  qx,],
+            [ qy, -qx,  qw,],
         ])
         
-        Q_delta_theta = q_matrix @ (1/2 * np.block([[np.zeros(3)], [np.eye(3)]]))
+        return Q_delta_theta
+    
+    
+    @staticmethod
+    def __X_delta_x(q: ndarray, n: int) -> ndarray:
+        """
+        Computes the partial derivative of the state w.r.t. the error state. \\
+        X_dx = ∂x / ∂x_ε
+        
+        Args:
+            q (quaternion): orientation q_nb.
+            n (int): remaining dimension.
+            
+        Returns:
+            ndarray: size = [4+n, 3+n]
+        """
+        
+        Q_delta_theta = KalmanFilter.__Q_delta_theta(q)
         
         Xdx = np.block([
-            [  Q_delta_theta, np.zeros((4,n))],
-            [np.zeros((n,3)),       np.eye(n)]
+            [   Q_delta_theta, np.zeros((4,n)) ],
+            [ np.zeros((n,3)),       np.eye(n) ],
         ])
         
         return Xdx
+    
+    
+    @staticmethod
+    def __dRvdq(q, v):
+        """
+        Computes d/dq (R(q) @ v),
+        where R(q) = quaternion.as_rotation_matrix(q)
+        """
+                
+        qw = q.w; qx = q.x; qy = q.y; qz = q.z
+        vx = v[0]; vy = v[1]; vz = v[2]
+        
+        return np.array([
+            [2*qw*vx - 2*qy*vz + 2*qz*vy, 2*qx*vx + 2*qy*vy + 2*qz*vz, 2*qx*vy - 2*qw*vz - 2*qy*vx, 2*qw*vy + 2*qx*vz - 2*qz*vx],
+            [2*qw*vy + 2*qx*vz - 2*qz*vx, 2*qw*vz - 2*qx*vy + 2*qy*vx, 2*qx*vx + 2*qy*vy + 2*qz*vz, 2*qy*vz - 2*qw*vx - 2*qz*vy],
+            [2*qw*vz - 2*qx*vy + 2*qy*vx, 2*qz*vx - 2*qx*vz - 2*qw*vy, 2*qw*vx - 2*qy*vz + 2*qz*vy, 2*qx*vx + 2*qy*vy + 2*qz*vz],
+        ])

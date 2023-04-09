@@ -60,3 +60,4 @@ Upcoming (2023-04-02)
 ------------------
 - Started using clang-tidy. The docker image installs ament-clang-tidy if the image is built with the `-d` option.
 - The estimated robot pose is displayed in RViz.
+- The state estimator works correctly and does not diverge. The filter gains are not set. The sensor noises are zero.

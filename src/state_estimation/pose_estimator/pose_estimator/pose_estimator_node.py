@@ -1,8 +1,4 @@
-from math import asin, atan2
-import threading
-
 import numpy as np
-import quaternion
 
 import rclpy
 from rclpy.node import Node
@@ -23,11 +19,8 @@ from .kalman_filter import KalmanFilter
 # ============================================================================ #
 
 class PoseEstimatorNode(Node):
-    """
-    
-    """
 
-    def __init__(self, robot_name):
+    def __init__(self):
         super().__init__("pose_estimator_node")
         
         # ============================ Subscriber ============================ #
@@ -37,28 +30,24 @@ class PoseEstimatorNode(Node):
             "/joint_states",
             self.joint_states_callback,
             1)
-        self.joint_states_subscription   # prevent unused variable warning
 
         self.link_states_subscription = self.create_subscription(
             LinkStates,
             "/gazebo/link_states",
             self.link_states_callback,
             1)
-        self.link_states_subscription   # prevent unused variable warning
 
         self.imu_subscription = self.create_subscription(
             Imu,
             "/imu_sensor_broadcaster/imu",
             self.imu_callback,
             1)
-        self.imu_subscription           # prevent unused variable warning
         
         self.gen_pose_subscription = self.create_subscription(
             GeneralizedPose,
             "/robot/desired_generalized_pose",
             self.gen_pose_callback,
             1)
-        self.gen_pose_subscription      # prevent unused variable warning
         
         
         # ========================== Node Parameters ========================= #
@@ -77,7 +66,9 @@ class PoseEstimatorNode(Node):
         
         # ================= Variables Saved By The Subscriber ================ #
 
+        # Base position and quaternion orientation (q_nb) in inertial frame: [px, py, pz, qw, qx, qy, qz].
         self.q_b = np.zeros(7)
+        # Base linear and angular velocity in inertial frame: [vx, vy, vz, omega_x, omega_y, omega_z]
         self.v_b = np.zeros(6)
         
         self.q_j = np.zeros(12)             # joints position
@@ -91,7 +82,7 @@ class PoseEstimatorNode(Node):
         # names of the feet in contact with the ground
         self.contact_feet_names = ['LF', 'RF', 'LH', 'RH']
         
-        self.time = 0                       # time of last message from the imu
+        self.nanosec = 0                       # time of last message from the imu
         
         
         # ============================= Publisher ============================ #
@@ -144,14 +135,14 @@ class PoseEstimatorNode(Node):
         self.v_b = np.array([lin.x, lin.y, lin.z, ang.x, ang.y, ang.z])
 
 
-    def imu_callback(self, msg):
+    def imu_callback(self, msg: Imu):
         acc = msg.linear_acceleration
         ang_vel = msg.angular_velocity
 
         self.a_b = np.array([acc.x, acc.y, acc.z])
         self.w_b = np.array([ang_vel.x, ang_vel.y, ang_vel.z])
         
-        self.time = msg.header.stamp.nanosec / 10**9 + msg.header.stamp.sec
+        self.nanosec = msg.header.stamp.nanosec / 10**9 # + msg.header.stamp.sec
         
         
     def gen_pose_callback(self, msg):
@@ -210,24 +201,18 @@ class PoseEstimatorNode(Node):
         
         
     def timer_callback(self):
-        self.filter.predict(self.w_b, self.a_b, self.time)
-
+        self.filter.predict(self.w_b, self.a_b, self.nanosec)
+        
         self.filter.fuse_odo(self.q_j, self.v_j, self.contact_feet_names.copy())
         
-        omega = self.w_b - self.filter._state[4:7]
+        omega = self.w_b - self.filter.gyro_bias
         
-        self.publish_pose_twist(self.filter._state[10:13], self.filter._state[0:4], self.filter._state[13:16], omega)
+        self.publish_pose_twist(self.filter.position, self.filter.orientation_as_float_array, self.filter.velocity, omega)
         
-        self.broadcast_transform(self.filter._state[10:13], self.filter._state[0:4])
+        self.broadcast_transform(self.filter.position, self.filter.orientation_as_float_array)
         
         self.joint_states_msg.position = self.q_j.tolist()
         self._joint_states_publisher.publish(self.joint_states_msg)
-                
-        # Get the yaw, pitch, and roll angles from the orientation quaternion and print them.
-        # q = quaternion.from_float_array(filter._state[0:4])
-        # yaw = atan2(2.0*(q.y*q.z + q.w*q.x), q.w*q.w - q.x*q.x - q.y*q.y + q.z*q.z)
-        # pitch = asin(-2.0*(q.x*q.z - q.w*q.y))
-        # roll = atan2(2.0*(q.x*q.y + q.w*q.z), q.w*q.w + q.x*q.x - q.y*q.y - q.z*q.z)
         
         
         
@@ -240,7 +225,6 @@ class blockingNode(Node):
             "/clock",
             self.clock_callback,
             1)        
-        self.clock_subscription   # prevent unused variable warning
                 
     def clock_callback(self, msg):
         if (msg.clock.nanosec == 0):
@@ -255,12 +239,11 @@ class blockingNode(Node):
 def main(args=None):
     rclpy.init(args=args)
         
-    node = PoseEstimatorNode("anymal_c")
+    node = PoseEstimatorNode()
         
     node.filter.decimation_factor = 5
-    node.filter._state[12] = 0.6
-    # node.filter._state[0:4] = np.array([0, -0.707, 0.707, 0])
-    node.filter._flag_fuse_odo_pos = True
+    node.filter.position = np.array([0., 0., 0.6])
+    node.filter.flag_fuse_odo_pos = True
     node.filter.update_private_properties()
         
     
