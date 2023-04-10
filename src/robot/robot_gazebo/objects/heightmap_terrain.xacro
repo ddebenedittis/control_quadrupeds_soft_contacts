@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="ground_plane" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:arg name="terrain" default="rigid"/>
+    <xacro:property name="terrain" default="$(arg terrain)"/>
+
+    <xacro:property name="scale_x" default="50"/>
+    <xacro:property name="scale_y" default="50"/>
+    <xacro:property name="scale_z" default="10"/>
+
+    <xacro:property name="roll"  default="0"/>
+    <xacro:property name="pitch" default="0"/>
+    <xacro:property name="yaw"   default="0"/>
+
+    <xacro:property name="x" default="0"/>
+    <xacro:property name="y" default="0"/>
+    <xacro:property name="z" default="0"/>
+
+    <gazebo>
+        <static>true</static>
+    </gazebo>
+
+    <link name="ground_plane_link">
+        <visual>
+            <origin rpy="${roll} ${pitch} ${yaw}" xyz="${x} ${y} ${z}"/>
+            <geometry>
+                <mesh filename="file://$(find robot_gazebo)/models/heightmaps/heightmap_visual.dae" scale="${scale_x} ${scale_y} ${scale_z}"/>
+            </geometry>
+        </visual>
+
+        <collision>
+            <origin rpy="${roll} ${pitch} ${yaw}" xyz="${x} ${y} ${z}"/>
+            <geometry>
+                <mesh filename="file://$(find robot_gazebo)/models/heightmaps/heightmap_collision.dae" scale="${scale_x} ${scale_y} ${scale_z}"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="ground_plane_link_to_ground_plane_link_inertia" type="fixed">
+        <parent link="ground_plane_link"/>
+        <child link="ground_plane_link_inertia"/>
+    </joint>
+    <link name="ground_plane_link_inertia">
+        <inertial>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <mass value="1"/>
+            <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+        </inertial>
+    </link>
+
+    <gazebo reference="ground_plane_link">
+        <material>Gazebo/Grey</material>
+        <kp>1e6</kp>
+        <kd>1e2</kd>
+    </gazebo>
+</robot>

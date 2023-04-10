@@ -28,6 +28,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ==============================================================================
 
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
+find_package(rclpy REQUIRED)
 
 
 
@@ -36,8 +38,25 @@ find_package(ament_cmake REQUIRED)
 # ==============================================================================
 
 install(
-    DIRECTORY config launch objects worlds
+    DIRECTORY config launch models objects worlds
     DESTINATION share/${PROJECT_NAME}
+)
+
+ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/env-hooks/robot_gazebo.dsv.in")
+
+
+
+# ==============================================================================
+#                                    PYTHON                                     
+# ==============================================================================
+
+# Python modules
+# ament_python_install_package(${PROJECT_NAME})
+
+# Python executables
+install(PROGRAMS
+  scripts/generate_heightmap_mesh.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 

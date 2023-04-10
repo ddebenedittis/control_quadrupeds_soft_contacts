@@ -219,7 +219,7 @@ class Planner(Node):
         # Instantiate the fading filter class (used to filter the base acceleration)
         self.filter = FadingFilter()
         self.filter._order = 2
-        self.filter._beta = 0.5
+        self.filter._beta = 0.9
         
         self.zero_time = 1.     # time before the planner starts (no message is published).
         self.init_time = 0.5    # time during which the robot goes to the initial position, before the real planning starts.

@@ -1,25 +1,28 @@
 import os
+from os import environ
+from os import pathsep
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess 
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, RegisterEventHandler
 from launch.conditions import IfCondition
+from launch.event_handlers import OnProcessExit
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node, SetParameter
 from launch_ros.descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
+from scripts import GazeboRosPaths
+
 
 
 def generate_launch_description():
     
-    global robot_name, package_share_path, robot_file_path, gazebo_config_file_path, rviz_config_file_path, terrain_file_path, multi_terrains_file_path, world_file_path
+    global robot_name, robot_file_path, gazebo_config_file_path, rviz_config_file_path, terrain_file_path, heightmap_terrain_file_path, multi_terrains_file_path, world_file_path
     
     robot_name = LaunchConfiguration('robot_name', default='anymal_c')
 
-    package_share_path = FindPackageShare(LaunchConfiguration('package_name', default="anymal_c_simple_description"))
-
     robot_file_path = PathJoinSubstitution([
-        package_share_path,
+        FindPackageShare(LaunchConfiguration('package_name', default="anymal_c_simple_description")),
         LaunchConfiguration('robot_file_path', default=os.path.join('urdf', 'anymal.xacro'))
     ])
     
@@ -39,6 +42,11 @@ def generate_launch_description():
     terrain_file_path = PathJoinSubstitution([
         FindPackageShare('robot_gazebo'),
         'objects/terrain.xacro'
+    ])
+    
+    heightmap_terrain_file_path = PathJoinSubstitution([
+        FindPackageShare('robot_gazebo'),
+        'objects/heightmap_terrain.xacro'
     ])
     
     multi_terrains_file_path = PathJoinSubstitution([
@@ -85,6 +93,8 @@ def generate_launch_description():
         
         DeclareLaunchArgument('use_rviz', default_value='False'),
     ])
+    
+    launch_generate_dae_files(ld)
         
     launch_gazebo(ld)
         
@@ -101,13 +111,45 @@ def generate_launch_description():
     return ld
 
 
+# ========================= Launch_generate_dae_files ======================== #
+
+def launch_generate_dae_files(ld):
+    
+    global heightmap_mesh_generator
+    
+    heightmap_mesh_generator = Node(
+        condition=IfCondition(
+            PythonExpression([
+                '"', terrain, '"', ' == "heightmap"'
+            ])
+        ),
+        package = 'robot_gazebo',
+        executable = 'generate_heightmap_mesh.py',
+        output = 'screen',
+    )
+    
+    ld.add_action(heightmap_mesh_generator)
+
+
 # =============================== Launch_gazebo ============================== #
 
 def launch_gazebo(ld):
+    model, plugin, media = GazeboRosPaths.get_paths()
+
+    if 'GAZEBO_MODEL_PATH' in environ:
+        model += pathsep+environ['GAZEBO_MODEL_PATH']
+    if 'GAZEBO_PLUGIN_PATH' in environ:
+        plugin += pathsep+environ['GAZEBO_PLUGIN_PATH']
+    if 'GAZEBO_RESOURCE_PATH' in environ:
+        media += pathsep+environ['GAZEBO_RESOURCE_PATH']
+    
     gazebo_server = ExecuteProcess(
         cmd=[['ros2 launch gazebo_ros gzserver.launch.py verbose:=true pause:=true world:=', world_file_path, ' params_file:=', gazebo_config_file_path]],
         additional_env={'__NV_PRIME_RENDER_OFFLOAD': '1',
-                        '__GLX_VENDOR_LIBRARY_NAME': 'nvidia'},
+                        '__GLX_VENDOR_LIBRARY_NAME': 'nvidia',
+                        'GAZEBO_MODEL_PATH': model,
+                        'GAZEBO_PLUGIN_PATH': plugin,
+                        'GAZEBO_RESOURCE_PATH': media},
         shell=True,
         output = 'screen',
     )
@@ -157,7 +199,7 @@ def spawn_things(ld):
     terrain_rsp = Node(
         condition=IfCondition(
             PythonExpression([
-                '"', terrain, '"', ' != "multi_terrains"'
+                '"', terrain, '"', ' != "multi_terrains" and ', '"', terrain, '"', ' != "heightmap"'
             ])
         ),
         package = 'robot_state_publisher',
@@ -168,6 +210,29 @@ def spawn_things(ld):
             {'robot_description': ParameterValue(Command(['xacro', ' ', terrain_file_path, ' ', 'terrain:=', terrain]), value_type=str)}
         ],
         output = 'screen',
+    )
+    
+    heightmap_terrain_rsp = Node(
+        condition=IfCondition(
+            PythonExpression([
+                '"', terrain, '"', ' == "heightmap"'
+            ])
+        ),
+        package = 'robot_state_publisher',
+        executable = 'robot_state_publisher',
+        namespace = 'ground_plane',
+        parameters = [
+            {'use_sim_time': use_sim_time},
+            {'robot_description': ParameterValue(Command(['xacro', ' ', heightmap_terrain_file_path, ' ', 'terrain:=', terrain]), value_type=str)}
+        ],
+        output = 'screen',
+    )
+    
+    heightmap_terrain_rsp_ev_hdl = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=heightmap_mesh_generator,
+            on_exit=[heightmap_terrain_rsp],
+        )
     )
     
     multi_terrain_rsp = Node(
@@ -211,6 +276,7 @@ def spawn_things(ld):
     ld.add_action(robot_rsp_state_estimator)
     
     ld.add_action(terrain_rsp)
+    ld.add_action(heightmap_terrain_rsp_ev_hdl)
     ld.add_action(multi_terrain_rsp)
     ld.add_action(spawn_terrain)
     

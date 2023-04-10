@@ -19,12 +19,12 @@ class Interpolation:
         self.Ts = 0.2
         
         # Phase delay before which the foot starts moving in the horizontal direction.
-        self.horizontal_delay = 0.0
+        self.horizontal_delay = 0.1
         
         self.step_height = 0.1
         
         # Positive when the foot penetrates the terrain.
-        self.foot_penetration = - 0.02
+        self.foot_penetration = - 0.025
         
         
     # ============================== Interpolate ============================= #
@@ -109,13 +109,13 @@ class Interpolation:
         
         #! The robot walks faster when the velocity and the acceleration are not scaled.
         # The velocity and acceleration must be scaled to take into account the time in which the swing is performed (since phi is a normalized quantity).
-        # v_z = v_z / (self.Ts / 2)
-        # a_z = a_z / (self.Ts / 2)
+        v_z = v_z / (self.Ts / 2)
+        a_z = a_z / (self.Ts / 2)
         
         p_tan, v_tan, a_tan = self._spline(0, d, self._compute_phi_m(phi))
         #! The robot walks faster when the velocity and the acceleration are not scaled.
-        # v_tan = v_tan / self.Ts
-        # a_tan = a_tan / self.Ts
+        v_tan = v_tan / self.Ts
+        a_tan = a_tan / self.Ts
         
         p_t = p_i + np.array([p_tan * np.cos(theta), p_tan * np.sin(theta), p_z])
         v_t = np.array([v_tan * np.cos(theta), v_tan * np.sin(theta), v_z])
@@ -148,13 +148,13 @@ class Interpolation:
         
         #! The robot walks faster when the velocity and the acceleration are not scaled.
         # The velocity and acceleration must be scaled to take into account the time in which the swing is performed (since phi is a normalized quantity).
-        # v_z = v_z / (self.Ts / 2)
-        # a_z = a_z / (self.Ts / 2)
+        v_z = v_z / (self.Ts / 2)
+        a_z = a_z / (self.Ts / 2)
         
         p_xy, v_xy, a_xy = self._spline(p_i[0:2], p_f[0:2], self._compute_phi_m(phi))
         #! The robot walks faster when the velocity and the acceleration are not scaled.
-        # v_xy = v_xy / self.Ts
-        # a_xy = a_xy / self.Ts
+        v_xy = v_xy / self.Ts
+        a_xy = a_xy / self.Ts
         
         p_t = np.concatenate((p_xy, np.array([p_z])))
         v_t = np.concatenate((v_xy, np.array([v_z])))

@@ -19,11 +19,6 @@
     </gazebo>
 
     <link name="ground_plane_link">
-        <inertial>
-            <origin rpy="0 0 0" xyz="0 0 0"/>
-            <mass value="1"/>
-            <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
-        </inertial>
         <visual>
             <origin rpy="${roll} ${pitch} ${yaw}" xyz="${x} ${y} ${z}"/>
             <geometry>
@@ -55,6 +50,17 @@
                 <box size="${side} ${side} 2"/>
             </geometry>
         </collision>
+    </link>
+    <joint name="ground_plane_link_to_ground_plane_link_inertia" type="fixed">
+        <parent link="ground_plane_link"/>
+        <child link="ground_plane_link_inertia"/>
+    </joint>
+    <link name="ground_plane_link_inertia">
+        <inertial>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <mass value="1"/>
+            <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+        </inertial>
     </link>
 
     <xacro:if value="${'rigid' == terrain}">

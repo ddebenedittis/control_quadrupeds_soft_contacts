@@ -24,9 +24,9 @@ Clone the repo:
 ```shell
 git clone --recursive https://github.com/ddebenedittis/control_quadrupeds_soft_contacts
 ```
-Build the docker image (-d to install additional packages for development) (-l to install all the dependencies to use plot; the resulting image is bigger) (-r option to rebuild the underlying images):
+Build the docker image (-d to install additional packages for development) (-h for printing the help) (-p to install all the dependencies to use plot) (-r to rebuild the underlying images) (-t for installing bly to generate the terrain meshes from some heightmaps) (-a to install all the optional dependencies):
 ```shell
-./build.bash [d] [-l] [-r]
+./build.bash [-a] [-d] [-h] [-p] [-r] [-t]
 ```
 Run the container:
 ```shell
@@ -63,21 +63,21 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_E
 
 - ANYmal C simulation:
 ```shell
-ros2 launch robot_gazebo anymal_c.launch.py [terrain:={rigid,soft,very_soft,multi_terrains}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo anymal_c.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
 ![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/anymal_c-trot-grass.gif)
 
 - SOLO12 static walk simulation:
 ```shell
-ros2 launch robot_gazebo solo12.launch.py [terrain:={rigid,soft,very_soft,multi_terrains}] [gait:={teleop_base,static_walk}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo solo12.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
 ![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/solo12-walk-rigid.gif)
 
 - ANYmal C with SoftFoot-Qs static walk simulation:
 ```shell
-ros2 launch robot_gazebo anymal_c_softfoot_q.launch.py [terrain:={rigid,soft,very_soft,multi_terrains}] [gait:={teleop_base,static_walk}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo anymal_c_softfoot_q.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
 Optional arguments:
@@ -118,7 +118,6 @@ Create a new `effort_controller.yaml` file, similar to the ones already present 
 ## Known Bugs
 
 - Sometimes, the SOLO12 simulation does not start correctly.
-- The pose_estimator does not estimate the pose correctly.
 
 
 ## Author

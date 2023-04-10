@@ -11,6 +11,7 @@
     <author email="davide.debenedittis@gmail.com">Davide De Benedittis</author>
 
     <buildtool_depend>ament_cmake</buildtool_depend>
+    <buildtool_depend>ament_cmake_python</buildtool_depend>
 
     <exec_depend>gazebo_ros</exec_depend>
     <exec_depend>gazebo-ros-pkgs</exec_depend>
@@ -22,10 +23,14 @@
     <exec_depend>anymal_c_simple_description</exec_depend>
     <exec_depend>solo_description</exec_depend>
 
+    <depend>rclpy</depend>
+
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>ament_lint_common</test_depend>
 
     <export>
         <build_type>ament_cmake</build_type>
+
+        <gazebo_ros gazebo_model_path="${prefix}/models"/>
     </export>
 </package>

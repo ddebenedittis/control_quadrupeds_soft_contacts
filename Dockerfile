@@ -39,16 +39,15 @@ RUN if [ "${DEVELOPMENT}" = "1" ] ; then \
         ros-humble-ament-clang-tidy ; \
     fi
 
-# If $LATEX is 1, install the packages required to use plot.py in the container.
-ARG LATEX=0
-RUN if [ "${LATEX}" = "1" ] ; then \
+# If $PLOT is 1, install the packages required to use plot.py in the container.
+ARG PLOT=0
+RUN if [ "${PLOT}" = "1" ] ; then \
         apt-get update && apt-get install --no-install-recommends -qqy \
         dvipng \
         texlive-latex-extra \
         texlive-fonts-recommended \
         cm-super ; \
     fi
-
 
 # Install Pinocchio
 RUN echo "deb [arch=amd64] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -cs) robotpkg" | sudo tee /etc/apt/sources.list.d/robotpkg.list
@@ -71,6 +70,14 @@ RUN pip3 install \
     numpy-quaternion \
     quadprog \
     --upgrade
+
+# If #TERRAIN_GEN is 1, install bpy for generating the terrain meshes with Blender.
+ARG TERRAIN_GEN=0
+RUN if [ "${TERRAIN_GEN}" = "1" ] ; then \
+        pip3 install \
+        bpy \
+        --upgrade ; \
+    fi
 
 # Create the same user as the host itself. (By default Docker creates the container as root, which is not recommended.)
 ARG UID=1000

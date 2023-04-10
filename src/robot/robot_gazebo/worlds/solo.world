@@ -35,7 +35,7 @@
         <physics type='ode'>
             <ode>
                 <solver>
-                    <use_dynamic_moi_scaling>0</use_dynamic_moi_scaling>
+                    <!-- <use_dynamic_moi_scaling>0</use_dynamic_moi_scaling> -->
                     <min_step_size>0.0001</min_step_size>
                     <type>quick</type>
                     <iters>50</iters>
