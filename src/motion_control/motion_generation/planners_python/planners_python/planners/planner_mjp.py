@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 from scipy.linalg import block_diag
@@ -14,15 +14,17 @@ from .interpolation import Interpolation, InterpolationMethod
 
 @dataclass
 class DesiredGeneralizedPose():
-    base_acc: np.ndarray
-    base_vel: np.ndarray
-    base_pos: np.ndarray
-    base_angvel: np.ndarray
-    base_quat: np.ndarray
-    feet_acc: np.ndarray
-    feet_vel: np.ndarray
-    feet_pos: np.ndarray
-    contact_feet_names: list[str]
+    base_acc: np.ndarray = np.zeros(3)
+    base_vel: np.ndarray = np.zeros(3)
+    base_pos: np.ndarray = np.zeros(3)
+    
+    base_angvel: np.ndarray = np.zeros(3)
+    base_quat: np.ndarray = np.array([1., 0., 0., 0.])
+    
+    feet_acc: np.ndarray = np.empty([0])
+    feet_vel: np.ndarray = np.empty([0])
+    feet_pos: np.ndarray = np.empty([0])
+    contact_feet_names: list[str] = field(default_factory=list) 
 
 
 
@@ -87,6 +89,11 @@ class MotionPlanner:
 
         # Desired center of mass height
         self.zcom = 0.5
+        
+        
+        # The planner stops moving the feet when the reference velocity (linear and angular) has been equal to zero for a number of steps equal to max_fixed_steps.
+        self.max_fixed_steps = 6
+        self.fixed_steps = 6
         
     
     # ================================== Ts ================================== #
@@ -351,15 +358,12 @@ class MotionPlanner:
         r_b_ddot_des = g / self.zcom * np.array([Xcom_0[0] - px_0, Ycom_0[0] - py_0, 0])
 
         return r_b_ddot_des, r_b_dot_des, r_b_des
-
-
+    
+    
     # ================================== Mpc ================================= #
-
-    def mpc(self, p_com, v_com, a_com, vel_cmd, yaw_rate_cmd):
-        """
-        Main method called to perform a step of the planner.
-        """
-
+    
+    def _mpc(self, p_com, v_com, a_com, vel_cmd, yaw_rate_cmd) -> DesiredGeneralizedPose:
+        
         # Initial COM position.
         Xcom_0 = np.array([p_com[0], v_com[0]])
         Ycom_0 = np.array([p_com[1], v_com[1]])
@@ -425,6 +429,84 @@ class MotionPlanner:
             feet_pos=r_s_des,
             contact_feet_names=contactFeet
         )
+        
+        return des_gen_pose
+    
+    
+    # ============================== _check_stop ============================= #
+    
+    def _check_stop(self, p_com, vel_cmd, yaw_rate_cmd) -> tuple[bool, DesiredGeneralizedPose]:
+        """
+        Check wheter the robot should stop. If so, keep the desired generalized pose fixed.
+
+        Args:
+            p_com (np.ndarray): center of mass position
+            vel_cmd (np.ndarray): commanded linear velocity
+            yaw_rate_cmd (float): commanded yaw rate
+
+        Returns:
+            tuple[bool, DesiredGeneralizedPose]: flag that is true when the planner has been stopped and the desired generalized pose
+        """
+        
+        # Stop moving the feet if the commanded velocity has been equal to zero for a number of steps equal to max_fixed_steps.
+        
+        if self.phi == 0 and self.fixed_steps >= self.max_fixed_steps \
+            and np.linalg.norm(vel_cmd) < 0.01 and yaw_rate_cmd < 0.01:
+                
+            # Stop the robot movement.
+                
+            r_b_des = np.array([p_com[0], p_com[1], self.zcom])
+            q_des = np.array([0.0, 0.0, np.sin(self.dtheta/2), np.cos(self.dtheta/2)])
+            
+            des_gen_pose = DesiredGeneralizedPose(
+                base_acc=np.zeros(3),
+                base_vel=np.zeros(3),
+                base_pos=r_b_des,
+                base_angvel=np.zeros(3),
+                base_quat=q_des,
+                feet_acc=np.zeros(0),
+                feet_vel=np.zeros(0),
+                feet_pos=np.zeros(0),
+                contact_feet_names=['LF', 'RF', 'LH', 'RH']
+            )
+            
+            return True, des_gen_pose
+        elif self.phi == 0 and self.fixed_steps < self.max_fixed_steps \
+            and np.linalg.norm(vel_cmd) < 0.01 and yaw_rate_cmd < 0.01:
+            
+            # Do not stop the robot, but increase the number of steps during which the commanded twist was zero.
+            self.fixed_steps += 1
+        elif np.linalg.norm(vel_cmd) > 0.01 or yaw_rate_cmd > 0.01:
+            # The commanded twist is not null. Reset the fixed_steps variable
+            self.fixed_steps = 0
+            
+        return False, DesiredGeneralizedPose()
+
+
+    # ================================ Update ================================ #
+
+    def update(self, p_com, v_com, a_com, vel_cmd, yaw_rate_cmd) -> DesiredGeneralizedPose:
+        """
+        Main method called to perform an update of the planner.
+
+        Args:
+            p_com (np.ndarray): position of the center of mass
+            v_com (np.ndarray): velocity of the center of mass
+            a_com (np.ndarray): acceleration of the center of mass
+            vel_cmd (np.ndarray): linear velocity command
+            yaw_rate_cmd (float): yaw rate command
+
+        Returns:
+            DesiredGeneralizedPose: desired generalized pose computed by the trotting planner
+        """
+        
+        # Stop moving the feet if the commanded velocity has been equal to zero for a number of steps equal to max_fixed_steps.
+        stop_flag, des_gen_pose = self._check_stop(p_com, vel_cmd, yaw_rate_cmd)
+        if stop_flag:
+            return des_gen_pose
+        
+        # The robot should not stop, compute the mpc for trotting.
+        des_gen_pose = self._mpc(p_com, v_com, a_com, vel_cmd, yaw_rate_cmd)
 
         return des_gen_pose
     
@@ -433,14 +515,16 @@ class MotionPlanner:
     
     def trajectory_sample_points(self):
         """
-        _summary_
+        Return the list containing the trajectories of the swing feet.
         """
         
         all_feet = ['LF', 'RF', 'LH', 'RH']
         
+        # The swing trajectory is sampled in n_points number of points.
         n_points = 10
         
-        r_s_des = np.zeros((n_points, 2*3))
+        # It has n_trajectories * 3 columns.
+        r_s_des = [np.zeros((n_points, 3)), np.zeros((n_points, 3))]
         
         feet_ids = []
         
@@ -462,6 +546,6 @@ class MotionPlanner:
                 r_s_des_temp = self.interp.interpolate(p0, pf, phi)[0]
                                 
                 jj = feet_ids.index(j)
-                r_s_des[i, 3*jj:3*jj+3] = r_s_des_temp
+                r_s_des[jj][i, :] = r_s_des_temp
 
         return r_s_des

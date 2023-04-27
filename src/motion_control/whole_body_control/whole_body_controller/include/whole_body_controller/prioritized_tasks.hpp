@@ -166,7 +166,7 @@ private:
     std::vector<int> tasks_vector;
 
     /// @brief
-    ContactConstraintType contact_constraint_type = ContactConstraintType::soft_kv;
+    ContactConstraintType contact_constraint_type = ContactConstraintType::rigid;
 };
 
 } // namespace wbc

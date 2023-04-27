@@ -10,11 +10,11 @@ class PlaneEstimator():
     
     def __init__(self) -> None:
         # Save the position of each foot the last time they were in contact with the terrain. These positions are used to compute the plane coefficients.
-        self.last_contact_feet_position = np.array([
-             1.,  1., 0.,
-             1., -1., 0.,
-            -1.,  1., 0.,
-            -1., -1., 0.
+        self.contact_feet_positions = np.array([
+             1.,  1., 0.,   # LF
+             1., -1., 0.,   # RF
+            -1.,  1., 0.,   # LH
+            -1., -1., 0.    # RH
         ])
         
     
@@ -26,18 +26,18 @@ class PlaneEstimator():
         #     [ ...     ]
         #     [ xn yn 1 ]
         
+        A = np.block([
+            self.contact_feet_positions.reshape((4, 3))[:, 0:2], np.ones((4,1))
+        ])
+        
         #     [ z0  ]
         # b = [ z1  ]
         #     [ ... ]
         #     [ zn  ]
+
+        b = self.contact_feet_positions.reshape((4, 3))[:, 2]
         
-        A = np.block([
-            self.last_contact_feet_position.reshape((4, 3))[:, 0:2], np.ones((4,1))
-        ])
-        
-        b = self.last_contact_feet_position.reshape((4, 3))[:, 2]
-        
-        # The plane is z = a x + b y + c, where self.plane_coeffs = {a, b, c}.
+        # The plane equation is z = a x + b y + c, where self.plane_coeffs = {a, b, c}.
         plane_coeffs = np.linalg.lstsq(A, b, rcond=None)[0]
         
         return plane_coeffs

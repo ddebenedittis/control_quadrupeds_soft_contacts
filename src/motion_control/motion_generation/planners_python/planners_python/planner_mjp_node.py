@@ -21,24 +21,25 @@ import numpy as np
 
 # ========================= Get_quaternion_from_euler ======================== #
 
-def get_quaternion_from_euler(roll, pitch, yaw):
-  """
-  Convert an Euler angle to a quaternion.
-   
-  Input
-    :param roll: The roll (rotation around x-axis) angle in radians.
-    :param pitch: The pitch (rotation around y-axis) angle in radians.
-    :param yaw: The yaw (rotation around z-axis) angle in radians.
- 
-  Output
-    :return qx, qy, qz, qw: The orientation in quaternion [x,y,z,w] format
-  """
-  qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
-  qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
-  qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
-  qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
- 
-  return np.array([qx, qy, qz, qw])
+def get_quaternion_from_euler(roll: float, pitch: float, yaw: float):
+    """
+    Convert the Euler angles to a unit quaternion.
+
+    Args:
+        roll (float): The roll (rotation around x-axis) angle in radians.
+        pitch (float): The pitch (rotation around y-axis) angle in radians.
+        yaw (float): The yaw (rotation around z-axis) angle in radians.
+
+    Returns:
+        ndarray: the orientation in quaternion [x,y,z,w] format
+    """
+    
+    qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+    qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
+    qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
+    qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+    
+    return np.array([qx, qy, qz, qw])
 
 
 
@@ -68,11 +69,18 @@ class MinimalSubscriber(Node):
             self.vel_cmd_callback,
             1)
         
-        self.terrain_subscription = self.create_subscription(
+        self.terrain_plane_subscription = self.create_subscription(
             Float64MultiArray,
-            "/state_estimator/terrain",
+            "/state_estimator/terrain_plane",
             self.terrain_callback,
             1)
+        
+        self.terrain_penetration_subscription = self.create_subscription(
+            Float64MultiArray,
+            "state_estimator/terrain_penetration",
+            self.terrain_penetration_callback,
+            1)
+
 
         self.q_b = np.array([])     # base position
         self.v_b = np.array([])     # base velocity
@@ -84,15 +92,18 @@ class MinimalSubscriber(Node):
         
         # The plane is z = a x + b y + c, where self.plane_coeffs = {a, b, c}.
         self.plane_coeffs = np.zeros(3)
+        
+        # The penetrations of the four feet into the ground (LF -> RF -> LH -> RH). This value is used to increase the step height.
+        self.terrain_penetrations = np.zeros(4)
 
 
     # Save the base pose and twist
-    def link_states_callback(self, msg):
+    def link_states_callback(self, msg: LinkStates):
         # The index of the base must be found by searching which link contains "base" in its name.
         base_id = -1
         
-        for i in range(len(msg.name)):
-            if "base" in msg.name[i]:
+        for i, name in enumerate(msg.name):
+            if "base" in name:
                 base_id = i
                 break
                     
@@ -112,20 +123,24 @@ class MinimalSubscriber(Node):
 
 
     # Save the base acceleration
-    def imu_callback(self, msg):
+    def imu_callback(self, msg: Imu):
         acc = msg.linear_acceleration
 
         self.a_b = np.array([acc.x, acc.y, acc.z])
         
         
-    def vel_cmd_callback(self, msg):
+    def vel_cmd_callback(self, msg: SimpleVelocityCommand):
         self.velocity_forward = msg.velocity_forward
         self.velocity_lateral = msg.velocity_lateral
         self.yaw_rate = msg.yaw_rate
         
         
-    def terrain_callback(self, msg):
+    def terrain_callback(self, msg: Float64MultiArray):
         self.plane_coeffs = msg.data
+        
+        
+    def terrain_penetration_callback(self, msg: Float64MultiArray):
+        self.terrain_penetrations = msg.data
 
 
 
@@ -177,22 +192,25 @@ class MinimalPublisher(Node):
         self.gen_pose_publisher_.publish(msg)
         
     
-    def publish_feet_trajectory(self, r_s_des):
+    def publish_feet_trajectory(self, r_s_des: np.ndarray):
         msg = Paths()
         
         msg.header.frame_id = "ground_plane_link"
         
-        n_points = np.shape(r_s_des)[0]
-        n_paths = np.shape(r_s_des)[1] // 3
+        n_paths = len(r_s_des)
+        
+        # print(r_s_des)
                 
         for i in range(n_paths):
             msg.paths.append(Path())
             
+            n_points = np.shape(r_s_des[i])[0]
+            
             for j in range(n_points):
                 msg.paths[i].poses.append(PoseStamped())
-                msg.paths[i].poses[j].pose.position.x = r_s_des[j,3*i+0]
-                msg.paths[i].poses[j].pose.position.y = r_s_des[j,3*i+1]
-                msg.paths[i].poses[j].pose.position.z = r_s_des[j,3*i+2]
+                msg.paths[i].poses[j].pose.position.x = r_s_des[i][j,0]
+                msg.paths[i].poses[j].pose.position.y = r_s_des[i][j,1]
+                msg.paths[i].poses[j].pose.position.z = r_s_des[i][j,2]
         
         self.feet_trajectory_publisher_.publish(msg)
         
@@ -215,6 +233,9 @@ class Planner(Node):
         # Instantiate the motion planner
         self.planner = MotionPlanner()
         self.planner.dt = 1. / 200
+        
+        self.default_step_height = 0.1
+        self.planner.interp.step_height = self.default_step_height
         
         # Instantiate the fading filter class (used to filter the base acceleration)
         self.filter = FadingFilter()
@@ -278,6 +299,9 @@ class Planner(Node):
                 
             self.rate.sleep()
         else:
+            # Update the step height to take into account the terrain penetration.
+            self.planner.interp.step_height = self.default_step_height + 0.5 * np.mean(self.minimal_subscriber.terrain_penetrations)
+            
             # Update the internal timer
             self.time += self.planner.dt
 
@@ -315,14 +339,24 @@ class Planner(Node):
             # Perform a single iteration of the model predictive control
             if self.time > self.init_time + self.zero_time:
                 # Planner output after the initialization phase has finished
-                des_gen_pose = self.planner.mpc(p_b, v_b, a_b, vel_cmd, yaw_rate_cmd)
+                des_gen_pose = self.planner.update(p_b, v_b, a_b, vel_cmd, yaw_rate_cmd)
+                
+                self.correct_with_terrain(des_gen_pose)
                 
                 self.minimal_publisher.publish_feet_trajectory(self.planner.trajectory_sample_points())
             elif self.time > self.zero_time:
                 contactFeet = ['LF', 'RF', 'LH', 'RH']
+                
+                plane_coeffs = self.minimal_subscriber.plane_coeffs
+        
+                # Local terrain height.
+                delta_h = plane_coeffs[0] * 0 + plane_coeffs[1] * 0 + plane_coeffs[2]
 
                 # Base position quantities
-                r_b_des, r_b_dot_des, r_b_ddot_des = self.planner.interp._spline(np.array([self.p_b_0[0], self.p_b_0[1], self.p_b_0[2]]), np.array([self.p_b_0[0], self.p_b_0[1], self.planner.zcom]), (self.time - self.zero_time)/self.init_time)
+                r_b_des, r_b_dot_des, r_b_ddot_des = self.planner.interp._spline(
+                    np.array([self.p_b_0[0], self.p_b_0[1], self.p_b_0[2]]),
+                    np.array([self.p_b_0[0], self.p_b_0[1], self.planner.zcom + delta_h]),
+                    (self.time - self.zero_time)/self.init_time)
 
                 # Base angular quantities
                 omega_des = np.zeros(3)
@@ -348,9 +382,7 @@ class Planner(Node):
                 self.p_b_0[2] = self.minimal_subscriber.q_b[2]
                 
                 return
-            
-            
-            self.correct_with_terrain(des_gen_pose)
+
 
             # Publish the desired generalized pose message
             self.minimal_publisher.publish_desired_gen_pose(des_gen_pose)

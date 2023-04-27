@@ -12,8 +12,10 @@ namespace wbc {
 WholeBodyController::WholeBodyController(const std::string& robot_name, float dt)
 : prioritized_tasks(robot_name, dt),
   hierarchical_qp(prioritized_tasks.get_max_priority()),
-  f_c_opt(12),
-  d_des_opt(12)
+  x_opt(Eigen::VectorXd::Zero(prioritized_tasks.get_nv())),
+  tau_opt(Eigen::VectorXd::Zero(12)),
+  f_c_opt(Eigen::VectorXd::Zero(12)),
+  d_des_opt(Eigen::VectorXd::Zero(0))
 {}
 
 

@@ -397,7 +397,7 @@ def launch_estimator(ld):
         package='terrain_estimator',
         executable='terrain_estimator_node',
         parameters=[
-            #         {'use_sim_time': use_sim_time},
+            {'use_sim_time': use_sim_time},
         ],
         emulate_tty=True,
         output='screen',

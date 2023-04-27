@@ -20,6 +20,13 @@ public:
     ///@param gen_pose 
     void step(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const GeneralizedPose& gen_pose);
 
+    void reset(
+        const Eigen::VectorXd& q, const Eigen::VectorXd& v,
+        const std::vector<std::string>& contact_feet_names)
+    {
+        prioritized_tasks.reset(q, v, contact_feet_names);
+    }
+
 
     /* =============================== Getters ============================== */
 
@@ -141,8 +148,6 @@ private:
     Eigen::VectorXd f_c_opt;    /// @brief Optimal contact forces
 
     Eigen::VectorXd d_des_opt;  /// @brief Optimal desired feet deformations
-
-    ContactConstraintType contact_constraint_type = ContactConstraintType::rigid;
 };
 
 }
