@@ -116,9 +116,7 @@ Create a new `effort_controller.yaml` file, similar to the ones already present 
 
 
 ## Known Bugs
-
-- Sometimes, the SOLO12 simulation does not start correctly.
-
+- None
 
 ## Author
 
