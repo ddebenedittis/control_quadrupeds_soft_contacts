@@ -1,5 +1,7 @@
 #!/bin/bash
 
+mkdir -p build install log
+
 # ================================= Edit Here ================================ #
 
 # Change these values to use different versions of ROS or different base images. The rest of the script should be left unchanged.

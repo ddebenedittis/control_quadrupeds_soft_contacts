@@ -25,7 +25,7 @@ namespace hqp_controller {
 
 class HQPPublisher : public rclcpp::Node {
 public:
-    HQPPublisher(const std::vector<std::string> feet_names);
+    HQPPublisher(const std::vector<std::string>& feet_names);
 
     void publish_all(
         const Eigen::VectorXd& joints_accelerations, const Eigen::VectorXd& torques,
@@ -36,9 +36,9 @@ public:
         const Eigen::Vector3d& com_position);
 
 private:
-    inline void publish_float64_multi_array(
+    static inline void publish_float64_multi_array(
         const Eigen::VectorXd& vector,
-        rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher);
+        const rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher);
 
     inline void publish_wrenches_stamped(const Eigen::VectorXd& forces);
 

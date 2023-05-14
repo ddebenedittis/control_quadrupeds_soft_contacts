@@ -1,6 +1,5 @@
 import csv
 import os
-import shutil
 
 from cycler import cycler
 import matplotlib.pyplot as plt
@@ -387,6 +386,10 @@ class Plot:
             
             
     def megaplot(self):
+        """
+        Save all the plots.
+        """
+        
         feet_names = ["LF", "RF", "LH", "RH"]
         
         os.makedirs(self.foldername + '/' + self.format, exist_ok=True)
@@ -428,10 +431,13 @@ class Plot:
             
         
         
-        
 def main():
-    default_cycler = (cycler(color=['#0072BD', '#D95319', '#EDB120', '#7E2F8E']) + 
-                    cycler('linestyle', ['-', '--', '-', '--']))
+    # Plots style definition
+    
+    default_cycler = (
+        cycler(color=['#0072BD', '#D95319', '#EDB120', '#7E2F8E']) + 
+        cycler('linestyle', ['-', '--', '-', '--'])
+    )
 
     textsize = 12
     labelsize = 16

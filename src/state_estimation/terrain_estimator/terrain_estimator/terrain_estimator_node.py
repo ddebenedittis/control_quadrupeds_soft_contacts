@@ -58,7 +58,7 @@ class TerrainEstimator(Node):
         # Used to know which feet are in contact with the terrain.
         self.desired_generalized_pose_subscription = self.create_subscription(
             GeneralizedPose,
-            "robot/desired_generalized_pose",
+            "motion_planner/desired_generalized_pose",
             self.desired_generalized_pose_callback,
             1)
         

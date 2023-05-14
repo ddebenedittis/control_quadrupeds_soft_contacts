@@ -152,7 +152,7 @@ class MinimalPublisher(Node):
     def __init__(self):
         super().__init__("minimal_publisher")
 
-        self.gen_pose_publisher_ = self.create_publisher(GeneralizedPose, 'robot/desired_generalized_pose', 1)
+        self.gen_pose_publisher_ = self.create_publisher(GeneralizedPose, 'motion_planner/desired_generalized_pose', 1)
         
         self.feet_trajectory_publisher_ = self.create_publisher(Paths, 'rviz/feet_trajectory', 1)
 
@@ -233,6 +233,8 @@ class Planner(Node):
         # Instantiate the motion planner
         self.planner = MotionPlanner()
         self.planner.dt = 1. / 200
+        
+        self.planner.Ts = 0.2
         
         self.default_step_height = 0.1
         self.planner.interp.step_height = self.default_step_height

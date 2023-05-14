@@ -62,9 +62,9 @@ void WholeBodyController::step(const Eigen::VectorXd& q, const Eigen::VectorXd& 
 
     x_opt = hierarchical_qp.get_sol();
 
-    int nv = prioritized_tasks.get_nv();
-    int nF = prioritized_tasks.get_nF();
-    int nd = prioritized_tasks.get_nd();
+    const int nv = prioritized_tasks.get_nv();
+    const int nF = prioritized_tasks.get_nF();
+    const int nd = prioritized_tasks.get_nd();
 
     Eigen::VectorXd f_c_opt_var = x_opt.segment(nv, nF);
     Eigen::VectorXd d_des_opt_var = x_opt.segment(nv + nF, nd);
@@ -76,14 +76,14 @@ void WholeBodyController::step(const Eigen::VectorXd& q, const Eigen::VectorXd& 
         f_c_opt.setZero();
         d_des_opt.setZero();
 
-        int def_size = deformations_history_manager.get_def_size();
+        const int def_size = deformations_history_manager.get_def_size();
 
         for (int i=0; i<static_cast<int>(gen_pose.contact_feet_names.size()); i++) {
             generic_foot_name = gen_pose.contact_feet_names[i];
 
             auto it = std::find(generic_feet_names.begin(), generic_feet_names.end(), generic_foot_name);
 
-            int index = std::distance(generic_feet_names.begin(), it);
+            const int index = std::distance(generic_feet_names.begin(), it);
 
             f_c_opt.segment(3*index,3) = f_c_opt_var.segment(3*i, 3);
             
@@ -107,8 +107,8 @@ void WholeBodyController::step(const Eigen::VectorXd& q, const Eigen::VectorXd& 
 
 void WholeBodyController::compute_torques()
 {
-    int nv = prioritized_tasks.get_nv();
-    int nF = prioritized_tasks.get_nF();
+    const int nv = prioritized_tasks.get_nv();
+    const int nF = prioritized_tasks.get_nF();
 
     tau_opt =   prioritized_tasks.get_M().bottomRows(nv-6) * x_opt.head(nv)
               + prioritized_tasks.get_h().tail(nv-6)

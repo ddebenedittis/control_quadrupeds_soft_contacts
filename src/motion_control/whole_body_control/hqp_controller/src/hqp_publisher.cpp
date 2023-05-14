@@ -10,11 +10,10 @@ namespace hqp_controller {
 
 /* =============================== Constructor ============================== */
 
-HQPPublisher::HQPPublisher(const std::vector<std::string> feet_names)
-: Node("HQP_publisher")
+HQPPublisher::HQPPublisher(const std::vector<std::string>& feet_names)
+: Node("HQP_publisher"),
+  feet_names_(feet_names)
 {
-    feet_names_ = feet_names;
-
     joints_accelerations_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
         "/logging/optimal_joints_accelerations", 1);
 
@@ -53,7 +52,7 @@ HQPPublisher::HQPPublisher(const std::vector<std::string> feet_names)
 
 inline void HQPPublisher::publish_float64_multi_array(
     const Eigen::VectorXd& vector,
-    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher)
+    const rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher)
 {
     auto message = std_msgs::msg::Float64MultiArray();
     message.data = std::vector<double>(vector.data(), vector.data() + vector.size());

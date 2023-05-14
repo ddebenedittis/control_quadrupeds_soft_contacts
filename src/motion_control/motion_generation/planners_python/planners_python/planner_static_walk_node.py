@@ -80,7 +80,7 @@ class MinimalPublisher(Node):
     def __init__(self):
         super().__init__("minimal_publisher")
 
-        self.publisher_ = self.create_publisher(GeneralizedPose, 'robot/desired_generalized_pose', 1)
+        self.publisher_ = self.create_publisher(GeneralizedPose, 'motion_planner/desired_generalized_pose', 1)
 
     def publish_desired_gen_pose(
         self,

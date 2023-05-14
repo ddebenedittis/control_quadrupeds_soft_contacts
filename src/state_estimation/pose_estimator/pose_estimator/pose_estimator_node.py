@@ -45,7 +45,7 @@ class PoseEstimatorNode(Node):
         
         self.gen_pose_subscription = self.create_subscription(
             GeneralizedPose,
-            "/robot/desired_generalized_pose",
+            "/motion_planner/desired_generalized_pose",
             self.gen_pose_callback,
             1)
         

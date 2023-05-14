@@ -24,8 +24,7 @@ using hardware_interface::HW_IF_EFFORT;
 /* ========================================================================== */
 
 HQPController::HQPController()
-: controller_interface::ControllerInterface(),
-  wbc("anymal_c", 1/100) {}
+: wbc("anymal_c", 1./100.) {}
 
 
 /* ================================= On_init ================================ */
@@ -112,13 +111,13 @@ InterfaceConfiguration HQPController::state_interface_configuration() const
 
 CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*previous_state*/)
 {
-    std::string robot_name = get_node()->get_parameter("robot_name").as_string();
+    const std::string robot_name = get_node()->get_parameter("robot_name").as_string();
     if (robot_name.empty()) {
         RCLCPP_ERROR(get_node()->get_logger(),"'robot_name' parameter is empty");
         return CallbackReturn::ERROR;
     }
 
-    double dt = get_node()->get_parameter("sample_time").as_double();
+    const double dt = get_node()->get_parameter("sample_time").as_double();
     if (dt <= 0) {
         RCLCPP_ERROR(get_node()->get_logger(),"'sample_time' parameter is <= 0");
         return CallbackReturn::ERROR;
@@ -132,7 +131,7 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
     }
 
 
-    bool use_estimator = get_node()->get_parameter("use_estimator").as_bool();
+    const bool use_estimator = get_node()->get_parameter("use_estimator").as_bool();
 
 
     init_time_ = get_node()->get_parameter("initialization_time").as_double();
@@ -182,7 +181,7 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
         return CallbackReturn::ERROR;
     }
     wbc.set_contact_constraint_type(get_node()->get_parameter("contact_constraint_type").as_string());
-    int def_size = wbc.get_def_size();
+    const int def_size = wbc.get_def_size();
 
     if (get_node()->get_parameter("tau_max").as_double() <= 0) {
         RCLCPP_ERROR(get_node()->get_logger(),"'tau_max' parameter is <= 0");
@@ -279,7 +278,7 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
 
     /* ====================================================================== */
 
-    if (use_estimator == false) {
+    if (!use_estimator) {
         // Use the simulated data of Gazebo.
 
         joint_state_subscription_ = get_node()->create_subscription<gazebo_msgs::msg::LinkStates>(
@@ -301,11 +300,11 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
                     RCLCPP_ERROR(get_node()->get_logger(),"Can't find a link name which contains 'base'");
                 }
 
-                geometry_msgs::msg::Point pos = msg->pose[base_id].position;
-                geometry_msgs::msg::Quaternion orient = msg->pose[base_id].orientation;
+                const geometry_msgs::msg::Point pos = msg->pose[base_id].position;
+                const geometry_msgs::msg::Quaternion orient = msg->pose[base_id].orientation;
 
-                geometry_msgs::msg::Vector3 lin = msg->twist[base_id].linear;
-                geometry_msgs::msg::Vector3 ang = msg->twist[base_id].angular;
+                const geometry_msgs::msg::Vector3 lin = msg->twist[base_id].linear;
+                const geometry_msgs::msg::Vector3 ang = msg->twist[base_id].angular;
 
                 q_.head(7) << pos.x, pos.y, pos.z,
                               orient.x, orient.y, orient.z, orient.w;
@@ -338,7 +337,7 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
     
 
     desired_generalized_pose_subscription_ = get_node()->create_subscription<generalized_pose_msgs::msg::GeneralizedPose>(
-        "/robot/desired_generalized_pose", QUEUE_SIZE,
+        "/motion_planner/desired_generalized_pose", QUEUE_SIZE,
         [this](const generalized_pose_msgs::msg::GeneralizedPose::SharedPtr msg) -> void
         {
             des_gen_pose_.base_acc << msg->base_acc.x, msg->base_acc.y, msg->base_acc.z;
@@ -352,14 +351,14 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
             des_gen_pose_.feet_vel = Eigen::VectorXd::Map(msg->feet_vel.data(), msg->feet_vel.size());
             des_gen_pose_.feet_pos = Eigen::VectorXd::Map(msg->feet_pos.data(), msg->feet_pos.size());
 
-            des_gen_pose_.contact_feet_names.assign(&msg->contact_feet[0], &msg->contact_feet[msg->contact_feet.size()]);
+            des_gen_pose_.contact_feet_names.assign(msg->contact_feet.data(), &msg->contact_feet[msg->contact_feet.size()]);
         }
     );
 
 
     /* ====================================================================== */
 
-    if (logging_ == true) {
+    if (logging_) {
         logger_ = std::make_shared<HQPPublisher>(wbc.get_all_feet_names());
     }
 
@@ -389,7 +388,14 @@ CallbackReturn HQPController::on_deactivate(const rclcpp_lifecycle::State& /*pre
 controller_interface::return_type HQPController::update(
     const rclcpp::Time& time, const rclcpp::Duration& /*period*/
 ) {
-    double time_double = static_cast<double>(time.seconds()) + static_cast<double>(time.nanoseconds()) * std::pow(10, -9);
+    const double time_double = static_cast<double>(time.seconds()) + static_cast<double>(time.nanoseconds()) * 1e-9;
+
+    std::vector<std::string> contact_feet_names = wbc.get_generic_feet_names();
+
+    for (uint i=0; i<joint_names_.size(); i++) {
+        q_(i+7) = state_interfaces_[2*i].get_value();
+        v_(i+6) = state_interfaces_[2*i+1].get_value();
+    }
 
     if (des_gen_pose_.contact_feet_names.size() + des_gen_pose_.feet_pos.size()/3 != 4) {
         // The planner is not publishing messages yet. Interpolate from q0 to qi and than wait.
@@ -399,22 +405,19 @@ controller_interface::return_type HQPController::update(
         // PD for the state estimator initialization
         for (uint i=0; i<joint_names_.size(); i++) {
             command_interfaces_[i].set_value(
-                + PD_proportional_ * (q[i] - state_interfaces_[2*i].get_value())
-                + PD_derivative_ * (- state_interfaces_[2*i+1].get_value())
+                + PD_proportional_ * (q[i] - q_(i+7))
+                + PD_derivative_ * (- v_(i+6))
             );
         }
+
+        wbc.reset(q_, v_, contact_feet_names);
     } else {
         // WBC
-
-        for (uint i=0; i<joint_names_.size(); i++) {
-            q_(i+7) = state_interfaces_[2*i].get_value();
-            v_(i+6) = state_interfaces_[2*i+1].get_value();
-        }
 
         wbc::GeneralizedPose des_gen_pose_copy = des_gen_pose_;
 
         //! This assumes that the robot is a quadrupedal robot, not a bipedal one.
-        if (shift_base_height_ == true) {
+        if (shift_base_height_) {
             int n = 0;
             
             if (des_gen_pose_copy.contact_feet_names.size() == 2) {
@@ -430,21 +433,23 @@ controller_interface::return_type HQPController::update(
         
         wbc.step(q_, v_, des_gen_pose_copy);
 
+        contact_feet_names = std::move(des_gen_pose_copy.contact_feet_names);
+
         tau_ = wbc.get_tau_opt();
 
         // Send effort command
         for (uint i=0; i<joint_names_.size(); i++) {
             command_interfaces_[i].set_value(tau_(i));
         }
+    }
 
-        if (logging_ == true) {
-            logger_->publish_all(
-                wbc.get_v_dot_opt(), tau_,
-                wbc.get_f_c_opt(), wbc.get_d_des_opt(),
-                wbc.get_feet_positions(), wbc.get_feet_velocities(v_),
-                des_gen_pose_copy.contact_feet_names, wbc.get_generic_feet_names(), wbc.get_all_feet_names(),
-                wbc.get_friction_coefficient(), wbc.get_com_position());
-        }
+    if (logging_) {
+        logger_->publish_all(
+            wbc.get_v_dot_opt(), wbc.get_tau_opt(),
+            wbc.get_f_c_opt(), wbc.get_d_des_opt(),
+            wbc.get_feet_positions(), wbc.get_feet_velocities(v_),
+            contact_feet_names, wbc.get_generic_feet_names(), wbc.get_all_feet_names(),
+            wbc.get_friction_coefficient(), wbc.get_com_position());
     }
 
     return controller_interface::return_type::OK;
