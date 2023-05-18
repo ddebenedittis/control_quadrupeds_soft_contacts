@@ -65,8 +65,49 @@ void HierarchicalQP::solve_qp(
     const MatrixXd& C,
     const VectorXd& d,
     const VectorXd& we,
-    const VectorXd& wi)
-{
+    const VectorXd& wi,
+    int m_eq
+) {
+    /* ========================= Weighted A, b, C, d ======================== */
+
+    // Construct the matrices A, b, C, d weighted by we and wi.
+    // Each element of we and wi multiplies a whole row of A and C respectively (and an element of b and d). This is more easily implemented using Eigen arrays.
+
+    Eigen::MatrixXd A_w(A.rows(), A.cols());
+    Eigen::VectorXd b_w(A.rows());
+    Eigen::MatrixXd C_w(C.rows(), A.cols());
+    Eigen::VectorXd d_w(C.rows());
+
+    if (A.rows() > 0) {
+        A_w = A.array().colwise() * we.array();
+        b_w = b.array().colwise() * we.array();
+    }
+    if (C.rows() > 0) {
+        C_w = C.array().colwise() * wi.array();
+        d_w = d.array().colwise() * wi.array();
+    }
+
+
+    /* ============================ Solve The QP ============================ */
+
+    solve_qp(
+        priority,
+        A_w, b_w,
+        C_w, d_w,
+        m_eq
+    );
+}
+
+
+
+void HierarchicalQP::solve_qp(
+    int priority,
+    const MatrixXd& A,
+    const VectorXd& b,
+    const MatrixXd& C,
+    const VectorXd& d,
+    int m_eq
+) {
     /* =================== Setup The Optimization Problem =================== */
 
     const int A_cols = static_cast<int>(A.cols());    // Dimension of the optimization vector (not counting the slack variables)
@@ -74,26 +115,6 @@ void HierarchicalQP::solve_qp(
 
     if (priority == 0) {
         reset_qp(A_cols);
-    }
-
-
-    /* ========================= Weighted A, b, C, d ======================== */
-
-    // Construct the matrices A, b, C, d weighted by we and wi.
-    // Each element of we and wi multiplies a whole row of A and C respectively (and an element of b and d). This is more easily implemented using Eigen arrays.
-
-    Eigen::MatrixXd A_w(A.rows(), A_cols);
-    Eigen::VectorXd b_w(A.rows());
-    Eigen::MatrixXd C_w(C_rows, A_cols);
-    Eigen::VectorXd d_w(C_rows);
-
-    if (A.rows() > 0) {
-        A_w = A.array().colwise() * we.array();
-        b_w = b.array().colwise() * we.array();
-    }
-    if (C_rows > 0) {
-        C_w = C.array().colwise() * wi.array();
-        d_w = d.array().colwise() * wi.array();
     }
     
 
@@ -105,16 +126,16 @@ void HierarchicalQP::solve_qp(
     //           [ Cp ]               [ dp ]
 
     if (C_stack_.rows() == 0 && C_rows > 0) {
-        C_stack_ = C_w;
-        d_stack_ = d_w;
+        C_stack_ = C;
+        d_stack_ = d;
     } else if (C_rows > 0) {
         const int C_stack_rows = static_cast<int>(C_stack_.rows());
 
         C_stack_.conservativeResize(C_stack_rows + C_rows, NoChange);
-        C_stack_.bottomRows(C_rows) = C_w;
+        C_stack_.bottomRows(C_rows) = C;
 
         d_stack_.conservativeResize(C_stack_rows + C_rows);
-        d_stack_.tail(C_rows) = d_w;
+        d_stack_.tail(C_rows) = d;
     }
 
     const int C_stack_rows = static_cast<int>(C_stack_.rows());
@@ -133,18 +154,18 @@ void HierarchicalQP::solve_qp(
     VectorXd g0 = VectorXd::Zero(A_cols + C_rows);
     
     if (priority != 0 && A.rows() > 0) {
-        G.topLeftCorner(A_cols, A_cols) = Z_.transpose() * A_w.transpose() * A_w * Z_;
+        G.topLeftCorner(A_cols, A_cols) = Z_.transpose() * A.transpose() * A * Z_;
 
-        g0.head(A_cols) = Z_.transpose() * A_w.transpose() * (A_w * sol_ - b_w);
+        g0.head(A_cols) = Z_.transpose() * A.transpose() * (A * sol_ - b);
     }
     else if (priority != 0) {
         G.topLeftCorner(A_cols, A_cols) = MatrixXd::Zero(A_cols, A_cols);
 
         g0.head(A_cols) = VectorXd::Zero(A_cols);
     } else {
-        G.topLeftCorner(A_cols, A_cols) = A_w.transpose() * A_w;
+        G.topLeftCorner(A_cols, A_cols) = A.transpose() * A;
 
-        g0.head(A_cols) = - A_w.transpose() * b_w;
+        g0.head(A_cols) = - A.transpose() * b;
     }
 
     // Add the regularization term. This is required in order to ensure that the matrix is positive definite (necessary for the eiquadprog library), and is also desirable.
@@ -177,11 +198,11 @@ void HierarchicalQP::solve_qp(
     // Initialize the solution vector
     VectorXd xi_opt(A_cols + C_rows);
 
-    /* The problem is in the form:
-     * min 0.5 * x G x + g0 x
+    /* In quadprog, the problem is in the following form:
+     * min 0.5 * x G x - g0 x
      * s.t.
-     * CE x + ce0 = 0
-     * CI x + ci0 >= 0
+     * CE.T x - ce0 = 0
+     * CI.T x - ci0 >= 0
     */
 
     // using namespace eiquadprog::solvers;
@@ -196,11 +217,12 @@ void HierarchicalQP::solve_qp(
     
     // /*EiquadprogFast_status status = */qp.solve_quadprog(
     const int result = solve_quadprog(
-        G,
-        g0,
-        CI,
-        ci0,
-        xi_opt
+        std::move(G),
+        - g0,
+        CI.transpose(),
+        - ci0,
+        xi_opt,
+        m_eq
     );
 
     if (result == 1) {
@@ -218,10 +240,10 @@ void HierarchicalQP::solve_qp(
     // Compute the new null_space_projector for the next time step (if necessary).
     if (priority == 0) {
         // If it is the first task, the computation is slightly easier since Z_ = Identity.
-        Z_ = null_space_projector(A_w);
+        Z_ = null_space_projector(A);
     } else if (priority < n_tasks_ && A.rows() > 0) {
         // If it is the last task, it is not necessary to compute the null space projector.
-        Z_ *= null_space_projector(A_w * Z_);
+        Z_ *= null_space_projector(A * Z_);
     }
 
     // Update the stack of the w_opt slack variables (only if it is not the last task, and if there are inequality constraints in the current task).

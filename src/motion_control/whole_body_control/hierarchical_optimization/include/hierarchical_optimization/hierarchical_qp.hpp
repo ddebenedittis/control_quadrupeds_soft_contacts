@@ -6,11 +6,11 @@
 
 namespace hopt {
 
-/// @class @brief 
+/// @class @brief
 class HierarchicalQP {
 public:
     /// @brief Construct a new Hierarchical QP object.
-    /// @param[in] nTasks the total number of tasks with different priorities of the Hierarchical QP 
+    /// @param[in] nTasks the total number of tasks with different priorities of the Hierarchical QP
     HierarchicalQP(int n_tasks)
     : n_tasks_(n_tasks)
     {}
@@ -23,17 +23,28 @@ public:
         const Eigen::MatrixXd& C,
         const Eigen::VectorXd& d,
         const Eigen::VectorXd& we,
-        const Eigen::VectorXd& wi
+        const Eigen::VectorXd& wi,
+        int m_eq = 0
+    );
+
+    /// @brief Solve a single prioritized task of the hierarchical QP problem.
+    void solve_qp(
+        int priority,
+        const Eigen::MatrixXd& A,
+        const Eigen::VectorXd& b,
+        const Eigen::MatrixXd& C,
+        const Eigen::VectorXd& d,
+        int m_eq = 0
     );
 
     /// @brief Get the QP problem solution
     Eigen::VectorXd get_sol() const {return sol_;}
 
     void set_regularization(double reg) {this->regularization_ = reg;}
-    
+
 private:
     /// @brief Compute the null space projector of a matrix M.
-    /// @param[in] M 
+    /// @param[in] M
     /// @return Eigen::MatrixXd Square matrix of dimension (A_cols, A_cols)
     static Eigen::MatrixXd null_space_projector(const Eigen::MatrixXd& M);
 
