@@ -18,7 +18,7 @@ TeleopSimpleVelocityCommand::TeleopSimpleVelocityCommand()
     this->get_parameter("scale_linear", l_scale_);
 
     pub_ = this->create_publisher<velocity_command_msgs::msg::SimpleVelocityCommand>(
-        "/robot/simple_velocity_command", 1);
+        "/motion_generator/simple_velocity_command", 1);
 
     print_instructions();
 }
@@ -121,6 +121,6 @@ int main(int argc, char* argv[])
     teleop_simple_velocity_command->shutdown();
 
     rclcpp::shutdown();
-    
+
     return 0;
 }

@@ -22,7 +22,7 @@ TeleopRobotBase::TeleopRobotBase()
     this->get_parameter("robot_name", robot_name);
 
     pub_ = this->create_publisher<generalized_pose_msgs::msg::GeneralizedPose>(
-        "robot/desired_generalized_pose", 1);
+        "motion_planner/desired_generalized_pose", 1);
 
     subscriber_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     auto sub_opt = rclcpp::SubscriptionOptions();
@@ -164,7 +164,7 @@ void TeleopRobotBase::update_message()
     for(int i=0; i<static_cast<int>(base_pos_des_.size()); i++) {
         base_pos_des_[i] = base_pos_des_[i] + l_twist_[i] * l_scale_ * 0.01;
     }
-    
+
     // Integrate the orientation with the angular velocity in body frame received by the user input.
     base_quat_des_ = quat_int(base_quat_des_, a_twist_, a_scale_ * 0.01);
 
@@ -243,6 +243,6 @@ int main(int argc, char* argv[])
     teleop_robot_base->shutdown();
 
     rclcpp::shutdown();
-    
+
     return 0;
 }

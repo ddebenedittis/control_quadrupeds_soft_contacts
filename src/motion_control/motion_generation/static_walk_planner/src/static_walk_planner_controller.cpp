@@ -159,7 +159,7 @@ CallbackReturn SWPController::on_configure(const rclcpp_lifecycle::State& /*prev
     if (planner_.desired_foot_penetration_ < 0) {
         RCLCPP_ERROR(get_node()->get_logger(),"'desired_foot_penetration' parameter is < 0.");
         return CallbackReturn::ERROR;
-    }    
+    }
 
     planner_.step_horizontal_delay_ = get_node()->get_parameter("step_horizontal_delay").as_double();
     if (planner_.step_horizontal_delay_ < 0 || planner_.step_horizontal_delay_ >= 0.5) {
@@ -240,7 +240,7 @@ CallbackReturn SWPController::on_configure(const rclcpp_lifecycle::State& /*prev
     /* ====================================================================== */
 
     gen_pose_publisher_ = get_node()->create_publisher<generalized_pose_msgs::msg::GeneralizedPose>(
-        "/robot/desired_generalized_pose", rclcpp::SystemDefaultsQoS()
+        "/motion_planner/desired_generalized_pose", rclcpp::SystemDefaultsQoS()
     );
 
 
@@ -319,7 +319,7 @@ void SWPController::publish_gen_pose()
     msg.feet_acc = std::vector<double>(gen_pose_.feet_acc.data(), gen_pose_.feet_acc.data() + gen_pose_.feet_acc.size());
     msg.feet_vel = std::vector<double>(gen_pose_.feet_vel.data(), gen_pose_.feet_vel.data() + gen_pose_.feet_vel.size());
     msg.feet_pos = std::vector<double>(gen_pose_.feet_pos.data(), gen_pose_.feet_pos.data() + gen_pose_.feet_pos.size());
- 
+
     msg.contact_feet = gen_pose_.contact_feet_names;
 
 

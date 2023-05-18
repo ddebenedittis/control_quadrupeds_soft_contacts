@@ -41,7 +41,7 @@ class SWPController : public controller_interface::ControllerInterface {
         // CallbackReturn on_error(const rclcpp_lifecycle::State& previous_state) override;
         // CallbackReturn on_shutdown(const rclcpp_lifecycle::State& previous_state) override;
 
-    protected:
+    private:
         /// @brief Publish the desired generalized pose message.
         void publish_gen_pose();
 
