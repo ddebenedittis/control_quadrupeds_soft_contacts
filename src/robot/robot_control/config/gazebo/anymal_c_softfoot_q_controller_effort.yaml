@@ -16,7 +16,7 @@ controller_manager:
         whole_body_controller:
             type: hqp_controller/HQPController
 
-        planner:
+        static_walk_planner:
             type: static_walk_planner/SWPController
 
 
@@ -143,7 +143,7 @@ whole_body_controller:
         regularization: 1e-6
 
 
-planner:
+static_walk_planner:
     ros__parameters:
         use_sim_time: true
 

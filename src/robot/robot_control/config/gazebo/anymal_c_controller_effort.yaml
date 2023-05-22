@@ -16,8 +16,11 @@ controller_manager:
         whole_body_controller:
             type: hqp_controller/HQPController
 
-        planner:
+        static_walk_planner:
             type: static_walk_planner/SWPController
+
+        lip_planner:
+            type: lip_walking_trot_planner/LIPController
 
 
 joint_state_broadcaster:
@@ -143,7 +146,7 @@ whole_body_controller:
         regularization: 1e-6
 
 
-planner:
+static_walk_planner:
     ros__parameters:
         use_sim_time: true
 
@@ -183,3 +186,18 @@ planner:
         base_oscillation: 
             - 0.06
             - 0.06
+
+
+lip_planner:
+    ros__parameters:
+        use_sim_time: true
+
+        zero_time: 1.0
+        init_time: 0.5
+
+        sample_time: 0.005
+        step_duration: 0.2
+        step_height: 0.1
+
+        acc_filter_order: 2
+        acc_filter_beta: 0.9

@@ -170,9 +170,10 @@ class Interpolation:
         Compute the foot position, velocity, and acceleration using a cycloid.
 
         Args:
-            p_i (_type_): initial position
-            phi (_type_): phase \in [0, 1]
-            theta (_type_): angle between the desired foot displacement and the heading direction
+            p_i (ndarray): initial position
+            d (double): step length
+            theta (double): angle between the desired foot displacement and the heading direction
+            phi (double): phase \in [0, 1]
 
         Returns:
             _type_: _description_
@@ -196,7 +197,7 @@ class Interpolation:
         z_dot = 2 * h / T * (1 - np.cos(4 * pi * t / T))
         z_ddot = 2 * h / T**2 * 4 * pi * np.sin(4 * pi * t / T)
         
-        if (t > T/2):
+        if t > T/2:
             z = 2 * h - z
             z_dot = - z_dot
             z_ddot = - z_ddot

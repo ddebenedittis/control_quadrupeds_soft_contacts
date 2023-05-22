@@ -64,3 +64,4 @@ Upcoming (2023-05-22)
 - The robot can be spawned in a terrain created from an heightmap.
 - The robot measures the penetration with the terrain and increase the step height accordingly.
 - The logger_node does save the data inside the log/csv/yyyy-mm-dd-hh:mm::ss folder (changes with the hour so it does not overwrite). The plot.py script processes all the folders in the log/csv folder that do not have a corresponding non-empty folder in log/svg. If the plot.py code has changed, delete the folders in log/svg that need to be processed again.
+- Implemented the walking_trot_planner in C++. But, although it works, it achieves worse performance compared to the Python version (due to undiscovered bugs).

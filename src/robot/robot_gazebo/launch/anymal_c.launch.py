@@ -23,6 +23,8 @@ def generate_launch_description():
     
     use_rviz = LaunchConfiguration('use_rviz', default='False')
     
+    velocity_cmd = LaunchConfiguration('velocity_cmd', default='[0., 0., 0.]')
+    
     
     # ======================================================================== #
     
@@ -33,6 +35,7 @@ def generate_launch_description():
         'world_file_path': os.path.join('worlds', 'anymal.world'),
         'contact_constraint_type': contact_constraint_type,
         'gait': gait,
+        'velocity_cmd': velocity_cmd,
         'save_csv': save_csv,
         'terrain': terrain,
         'use_rviz': use_rviz,

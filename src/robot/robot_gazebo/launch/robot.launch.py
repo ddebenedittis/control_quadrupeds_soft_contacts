@@ -17,7 +17,8 @@ from scripts import GazeboRosPaths
 
 def generate_launch_description():
     
-    global robot_name, robot_file_path, gazebo_config_file_path, rviz_config_file_path, terrain_file_path, heightmap_terrain_file_path, multi_terrains_file_path, world_file_path
+    global robot_name, robot_file_path, gazebo_config_file_path, rviz_config_file_path
+    global terrain_file_path, heightmap_terrain_file_path, multi_terrains_file_path, world_file_path
     
     robot_name = LaunchConfiguration('robot_name', default='anymal_c')
 
@@ -60,11 +61,13 @@ def generate_launch_description():
     ])
     
     
-    global contact_constraint_type, gait, height, save_csv, terrain, use_rviz, use_sim_time
+    global contact_constraint_type, gait, velocity_cmd, height, save_csv, terrain, use_rviz, use_sim_time
     
     contact_constraint_type = LaunchConfiguration('contact_constraint_type', default="'soft_kv'")
 
     gait = LaunchConfiguration('gait', default='static_walk')
+
+    velocity_cmd = LaunchConfiguration('velocity_cmd', default='[0., 0., 0.]')
 
     height = LaunchConfiguration('height', default='0.63')
         
@@ -87,6 +90,9 @@ def generate_launch_description():
         DeclareLaunchArgument('gait', default_value='static_walk'),
         SetParameter(name='gait', value=gait),
         
+        DeclareLaunchArgument('velocity_cmd', default_value='[0., 0., 0.]'),
+        SetParameter(name='velocity_cmd', value=velocity_cmd),
+
         DeclareLaunchArgument('terrain', default_value='rigid'),
         
         DeclareLaunchArgument('save_csv', default_value='False'),
@@ -316,7 +322,7 @@ def spawn_controllers(ld):
         parameters=[{'robot_name': robot_name}],
     )
     
-    spawn_planner = Node(
+    spawn_static_walk_planner = Node(
         condition=IfCondition(
             PythonExpression([
                 '"', gait, '"', ' == "static_walk"'
@@ -324,7 +330,7 @@ def spawn_controllers(ld):
         ),
         package = 'controller_manager',
         executable = 'spawner',
-        arguments = ['planner', '--controller-manager', '/controller_manager'],
+        arguments = ['static_walk_planner', '--controller-manager', '/controller_manager'],
         parameters=[{'use_sim_time': use_sim_time},],
         output='screen',
     )
@@ -345,6 +351,36 @@ def spawn_controllers(ld):
         output='screen',
     )
     
+    spawn_lip_walking_trot_planner = Node(
+        condition=IfCondition(
+            PythonExpression([
+                '"', gait, '"', ' == "walking_trot" or ', '"', gait, '"', ' == "teleop_walking_trot"'
+            ]),
+        ),
+        package = 'controller_manager',
+        executable = 'spawner',
+        arguments = ['lip_planner', '--controller-manager', '/controller_manager'],
+        parameters=[{'use_sim_time': use_sim_time},],
+        emulate_tty=True,
+        output='screen',
+    )
+
+    spawn_walking_trot =  ExecuteProcess(
+        condition=IfCondition(
+            PythonExpression([
+                '"', gait, '"', ' == "walking_trot"'
+            ]),
+        ),
+        cmd=[['ros2 topic pub -r 1 --qos-history keep_last --qos-depth 1 ',
+              '--qos-durability transient_local --qos-reliability reliable ',
+              '/motion_generator/simple_velocity_command ',
+              'velocity_command_msgs/msg/SimpleVelocityCommand ',
+              '"{velocity_forward: ', PythonExpression([velocity_cmd, '[0]']), ', ',
+              'velocity_lateral: ', PythonExpression([velocity_cmd, '[1]']), ', ',
+              'yaw_rate: ', PythonExpression([velocity_cmd, '[2]']), '}"']],
+        shell=True,
+    )
+
     spawn_teleop_trot = Node(
         condition=IfCondition(
             PythonExpression([
@@ -363,9 +399,7 @@ def spawn_controllers(ld):
         package = 'controller_manager',
         executable = 'spawner',
         arguments = ['whole_body_controller', '--controller-manager', '/controller_manager'],
-        parameters=[
-            {'use_sim_time': use_sim_time},
-        ],
+        parameters=[{'use_sim_time': use_sim_time},],
         emulate_tty=True,
         output='screen',
     )
@@ -373,8 +407,10 @@ def spawn_controllers(ld):
     ld.add_action(spawn_joint_state_broadcaster)
     ld.add_action(spawn_imu_sensor_broadcaster)
     ld.add_action(spawn_teleop_base)
-    ld.add_action(spawn_planner)
+    ld.add_action(spawn_static_walk_planner)
     ld.add_action(spawn_planner_mjp)
+    # ld.add_action(spawn_lip_walking_trot_planner)
+    ld.add_action(spawn_walking_trot)
     ld.add_action(spawn_teleop_trot)
     ld.add_action(spawn_whole_body_controller)
     

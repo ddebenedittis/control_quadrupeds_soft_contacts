@@ -1,6 +1,4 @@
-# ==============================================================================
-#                             PROJECT CONFIGURATION                             
-# ==============================================================================
+# =========================== Project Configuration ============================
 
 cmake_minimum_required(VERSION 3.5)
 project(generalized_pose_msgs)
@@ -22,10 +20,7 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
-
-# ==============================================================================
-#                               FIND DEPENDENCIES                               
-# ==============================================================================
+# ============================= Find Dependencies ==============================
 
 find_package(ament_cmake REQUIRED)
 
@@ -35,10 +30,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 
 
-
-# ==============================================================================
-#                                 GENERATE MSGS                                 
-# ==============================================================================
+# =============================== Generate Msgs ================================
 
 # Declare the list of messages you want to generate
 set(msg_files
@@ -54,6 +46,15 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 ament_export_dependencies(rosidl_default_runtime)
 
 
+# ====================== Install The Header Only Library =======================
+
+install(
+    DIRECTORY include/
+    DESTINATION include/${PROJECT_NAME}
+)
+
+
+# ==============================================================================
 
 if(BUILD_TESTING)
     find_package(ament_lint_auto REQUIRED)

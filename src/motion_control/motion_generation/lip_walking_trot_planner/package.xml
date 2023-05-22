@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+    <name>lip_walking_trot_planner</name>
+    <version>0.0.0</version>
+    <description>Walking trot motion planner for quadrupedal robots based on the Linearized Inverted Pendulum model</description>
+    <maintainer email="davide.debenedittis@gmail.com">Davide De Benedittis</maintainer>
+    <license>TODO: License declaration</license>
+
+    <url>https://github.com/ddebenedittis/control_quadrupeds_soft_contacts</url>
+    <author email="davide.debenedittis@gmail.com">Davide De Benedittis</author>
+
+    <buildtool_depend>ament_cmake</buildtool_depend>
+
+    <build_depend>eigen</build_depend>
+    <build_export_depend>eigen</build_export_depend> <!-- If your package uses Eigen3 in public headers, then also add these tags so downstream packages also depend on this package and Eigen3. -->
+
+    <depend>controller_interface</depend>
+    <depend>hardware_interface</depend>
+    <depend>pluginlib</depend>
+    <depend>rclcpp</depend>
+    <depend>rclcpp_lifecycle</depend>
+
+    <depend>gazebo_msgs</depend>
+    <depend>generalized_pose_msgs</depend>
+    <depend>rviz_legged_msgs</depend>
+    <depend>sensor_msgs</depend>
+    <depend>velocity_command_msgs</depend>
+
+    <depend>quadprog</depend>
+
+    <test_depend>ament_lint_auto</test_depend>
+    <test_depend>ament_lint_common</test_depend>
+
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
+</package>

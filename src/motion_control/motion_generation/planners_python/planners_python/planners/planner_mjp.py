@@ -24,7 +24,7 @@ class DesiredGeneralizedPose():
     feet_acc: np.ndarray = np.empty([0])
     feet_vel: np.ndarray = np.empty([0])
     feet_pos: np.ndarray = np.empty([0])
-    contact_feet_names: list[str] = field(default_factory=list) 
+    contact_feet_names: list[str] = field(default_factory=list)
 
 
 
@@ -451,7 +451,7 @@ class MotionPlanner:
         # Stop moving the feet if the commanded velocity has been equal to zero for a number of steps equal to max_fixed_steps.
         
         if self.phi == 0 and self.fixed_steps >= self.max_fixed_steps \
-            and np.linalg.norm(vel_cmd) < 0.01 and yaw_rate_cmd < 0.01:
+            and np.linalg.norm(vel_cmd) < 0.01 and np.linalg.norm(yaw_rate_cmd) < 0.01:
                 
             # Stop the robot movement.
                 
@@ -472,11 +472,11 @@ class MotionPlanner:
             
             return True, des_gen_pose
         elif self.phi == 0 and self.fixed_steps < self.max_fixed_steps \
-            and np.linalg.norm(vel_cmd) < 0.01 and yaw_rate_cmd < 0.01:
+            and np.linalg.norm(vel_cmd) < 0.01 and np.linalg.norm(yaw_rate_cmd) < 0.01:
             
             # Do not stop the robot, but increase the number of steps during which the commanded twist was zero.
             self.fixed_steps += 1
-        elif np.linalg.norm(vel_cmd) > 0.01 or yaw_rate_cmd > 0.01:
+        elif np.linalg.norm(vel_cmd) > 0.01 or np.linalg.norm(yaw_rate_cmd) > 0.01:
             # The commanded twist is not null. Reset the fixed_steps variable
             self.fixed_steps = 0
             

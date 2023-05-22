@@ -2,8 +2,8 @@ import rclpy
 from rclpy.node import Node
 
 from gazebo_msgs.msg import LinkStates
-from geometry_msgs.msg import PoseStamped
 from generalized_pose_msgs.msg import GeneralizedPose
+from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
 from rviz_legged_msgs.msg import Paths
 from sensor_msgs.msg import Imu
@@ -323,21 +323,11 @@ class Planner(Node):
             a_b = - self.filter.filter(a_b_meas_body, Ts=self.planner.dt)
 
             # Horizontal velocity command and yaw rate command
-            vel_cmd = np.array([0.0, 0.0])
-            yaw_rate_cmd = 0.0
-
-            if self.teleoperate == True:
-                vel_cmd = np.array([
-                    self.minimal_subscriber.velocity_forward,
-                    self.minimal_subscriber.velocity_lateral,
-                ])
-                yaw_rate_cmd = self.minimal_subscriber.yaw_rate
-            else:
-                vel_cmd = - 0.5 * np.array([
-                    p_b[0],
-                    p_b[1]
-                ])
-                yaw_rate_cmd = 0.
+            vel_cmd = np.array([
+                self.minimal_subscriber.velocity_forward,
+                self.minimal_subscriber.velocity_lateral,
+            ])
+            yaw_rate_cmd = self.minimal_subscriber.yaw_rate
 
             # Perform a single iteration of the model predictive control
             if self.time > self.init_time + self.zero_time:

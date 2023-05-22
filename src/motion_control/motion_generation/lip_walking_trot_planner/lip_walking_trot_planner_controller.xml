@@ -1,0 +1,9 @@
+<library path="lip_walking_trot_planner">
+    <class name="lip_walking_trot_planner/LIPController"
+           type="lip_walking_trot_planner::LIPController"
+           base_class_type="controller_interface::ControllerInterface">
+        <description>
+            Jo mama
+        </description>
+    </class>
+</library>
