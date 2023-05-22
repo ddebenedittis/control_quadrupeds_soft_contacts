@@ -96,7 +96,7 @@ In some simulations (e.g. the simulation of ANYmal with SoftFoot-Q or the simula
 
 ### Plot
 
-- Plot and save the figures in `log/svg/` or `log/pdf/`:
+- Plot and save the figures in `log/svg/` or `log/pdf/` (must be executed while in the workspace folder):
 ```shell
 ros2 run logger_gazebo plot
 ```

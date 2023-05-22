@@ -1,4 +1,5 @@
 import csv
+import datetime
 from enum import Enum
 import os
 
@@ -152,6 +153,7 @@ class LoggerSubscriber(Node):
         self.desired_base_pos = np.zeros(3)
         self.desired_base_quat = np.zeros(4); self.desired_base_quat[3] = 1
         self.desired_base_vel = np.zeros(3)
+        self.desired_feet_pos = np.nan * np.zeros(12)
         self.contact_feet_names = []
 
         # Contact sensor
@@ -216,7 +218,7 @@ class LoggerSubscriber(Node):
 
             future_cycle_duration = self.client_cycle_duration.call_async(request_cycle_duration)
             future_cycle_duration.add_done_callback(self.callback_param_cycle_duration)
-        elif self.gait == "teleop_walking_trot":
+        elif self.gait == "walking_trot" or self.gait == "teleop_walking_trot":
             self.vel_forward_cmd = 0.
             self.vel_lateral_cmd = 0.
             self.yaw_rate_cmd = 0.
@@ -255,6 +257,8 @@ class LoggerSubscriber(Node):
         self.orientation_error_vector = np.zeros(self.n)
         self.velocity_error_vector = np.zeros((self.n, 3))
 
+        self.desired_feet_positions_vector = np.zeros((self.n, 12))
+
         self.slippage_vector = np.zeros(self.n)
 
         self.contact_forces_vector = np.zeros((self.n, 12))
@@ -264,7 +268,7 @@ class LoggerSubscriber(Node):
         self.feet_positions_vector = np.zeros((self.n, 12))
         self.feet_velocities_vector = np.zeros((self.n, 12))
 
-        if self.gait == "teleop_walking_trot":
+        if self.gait == "walking_trot" or self.gait == "teleop_walking_trot":
             self.simple_velocity_command_vector = np.zeros((self.n, 3))
 
 
@@ -317,7 +321,7 @@ class LoggerSubscriber(Node):
         self.v[0:6] = v_b
 
 
-    def joint_states_callback(self, msg):
+    def joint_states_callback(self, msg: JointState):
         """
         Read, reorder and save the joint states.
         The joints are saved in the following order: LF_(HAA -> HFE -> KFE) -> LH -> RF -> RH,
@@ -341,13 +345,22 @@ class LoggerSubscriber(Node):
             self.v[6 + joint_names.index(msg.name[i])] = msg.velocity[i]
 
 
-    def gen_pose_callback(self, msg):
+    def gen_pose_callback(self, msg: GeneralizedPose):
         self.desired_base_pos = np.array([msg.base_pos.x, msg.base_pos.y, msg.base_pos.z])
         self.desired_base_quat = np.array([msg.base_quat.x, msg.base_quat.y, msg.base_quat.z, msg.base_quat.w])
         self.desired_base_vel = np.array([msg.base_vel.x, msg.base_vel.y, msg.base_vel.z])
 
         # These are generic feet names, independent on the particular quadrupedal robot. I.e. LF, RF, LH, RH.
         self.contact_feet_names = msg.contact_feet
+
+        j = 0
+
+        for i, foot_name in enumerate(self.generic_feet_names):
+            if foot_name not in self.contact_feet_names:
+                self.desired_feet_pos[3*i:3*i+3] = msg.feet_pos[3*j:3*j+3]
+                j += 1
+            else:
+                self.desired_feet_pos[3*i:3*i+3] = np.nan * np.ones(3)
 
 
     def contact_state_callback(self, msg, foot_name):
@@ -480,6 +493,8 @@ class LoggerSubscriber(Node):
         self.orientation_error_vector[self.i] = q_dist(self.q[3:7], self.desired_base_quat)
         self.velocity_error_vector[self.i, :] = self.v[0:3] - self.desired_base_vel
 
+        self.desired_feet_positions_vector[self.i, :] = self.desired_feet_pos
+
         self.optimal_joints_accelerations_vector[self.i, :] = self.optimal_joints_accelerations
         self.optimal_torques_vector[self.i, :] = self.optimal_torques
         self.optimal_forces_vector[self.i, :] = self.optimal_forces
@@ -494,14 +509,14 @@ class LoggerSubscriber(Node):
         self.feet_positions_vector[self.i, :] = self.feet_positions.flatten('F')
         self.feet_velocities_vector[self.i, :] = self.feet_velocities
 
-        if self.gait == "teleop_walking_trot":
+        if self.gait == "walking_trot" or self.gait == "teleop_walking_trot":
             self.simple_velocity_command_vector[self.i, :] = np.array([self.vel_forward_cmd, self.vel_lateral_cmd, self.yaw_rate_cmd])
 
 
         # ================= Save The Csv And Destroy The Node ================ #
 
         if self.i >= self.n - 1:
-            path = "log/csv/"
+            path = "log/csv/" + f"{datetime.datetime.now():%Y-%m-%d-%H:%M:%S}" + "/"
 
             try:
                 os.makedirs(path)
@@ -519,6 +534,8 @@ class LoggerSubscriber(Node):
             np.savetxt(path+"orientation_error.csv", self.orientation_error_vector, delimiter=",")
             np.savetxt(path+"velocity_error.csv", self.velocity_error_vector, delimiter=",")
 
+            np.savetxt(path+"desired_feet_positions.csv", self.desired_feet_positions_vector, delimiter=",")
+
             np.savetxt(path+"optimal_joints_accelerations.csv", self.optimal_joints_accelerations_vector, delimiter=",")
             np.savetxt(path+"optimal_torques.csv", self.optimal_torques_vector, delimiter=",")
             np.savetxt(path+"optimal_forces.csv", self.optimal_forces_vector, delimiter=",")
@@ -533,7 +550,7 @@ class LoggerSubscriber(Node):
             np.savetxt(path+"feet_positions.csv", self.feet_positions_vector, delimiter=",")
             np.savetxt(path+"feet_velocities.csv", self.feet_velocities_vector, delimiter=",")
 
-            if self.gait == "teleop_walking_trot":
+            if self.gait == "walking_trot" or self.gait == "teleop_walking_trot":
                 np.savetxt(path+"simple_velocity_command.csv", self.simple_velocity_command_vector, delimiter=",")
 
             # ================================================================ #
