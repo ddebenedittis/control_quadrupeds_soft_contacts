@@ -17,21 +17,35 @@ using namespace Eigen;
 
 
 
+Quaterniond quat_mult(const Quaterniond& q1, const Quaterniond& q2)
+{
+    double x1 = q1.x();
+    double y1 = q1.y();
+    double z1 = q1.z();
+    double w1 = q1.w();
+
+    double x2 = q2.x();
+    double y2 = q2.y();
+    double z2 = q2.z();
+    double w2 = q2.w();
+
+    double x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2;
+    double y = w1 * y2 + y1 * w2 + z1 * x2 - x1 * z2;
+    double z = w1 * z2 + z1 * w2 + x1 * y2 - y1 * x2;
+    double w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2;
+
+    return {w, x, y, z};
+}
+
 void quat_rot(const Quaterniond& quat, Vector3d& vec)
 {
-    double x1 = quat.x();
-    double y1 = quat.y();
-    double z1 = quat.z();
-    double w1 = quat.w();
+    Quaterniond vec_quat = Quaterniond(0, vec[0], vec[1], vec[2]);
 
-    double x2 = vec[0];
-    double y2 = vec[1];
-    double z2 = vec[2];
-    double w2 = 0;
+    Quaternion vec_out = quat_mult(quat_mult(quat, vec_quat), quat.conjugate());
 
-    vec[0] = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2;
-    vec[1] = w1 * y2 + y1 * w2 + z1 * x2 - x1 * z2;
-    vec[2] = w1 * z2 + z1 * w2 + x1 * y2 - y1 * x2;
+    vec[0] = vec_out.x();
+    vec[1] = vec_out.y();
+    vec[2] = vec_out.z();
 }
 
 
@@ -227,7 +241,7 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
 
     if (time_double > init_time_ + zero_time_) {
         Quaterniond quat_conj = Quaterniond(
-            q_[6], - q_[3], - q_[4], - q_[5]
+            q_[6], q_[3], q_[4], q_[5]
         );
 
         Vector3d g = {0, 0, - 9.81};

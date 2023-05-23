@@ -54,12 +54,12 @@ public:
 
     /* =============================== Setters ============================== */
 
-    void set_method(InterpolationMethod method) {this->_method = method;}
+    void set_method(InterpolationMethod method) {this->method_ = method;}
 
     void set_step_duration(double step_duration)
     {
         if (step_duration > 0) {
-            this->_step_duration = step_duration;
+            this->step_duration_ = step_duration;
         } else {
             std::cerr << "The step duration must be a positive value." << std::endl;
         }
@@ -68,7 +68,7 @@ public:
     void set_horizontal_phase_delay(double horizontal_delay)
     {
         if (horizontal_delay >= 0 && horizontal_delay <= 1) {
-            this->_horizontal_phase_delay = horizontal_delay;
+            this->horizontal_phase_delay_ = horizontal_delay;
         } else {
             std::cerr << "The horizontal phase delay must be in [0; 1]." << std::endl;
         }
@@ -77,27 +77,27 @@ public:
     void set_step_height(double step_height)
     {
         if (step_height > 0) {
-            this->_step_height = step_height;
+            this->step_height_ = step_height;
         } else {
             std::cerr << "The step height must be > 0." << std::endl;
         }
     }
 
-    void set_foot_penetration(double foot_penetration) {this->_foot_penetration = foot_penetration;}
+    void set_foot_penetration(double foot_penetration) {this->foot_penetration_ = foot_penetration;}
 
     /* =============================== Getters ============================== */
 
-    [[nodiscard]] double get_step_duration() const {return _step_duration;}
+    [[nodiscard]] double get_step_duration() const {return step_duration_;}
 
-    [[nodiscard]] double get_step_height() const {return _step_height;}
+    [[nodiscard]] double get_step_height() const {return step_height_;}
 
-    [[nodiscard]] double get_foot_penetration() const {return _foot_penetration;}
+    [[nodiscard]] double get_foot_penetration() const {return foot_penetration_;}
 
 private:
     /// @brief Compute a modified phi that is 0 when the phase is smaller that _horizontal_phase_delay/2 or bigger than (1 - _horizontal_phase_delay/2). This modified phi is used to ensure that the foot horizontal velocity is zero when it leaves and touches the ground.
     [[nodiscard]] double _compute_modified_phi(double phi) const
     {
-        double phi_m = (phi - this->_horizontal_phase_delay/2) / (1 - this->_horizontal_phase_delay);
+        double phi_m = (phi - this->horizontal_phase_delay_/2) / (1 - this->horizontal_phase_delay_);
 
         return std::min(std::max(0., phi_m), 1.);
     }
@@ -114,7 +114,7 @@ private:
         const T& p_i, const T& p_f, double phi
     ) {
         return spline(
-            p_i, p_f, phi, _method
+            p_i, p_f, phi, method_
         );
     }
 
@@ -139,19 +139,19 @@ private:
 
     /* ====================================================================== */
 
-    InterpolationMethod _method = InterpolationMethod::Spline_3rd;
+    InterpolationMethod method_ = InterpolationMethod::Spline_3rd;
 
     // Time duration of a step swing (both upwards and downwards movement).
-    double _step_duration = 0.2;
+    double step_duration_ = 0.2;
 
     // Phase delay before which the foot starts moving in the horizontal direction.
-    double _horizontal_phase_delay = 0.1;
+    double horizontal_phase_delay_ = 0.1;
 
     // How much the foot is raised during the swing phase.
-    double _step_height = 0.1;
+    double step_height_ = 0.1;
 
     // Positive when the foot penetrates the terrain.
-    double _foot_penetration = 0.025;
+    double foot_penetration_ = - 0.025;
 };
 
 }

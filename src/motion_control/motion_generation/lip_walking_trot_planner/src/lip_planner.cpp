@@ -432,16 +432,18 @@ bool MotionPlanner::check_stop(
     if (_phi == 0.
         && _fixed_steps >= _max_fixed_steps
         && vel_cmd.norm() < threshold
-        && std::norm(yaw_rate_cmd) < threshold) {
+        && std::abs(yaw_rate_cmd) < threshold) {
         // Stop the robot movements.
 
         return true;
     } else if (_phi == 0.
-               && _fixed_steps < _max_fixed_steps) {
+               && _fixed_steps < _max_fixed_steps
+               && vel_cmd.norm() < threshold
+               && std::abs(yaw_rate_cmd) < threshold) {
         // Do not stop the robot, but increase the number of steps during which the commanded twist was zero.
 
         _fixed_steps += 1;
-    } else if (vel_cmd.norm() > threshold || std::norm(yaw_rate_cmd) > threshold) {
+    } else if (vel_cmd.norm() > threshold || std::abs(yaw_rate_cmd) > threshold) {
         _fixed_steps = 0.;
     }
 
@@ -458,11 +460,19 @@ generalized_pose::GeneralizedPoseStruct MotionPlanner::update(
     bool stop_flag = check_stop(vel_cmd, yaw_rate_cmd);
 
     if (stop_flag) {
+        double pos_x = 0;
+        double pos_y = 0;
+
+        for (const auto& elem : _init_pos_swing_feet) {
+            pos_x += elem[0] / _init_pos_swing_feet.size();
+            pos_y += elem[1] / _init_pos_swing_feet.size();
+        }
+
         return  generalized_pose::GeneralizedPoseStruct(
-            generalized_pose::Vector3(p_com[0], p_com[1], _height_com),
+            generalized_pose::Vector3(pos_x, pos_y, _height_com),
             generalized_pose::Quaternion(0.0, 0.0, std::sin(_dtheta / 2), std::cos(_dtheta / 2))
         );
-    } else {
+    } else {        
         return mpc(
             p_com, v_com, a_com,
             vel_cmd, yaw_rate_cmd
