@@ -52,7 +52,7 @@ class PoseEstimatorNode(Node):
         
         # ========================== Node Parameters ========================= #
         
-        self.declare_parameter("robot_name")
+        self.declare_parameter("robot_name", "")
         
         
         # ============================== Filter ============================== #
