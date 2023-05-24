@@ -199,8 +199,6 @@ class MinimalPublisher(Node):
 
         n_paths = len(r_s_des)
 
-        # print(r_s_des)
-
         for i in range(n_paths):
             msg.paths.append(Path())
 

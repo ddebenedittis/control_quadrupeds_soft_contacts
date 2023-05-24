@@ -8,13 +8,13 @@ namespace lip_walking_trot_planner {
 
 Interpolator::Interpolator(
     InterpolationMethod method, double step_duration,
-    double horizontal_phase_delay, double step_height,
+    double step_height, double step_horizontal_phase_delay,
     double foot_penetration
 ): method_(method)
 {
     set_step_duration(step_duration);
-    set_horizontal_phase_delay(horizontal_phase_delay);
     set_step_height(step_height);
+    set_step_horizontal_phase_delay(step_horizontal_phase_delay);
     set_foot_penetration(foot_penetration);
 }
 
@@ -23,7 +23,7 @@ Interpolator::Interpolator(
 
 std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::interpolate(
     const Vector3d& init_pos, const Vector3d& end_pos, double phi
-) {
+) const {
     if (this->method_ == InterpolationMethod::Spline_3rd ||
         this->method_ == InterpolationMethod::Spline_5th) {
         return foot_trajectory_spline(init_pos, end_pos, phi);
@@ -45,13 +45,6 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::interpolate(
 
 /* ================================= Spline ================================= */
 
-/// @brief Compute the interpolation between two quantities using a polynomial spline.
-///
-/// @tparam T
-/// @param p_i initial position
-/// @param p_f final position
-/// @param phi swing phase (\in [0; 1])
-/// @return std::tuple<T, T, T> {pos, vel, acc}
 template <typename T>
 std::tuple<T, T, T> Interpolator::spline(
     const T& p_i, const T& p_f, double phi, InterpolationMethod method
@@ -95,11 +88,45 @@ template std::tuple<Vector3d, Vector3d, Vector3d>
 Interpolator::spline<Vector3d>(const Vector3d&, const Vector3d&, double, InterpolationMethod);
 
 
+/* ================================= Spline ================================= */
+
+std::tuple<Vector3d, Vector3d, Vector3d> spline(
+    const Vector3d& p_i, const Vector3d& v_i,
+    const Vector3d& p_f, const Vector3d& v_f,
+    double phi, InterpolationMethod method
+) {
+    // phi /in [0, 1]
+
+    Array3d f_t = Vector3d::Zero();
+    Array3d f_t_dot = Vector3d::Zero();
+    Array3d f_t_ddot = Vector3d::Zero();
+
+    // Local time of transition phase and its derivatives
+    if (method == InterpolationMethod::Spline_3rd) {
+        Array3d b = v_i;
+        Array3d c = 3 - v_f.array() - 2*v_i.array();
+        Array3d d = v_i.array() + v_f.array() - 2;
+
+        f_t = b * phi + c * std::pow(phi, 2) + d * std::pow(phi, 3);
+        f_t_dot = b + 2*c * phi + 3*d * std::pow(phi, 2);
+        f_t_ddot = 2*c + 6*d * phi;
+    }
+
+
+    // Polynomial spline and its derivatives
+    Vector3d p_t = (1 - f_t) * p_i.array() + f_t * p_f.array();
+    Vector3d v_t = - f_t_dot * p_i.array() + f_t_dot * p_f.array();
+    Vector3d a_t = - f_t_ddot * p_i.array() + f_t_ddot * p_f.array();
+
+    return {p_t, v_t, a_t};
+}
+
+
 /* ========================= Foot_trajectory_spline ========================= */
 
 std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_spline(
     const Vector3d& init_pos, const Vector3d& end_pos, double phi
-) {
+) const {
     double p_z, v_z, a_z;
 
     if (phi <= 0.5) {
@@ -132,7 +159,7 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_spline(
 
 std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_cycloid(
     const Vector3d& init_pos, double d, double theta, double phi
-) {
+) const {
     double T = this->step_duration_;
     double h = this->step_height_;
 

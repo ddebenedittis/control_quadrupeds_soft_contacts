@@ -196,8 +196,12 @@ lip_planner:
         init_time: 0.5
 
         sample_time: 0.005
+
+        interpolation_method: spline3   # must be in [spline3, spline5, cycloid]
         step_duration: 0.2
         step_height: 0.1
+        step_horizontal_phase_delay: 0.0
+        foot_penetration: -0.025
 
         acc_filter_order: 2
         acc_filter_beta: 0.9

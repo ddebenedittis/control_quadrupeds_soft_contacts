@@ -112,35 +112,52 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
 {
     zero_time_ = get_node()->get_parameter("zero_time").as_double();
     if (zero_time_ < 0) {
-        RCLCPP_ERROR(get_node()->get_logger(),"'zero_time' parameter is < 0.");
+        RCLCPP_ERROR(get_node()->get_logger(),"'zero_time' parameter must be > 0.");
         return CallbackReturn::ERROR;
     }
 
     init_time_ = get_node()->get_parameter("init_time").as_double();
     if (init_time_ < 0) {
-        RCLCPP_ERROR(get_node()->get_logger(),"'init_time' parameter is < 0.");
+        RCLCPP_ERROR(get_node()->get_logger(),"'init_time' parameter must be > 0.");
         return CallbackReturn::ERROR;
     }
 
 
-    // sample_time_ = get_node()->get_parameter("sample_time").as_double();
-    // if (sample_time_ < 0) {
-    //     RCLCPP_ERROR(get_node()->get_logger(),"'sample_time' parameter is < 0.");
-    //     return CallbackReturn::ERROR;
-    // }
+    double sample_time = get_node()->get_parameter("sample_time").as_double();
+    if (planner_.set_sample_time(sample_time) == 1) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'sample_time' parameter must be > 0.");
+        return CallbackReturn::ERROR;
+    }
 
-    // ste = get_node()->get_parameter("init_time").as_double();
-    // if (init_time_ < 0) {
-    //     RCLCPP_ERROR(get_node()->get_logger(),"'init_time' parameter is < 0.");
-    //     return CallbackReturn::ERROR;
-    // }
 
-    // step_height = get_node()->get_parameter("init_time").as_double();
-    // if (init_time_ < 0) {
-    //     RCLCPP_ERROR(get_node()->get_logger(),"'init_time' parameter is < 0.");
-    //     return CallbackReturn::ERROR;
-    // }
+    std::string method = get_node()->get_parameter("interpolation_method").as_string();
+    if (planner_.set_interpolation_method(method) == 1) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'interpolation_method' parameter is not an acceptable value.");
+        return CallbackReturn::ERROR;
+    }
 
+    double step_duration = get_node()->get_parameter("step_duration").as_double();
+    if (planner_.set_step_duration(step_duration) == 1) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'step_duration' parameter must be > 0.");
+        return CallbackReturn::ERROR;
+    }
+
+    double step_height = get_node()->get_parameter("step_height").as_double();
+    if (planner_.set_step_height(step_height) == 1) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'step_height' parameter must be > 0.");
+        return CallbackReturn::ERROR;
+    }
+
+    double step_horizontal_phase_delay = get_node()->get_parameter("step_horizontal_phase_delay").as_double();
+    if (planner_.set_step_horizontal_phase_delay(step_horizontal_phase_delay) == 1) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'step_horizontal_phase_delay' parameter must be >= 0 and < 1.");
+        return CallbackReturn::ERROR;
+    }
+
+    planner_.set_foot_penetration(
+        get_node()->get_parameter("foot_penetration").as_double()
+    );
+    
 
     /* ============================= Subscribers ============================ */
 
@@ -212,6 +229,10 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
     gen_pose_publisher_ = get_node()->create_publisher<generalized_pose_msgs::msg::GeneralizedPose>(
         "/motion_planner/desired_generalized_pose", rclcpp::SystemDefaultsQoS()
     );
+
+    feet_trajectories_publisher_ = get_node()->create_publisher<rviz_legged_msgs::msg::Paths>(
+        "rviz/feet_trajectory", rclcpp::SystemDefaultsQoS()
+    );
     
     return CallbackReturn::SUCCESS;
 }
@@ -257,6 +278,8 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
             q_.head(3), v_.head(3), a_b,
             (Vector2d() << velocity_forward_, velocity_lateral_).finished(), yaw_rate_
         );
+
+        publish_feet_trajectories();
     } else if (time_double > zero_time_) {
         // Interpolate between the initial position and the starting position of the trot.
 
@@ -300,6 +323,34 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
     gen_pose_publisher_->publish(gen_pose_.get_msg());
 
     return controller_interface::return_type::OK;
+}
+
+
+void LIPController::publish_feet_trajectories()
+{
+    auto trajectories = planner_.compute_trajectory_sample_points();
+
+    auto msg = rviz_legged_msgs::msg::Paths();
+
+    msg.header.frame_id = "ground_plane_link";
+
+    int n_paths = trajectories.size();
+
+    msg.paths.resize(n_paths);
+
+    for (int i = 0; i < n_paths; i++) {
+        int n_points = trajectories[i].size();
+
+        msg.paths[i].poses.resize(n_points);
+
+        for (int j = 0; j < n_points; j++) {
+            msg.paths[i].poses[j].pose.position.x = trajectories[i][j][0];
+            msg.paths[i].poses[j].pose.position.y = trajectories[i][j][1];
+            msg.paths[i].poses[j].pose.position.z = trajectories[i][j][2];
+        }
+    }
+
+    feet_trajectories_publisher_->publish(msg);
 }
 
 

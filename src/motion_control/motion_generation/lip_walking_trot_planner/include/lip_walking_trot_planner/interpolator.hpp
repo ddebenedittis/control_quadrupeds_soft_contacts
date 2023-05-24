@@ -33,7 +33,7 @@ public:
 
     Interpolator(
         InterpolationMethod method, double step_duration,
-        double horizontal_phase_delay, double step_height,
+        double step_height, double step_horizontal_phase_delay,
         double foot_penetration
     );
 
@@ -42,45 +42,76 @@ public:
     /// @param end_pos Desired foothold position
     /// @param phi Swing phase \in [0; 1]
     /// @return {position, velocity, acceleration} of the swing foot
-    std::tuple<Vector3d, Vector3d, Vector3d> interpolate(
+    [[nodiscard]] std::tuple<Vector3d, Vector3d, Vector3d> interpolate(
         const Vector3d& init_pos, const Vector3d& end_pos, double phi
-    );
+    ) const;
 
-    /// @brief Interpolate the position between two points using a polynomial spline (as specified in the _method variable).
+    /// @brief Compute the interpolation between two positions p_i and p_f using a polynomial spline (as specified in the _method variable). The starting velocity and acceleration is null.
+    /// 
+    /// @param p_i initial position
+    /// @param p_f final position
+    /// @param phi swing phase (\in [0; 1])
+    /// @param method 
+    /// @return {position, velocity, acceleration}
     template <typename T>
     static std::tuple<T, T, T> spline(
         const T& p_i, const T& p_f, double phi, InterpolationMethod method
+    );
+
+    /// @brief Compute the interpolation between two positions p_i and p_f using a polynomial spline (as specified in the _method variable).
+    /// 
+    /// @tparam T 
+    /// @param p_i initial position
+    /// @param v_i initial velocity
+    /// @param p_f final position
+    /// @param v_f final velocity
+    /// @param phi swing phase
+    /// @param method 
+    /// @return {position, velocity, acceleration}
+    static std::tuple<Vector3d, Vector3d, Vector3d> spline(
+        const Vector3d& p_i, const Vector3d& v_i,
+        const Vector3d& p_f, const Vector3d& v_f,
+        double phi, InterpolationMethod method
     );
 
     /* =============================== Setters ============================== */
 
     void set_method(InterpolationMethod method) {this->method_ = method;}
 
-    void set_step_duration(double step_duration)
+    int set_step_duration(double step_duration)
     {
         if (step_duration > 0) {
             this->step_duration_ = step_duration;
         } else {
             std::cerr << "The step duration must be a positive value." << std::endl;
+            return 1;
         }
+
+        return 0;
     }
 
-    void set_horizontal_phase_delay(double horizontal_delay)
+    int set_step_horizontal_phase_delay(double horizontal_phase_delay)
     {
-        if (horizontal_delay >= 0 && horizontal_delay <= 1) {
-            this->horizontal_phase_delay_ = horizontal_delay;
+        if (horizontal_phase_delay >= 0 && horizontal_phase_delay < 1) {
+            this->step_horizontal_phase_delay_ = horizontal_phase_delay;
         } else {
-            std::cerr << "The horizontal phase delay must be in [0; 1]." << std::endl;
+            std::cerr << "The horizontal phase delay must be in >= 0 and < 1." << std::endl;
+            return 1;
         }
+
+        return 0;
     }
 
-    void set_step_height(double step_height)
+    int set_step_height(double step_height)
     {
         if (step_height > 0) {
             this->step_height_ = step_height;
         } else {
             std::cerr << "The step height must be > 0." << std::endl;
+            return 1;
         }
+
+        return 0;
     }
 
     void set_foot_penetration(double foot_penetration) {this->foot_penetration_ = foot_penetration;}
@@ -97,7 +128,7 @@ private:
     /// @brief Compute a modified phi that is 0 when the phase is smaller that _horizontal_phase_delay/2 or bigger than (1 - _horizontal_phase_delay/2). This modified phi is used to ensure that the foot horizontal velocity is zero when it leaves and touches the ground.
     [[nodiscard]] double _compute_modified_phi(double phi) const
     {
-        double phi_m = (phi - this->horizontal_phase_delay_/2) / (1 - this->horizontal_phase_delay_);
+        double phi_m = (phi - this->step_horizontal_phase_delay_/2) / (1 - this->step_horizontal_phase_delay_);
 
         return std::min(std::max(0., phi_m), 1.);
     }
@@ -112,7 +143,7 @@ private:
     template <typename T>
     std::tuple<T, T, T> spline(
         const T& p_i, const T& p_f, double phi
-    ) {
+    ) const {
         return spline(
             p_i, p_f, phi, method_
         );
@@ -123,9 +154,9 @@ private:
     /// @param end_pos desired foothold position of the swing foot
     /// @param phi swing phase
     /// @return {position, velocity, acceleration} of the swing foot
-    std::tuple<Vector3d, Vector3d, Vector3d> foot_trajectory_spline(
+    [[nodiscard]] std::tuple<Vector3d, Vector3d, Vector3d> foot_trajectory_spline(
         const Vector3d& init_pos, const Vector3d& end_pos, double phi
-    );
+    ) const;
 
     /// @brief Compute and return the interpolated position, velocity and acceleration of a swing foot using a cycloid.
     /// @param init_pos initial position of the swing foot
@@ -133,9 +164,9 @@ private:
     /// @param theta yaw angle of the robot
     /// @param phi swing phase
     /// @return {position, velocity, acceleration} of the swing foot
-    std::tuple<Vector3d, Vector3d, Vector3d> foot_trajectory_cycloid(
+    [[nodiscard]] std::tuple<Vector3d, Vector3d, Vector3d> foot_trajectory_cycloid(
         const Vector3d& init_pos, double d, double theta, double phi
-    );
+    ) const;
 
     /* ====================================================================== */
 
@@ -145,7 +176,7 @@ private:
     double step_duration_ = 0.2;
 
     // Phase delay before which the foot starts moving in the horizontal direction.
-    double horizontal_phase_delay_ = 0.1;
+    double step_horizontal_phase_delay_ = 0.1;
 
     // How much the foot is raised during the swing phase.
     double step_height_ = 0.1;

@@ -39,11 +39,56 @@ public:
         return Interpolator::spline<Vector3d>(p_i, p_f, phi, method);
     };
 
-    [[nodiscard]] double get_dtheta() const {return _dtheta;}
+    [[nodiscard]] std::vector<std::vector<Vector3d>> compute_trajectory_sample_points() const;
 
-    [[nodiscard]] double get_height_com() const {return _height_com;}
+    /* =============================== Setters ============================== */
 
-    [[nodiscard]] double get_sample_time() const {return _dt;}
+    int set_sample_time(double dt)
+    {
+        if (dt > 0) {
+            dt_ = dt;
+        } else {
+            std::cerr << "The sample time must be > 0" << std::endl;
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int set_interpolation_method(const std::string& method)
+    {
+        if (method == "spline3") {
+            interpolator_.set_method(InterpolationMethod::Spline_3rd);
+        } else if (method == "spline5") {
+            interpolator_.set_method(InterpolationMethod::Spline_5th);
+        } else if (method == "cycloid") {
+            interpolator_.set_method(InterpolationMethod::Cycloid);
+        } else {
+            std::cerr << "In lip_walking_trot_planner::MotionPlanner.set_interpolation_method"
+                "the interpolation method specified is not an acceptable value.\n"
+                "It must be in [\"spline3\", \"spline5\", \"cycloid\"]" << std::endl;;
+
+            return 1;
+        }
+
+        return 0;
+    }
+
+    int set_step_duration(double step_duration) {return interpolator_.set_step_duration(step_duration);}
+
+    int set_step_horizontal_phase_delay(double horizontal_phase_delay) {return interpolator_.set_step_horizontal_phase_delay(horizontal_phase_delay);}
+
+    int set_step_height(double step_height) {return interpolator_.set_step_height(step_height);}
+
+    void set_foot_penetration(double foot_penetration) {return interpolator_.set_foot_penetration(foot_penetration);}
+
+    /* =============================== Getters ============================== */
+
+    [[nodiscard]] double get_dtheta() const {return dtheta_;}
+
+    [[nodiscard]] double get_height_com() const {return height_com_;}
+
+    [[nodiscard]] double get_sample_time() const {return dt_;}
 
 private:
     static MatrixXd compute_A_t(double omega, double t);
@@ -54,13 +99,11 @@ private:
         double xcom_dot_des
     );
 
-    std::vector<Vector2d> compute_desired_footholds(const Vector2d& p_star);
+    void compute_desired_footholds(const Vector2d& p_star);
 
-    std::tuple<VectorXd, VectorXd, VectorXd> compute_foot_trajectory(
-        const std::vector<Vector2d>& pos_swing_feet
-    );
+    std::tuple<VectorXd, VectorXd, VectorXd> compute_foot_trajectory();
 
-    void switch_swing_feet(const std::vector<Vector2d>& p_swing_feet);
+    void switch_swing_feet();
 
     std::tuple<Vector3d, Vector3d, Vector3d> get_des_base_pose(
         const Vector2d& Xcom_0, const Vector2d& Ycom_0,
@@ -76,58 +119,57 @@ private:
     /// @details True when the commanded linear and angular velocity has been equal to 0 for a number of robot steps grater than _max_fixed_steps and the previous swing phase has finished.
     bool check_stop(const Vector2d& vel_cmd, double yaw_rate_cmd);
 
-    [[nodiscard]] std::vector<std::vector<Vector3d>> compute_trajectory_sample_points();
-
     /// @brief Number of future steps over which the optimization is performed
-    int _n = 3;
+    int n_ = 3;
 
     // Cost function matrices
     // cost = sum 1/2 [ (xcom_dot - xcom_dot_des)^T Q (xcom_dot - xcom_dot_des) + (px - px_m)^T R (px - px_m) ]
-    MatrixXd _Q = 1000 * MatrixXd::Identity(_n, _n);
-    MatrixXd _R = 1 * MatrixXd::Identity(_n, _n);
+    MatrixXd Q_ = 1000 * MatrixXd::Identity(n_, n_);
+    MatrixXd R_ = 1 * MatrixXd::Identity(n_, n_);
 
     /// @brief Planner time step
-    double _dt = 1. / 200.;
+    double dt_ = 1. / 200.;
 
     /// @brief Time normalized stride phase
-    double _phi = 0.;
+    double phi_ = 0.;
 
     /// @brief Swing feet names
-    std::vector<std::string> _swing_feet_names = {"LF", "RH"};
+    std::vector<std::string> swing_feet_names_ = {"LF", "RH"};
 
     /// @brief Kinematic reachability limit for the stance feet
-    double _step_reachability = 0.2;
+    double step_reachability_ = 0.2;
 
     // Parameters used to describe the feet position with respect to the ZMP
-    double _theta_0 = 0.64;
-    double _r = 0.5;
+    double theta_0_ = 0.64;
+    double r_ = 0.5;
 
     /// @brief Commanded yaw angle
-    double _dtheta = 0.;
+    double dtheta_ = 0.;
 
-    Interpolator _interpolator = Interpolator(
-        InterpolationMethod::Spline_5th, 0.2,
-        0.0, 0.1, -0.025
+    Interpolator interpolator_ = Interpolator(
+        InterpolationMethod::Spline_3rd, 0.2,
+        0.1, 0.0,
+        -0.025
     );
 
-    /// @brief Initial swing feet positions at the start of the swing phase.
-    std::vector<Vector3d> _init_pos_swing_feet = {};
+    /// @brief Initial swing feet positions at the start of the swing phase. It is the last contact position.
+    std::vector<Vector3d> init_pos_swing_feet_ = {};
 
-    /// @brief Desired foothold positions at the end of the swing phase.
-    std::vector<Vector2d> _final_pos_swing_feet = {};
+    /// @brief Desired foothold positions of the swing feet at the end of the swing phase.
+    std::vector<Vector2d> final_pos_swing_feet_ = {};
 
     /// @brief Desired height of the center of mass
-    double _height_com = 0.5;
+    double height_com_ = 0.5;
 
     // The planner stops moving the feet when the reference velocity (linear and angular) has been equal to zero for a number of steps equal to max_fixed_steps.
-    int _max_fixed_steps = 6;
-    int _fixed_steps = 6;
+    int max_fixed_steps_ = 6;
+    int fixed_steps_ = 6;
 
     /// @brief Short ordered names of the swing feet.
-    std::vector<std::string> _all_feet_names = {"LF", "RF", "LH", "RH"};
+    std::vector<std::string> all_feet_names_ = {"LF", "RF", "LH", "RH"};
 
     /// Number of samples of a swing trajectory computed by compute_trajectory_sample_points().
-    int _n_sample_points = 10;
+    int n_sample_points_ = 10;
 };
 
 }
