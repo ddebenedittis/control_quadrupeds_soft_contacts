@@ -37,7 +37,7 @@ public:
         double foot_penetration
     );
 
-    /// @brief Interpolate the foot position from the initial position to the desired foothold position.
+    /// @brief Compute the positions, velocities, and accelerations that interpolate the foot position from the initial position to the desired foothold position with null starting and ending velocities.
     /// @param init_pos Initial foot position
     /// @param end_pos Desired foothold position
     /// @param phi Swing phase \in [0; 1]
@@ -46,31 +46,61 @@ public:
         const Vector3d& init_pos, const Vector3d& end_pos, double phi
     ) const;
 
-    /// @brief Compute the interpolation between two positions p_i and p_f using a polynomial spline (as specified in the _method variable). The starting velocity and acceleration is null.
+    /// @brief Compute the positions, velocities, and accelerations that interpolate the foot position from the initial position to the desired foothold position with null starting and ending velocities.
+    /// @param init_pos initial foot position
+    /// @param init_vel initial foot velocity
+    /// @param end_pos desired foot position
+    /// @param end_vel desired foot velocity
+    /// @param phi swing phase (\in [0, 1])
+    /// @param dt sampling time
+    /// @param step_duration time duration of the swing phase of a foot
+    /// @return {position, velocity, acceleration} of the swing foot
+    [[nodiscard]] std::tuple<Vector3d, Vector3d, Vector3d> interpolate(
+        const Vector3d& init_pos, const Vector3d& init_vel,
+        const Vector3d& end_pos, const Vector3d& end_vel,
+        double phi, double dt
+    ) const;
+
+    /// @brief Compute the position, velocity, and acceleration of a point that interpolates between two points with null starting and ending velocities using a polynomial spline.
     /// 
     /// @param p_i initial position
     /// @param p_f final position
-    /// @param phi swing phase (\in [0; 1])
-    /// @param method 
+    /// @param phi phase (\in [0; 1])
+    /// @param method spline type
     /// @return {position, velocity, acceleration}
     template <typename T>
     static std::tuple<T, T, T> spline(
         const T& p_i, const T& p_f, double phi, InterpolationMethod method
     );
 
-    /// @brief Compute the interpolation between two positions p_i and p_f using a polynomial spline (as specified in the _method variable).
+    /// @brief Compute the position, velocity, and acceleration of a point that interpolates between two points with non-null starting and ending velocities using a polynomial spline.
     /// 
     /// @tparam T 
     /// @param p_i initial position
     /// @param v_i initial velocity
     /// @param p_f final position
     /// @param v_f final velocity
-    /// @param phi swing phase
-    /// @param method 
+    /// @param phi phase
+    /// @param method spline type
     /// @return {position, velocity, acceleration}
-    static std::tuple<Vector3d, Vector3d, Vector3d> spline(
-        const Vector3d& p_i, const Vector3d& v_i,
-        const Vector3d& p_f, const Vector3d& v_f,
+    static std::tuple<Vector2d, Vector2d, Vector2d> spline(
+        const Vector2d& p_i, const Vector2d& v_i,
+        const Vector2d& p_f, const Vector2d& v_f,
+        double phi, InterpolationMethod method
+    );
+
+    /// @brief Compute the position, velocity, and acceleration of a point that interpolates between two points with non-null starting and ending velocities using a polynomial spline.
+    /// 
+    /// @param p_i initial position
+    /// @param v_i initial velocity
+    /// @param p_f final position
+    /// @param v_f final velocity
+    /// @param phi phase (\in [0, 1])
+    /// @param method spline type
+    /// @return {position, velocity, acceleration}
+    static std::tuple<double, double, double> spline(
+        double p_i, double v_i,
+        double p_f, double v_f,
         double phi, InterpolationMethod method
     );
 
@@ -156,6 +186,12 @@ private:
     /// @return {position, velocity, acceleration} of the swing foot
     [[nodiscard]] std::tuple<Vector3d, Vector3d, Vector3d> foot_trajectory_spline(
         const Vector3d& init_pos, const Vector3d& end_pos, double phi
+    ) const;
+
+    [[nodiscard]] std::tuple<Vector3d, Vector3d, Vector3d> foot_trajectory_spline(
+        const Vector3d& init_pos, const Vector3d& init_vel,
+        const Vector3d& end_pos, const Vector3d& end_vel,
+        double phi, double dt
     ) const;
 
     /// @brief Compute and return the interpolated position, velocity and acceleration of a swing foot using a cycloid.

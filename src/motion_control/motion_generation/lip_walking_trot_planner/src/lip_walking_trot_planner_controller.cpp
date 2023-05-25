@@ -161,6 +161,30 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
 
     /* ============================= Subscribers ============================ */
 
+    feet_positions_subscription_ = get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
+        "/logging/feet_positions", 1,
+        [this](const std_msgs::msg::Float64MultiArray& msg) -> void
+        {
+            for (int i = 0; i < 4; i++) {
+                feet_positions[i] << msg.data[3*i + 0],
+                                     msg.data[3*i + 1],
+                                     msg.data[3*i + 2];
+            }
+        }
+    );
+
+    feet_velocities_subscription_ = get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
+        "/logging/feet_velocities", 1,
+        [this](const std_msgs::msg::Float64MultiArray& msg) -> void
+        {
+            for (int i = 0; i < 4; i++) {
+                feet_velocities[i] << msg.data[3*i + 0],
+                                      msg.data[3*i + 1],
+                                      msg.data[3*i + 2];
+            }
+        }
+    );
+
     imu_subscription_ = get_node()->create_subscription<sensor_msgs::msg::Imu>(
         "/imu_sensor_broadcaster/imu", 1,
         [this](const sensor_msgs::msg::Imu& msg) -> void
@@ -273,7 +297,7 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
         // Vector3d a_b_meas_body = quat_conj * a_ + g;
 
         Vector3d a_b = - filter_.filter(a_b_meas_body, planner_.get_sample_time());
-        
+
         gen_pose_ = planner_.update(
             q_.head(3), v_.head(3), a_b,
             (Vector2d() << velocity_forward_, velocity_lateral_).finished(), yaw_rate_

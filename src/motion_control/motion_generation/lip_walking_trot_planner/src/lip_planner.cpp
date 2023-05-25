@@ -219,11 +219,6 @@ double MotionPlanner::mpc_qp(
 
     VectorXd sol(1+3*n_);
 
-    // std::cout << H << "\n" << std::endl;
-    // std::cout << c << "\n" << std::endl;
-    // std::cout << C << "\n" << std::endl;
-    // std::cout << d << "\n\n" << std::endl;
-
     solve_quadprog(
         std::move(H),
         - c,
@@ -264,8 +259,18 @@ void MotionPlanner::compute_desired_footholds(const Vector2d& p_star)
     }
 }
 
-std::tuple<VectorXd, VectorXd, VectorXd> MotionPlanner::compute_foot_trajectory()
+std::tuple<VectorXd, VectorXd, VectorXd> MotionPlanner::compute_swing_feet_trajectories(
+    const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
+)
 {
+    bool good_feet_positions = false;
+    for (const auto& foot_position : feet_positions) {
+        if (foot_position.norm() > 1e-6) {
+            good_feet_positions = true;
+            break;
+        }
+    }
+
     int n_swing_feet = final_pos_swing_feet_.size();
     VectorXd r_s_des = VectorXd::Zero(3 * n_swing_feet);
     VectorXd r_s_dot_des = VectorXd::Zero(3 * n_swing_feet);
@@ -277,16 +282,26 @@ std::tuple<VectorXd, VectorXd, VectorXd> MotionPlanner::compute_foot_trajectory(
         if (it != swing_feet_names_.end()) {
             int j = it - swing_feet_names_.begin();
 
-            auto init_pos = init_pos_swing_feet_[i];
-            // std::cout << init_pos << "\n" << std::endl;
             Vector3d end_pos = {final_pos_swing_feet_[j][0], final_pos_swing_feet_[j][1], 0.0};
-            // std::cout << end_pos << "\n\n" << std::endl;
             
-            std::forward_as_tuple(
-                r_s_des.segment(3*j, 3),
-                r_s_dot_des.segment(3*j, 3),
-                r_s_ddot_des.segment(3*j, 3)
-            ) = interpolator_.interpolate(init_pos, end_pos, phi_);
+            if (good_feet_positions) {
+                std::forward_as_tuple(
+                    r_s_des.segment(3*j, 3),
+                    r_s_dot_des.segment(3*j, 3),
+                    r_s_ddot_des.segment(3*j, 3)
+                ) = interpolator_.interpolate(
+                    feet_positions[i], feet_velocities[i],
+                    end_pos, {0,0,0},
+                    phi_, dt_);
+            } else {
+                auto init_pos = init_pos_swing_feet_[i];
+
+                std::forward_as_tuple(
+                    r_s_des.segment(3*j, 3),
+                    r_s_dot_des.segment(3*j, 3),
+                    r_s_ddot_des.segment(3*j, 3)
+                ) = interpolator_.interpolate(init_pos, end_pos, phi_);
+            }
         }
     }
 
@@ -341,7 +356,8 @@ std::tuple<Vector3d, Vector3d, Vector3d> MotionPlanner::get_des_base_pose(
 
 generalized_pose::GeneralizedPoseStruct MotionPlanner::mpc(
     const Vector3d& p_com, const Vector3d& v_com, const Vector3d& a_com,
-    const Vector2d& vel_cmd, double yaw_rate_cmd
+    const Vector2d& vel_cmd, double yaw_rate_cmd,
+    const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
 ) {
     // Initial CoM position
     Vector2d Xcom_0 = {p_com[0], v_com[0]};
@@ -370,14 +386,14 @@ generalized_pose::GeneralizedPoseStruct MotionPlanner::mpc(
     // Optimal ZMP position.
     Vector2d p_star = {p_x_star, p_y_star};
 
-    // std::cout << p_star << "\n" << std::endl;
-
     // Compute the desired footholds of the feet currently in swing phase.
     dtheta_ += yaw_rate_cmd * dt_;
     compute_desired_footholds(p_star);
 
     // Compute the feet trajectories.
-    auto [r_s_ddot_des, r_s_dot_des, r_s_des] = compute_foot_trajectory();
+    auto [r_s_ddot_des, r_s_dot_des, r_s_des] = compute_swing_feet_trajectories(
+        feet_positions, feet_velocities
+    );
 
     // Compute the base linear trajectory.
     auto [r_b_ddot_des, r_b_dot_des, r_b_des] = get_des_base_pose(Xcom_0, Ycom_0, px_0, py_0);
@@ -450,11 +466,12 @@ bool MotionPlanner::check_stop(
 
 generalized_pose::GeneralizedPoseStruct MotionPlanner::update(
     const Ref<Vector3d>& p_com, const Ref<Vector3d>& v_com, const Ref<Vector3d>& a_com,
-    const Ref<Vector2d>& vel_cmd, double yaw_rate_cmd
+    const Ref<Vector2d>& vel_cmd, double yaw_rate_cmd,
+    const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
 ) {
-    bool stop_flag = check_stop(vel_cmd, yaw_rate_cmd);
+    stop_flag_ = check_stop(vel_cmd, yaw_rate_cmd);
 
-    if (stop_flag) {
+    if (stop_flag_) {
         double pos_x = 0;
         double pos_y = 0;
 
@@ -470,7 +487,8 @@ generalized_pose::GeneralizedPoseStruct MotionPlanner::update(
     } else {        
         return mpc(
             p_com, v_com, a_com,
-            vel_cmd, yaw_rate_cmd
+            vel_cmd, yaw_rate_cmd,
+            feet_positions, feet_velocities
         );
     }
 }
@@ -480,6 +498,10 @@ generalized_pose::GeneralizedPoseStruct MotionPlanner::update(
 
 std::vector<std::vector<Vector3d>> MotionPlanner::compute_trajectory_sample_points() const
 {
+    if (stop_flag_) {
+        return {};
+    }
+
     std::vector<std::vector<Vector3d>> swing_feet_sampled_trajectories;
     swing_feet_sampled_trajectories.resize(2);
     for (std::vector<Vector3d>& trajectory : swing_feet_sampled_trajectories) {

@@ -69,6 +69,8 @@ class LIPController : public controller_interface::ControllerInterface {
 
         generalized_pose::GeneralizedPoseStruct gen_pose_;
 
+        rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr feet_positions_subscription_ = nullptr;
+        rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr feet_velocities_subscription_ = nullptr;
         rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_ = nullptr;
         rclcpp::Subscription<gazebo_msgs::msg::LinkStates>::SharedPtr link_states_subscription_ = nullptr;
         rclcpp::Subscription<velocity_command_msgs::msg::SimpleVelocityCommand>::SharedPtr simple_velocity_command_subscription_ = nullptr;
@@ -79,6 +81,13 @@ class LIPController : public controller_interface::ControllerInterface {
         std::shared_ptr<rclcpp::Publisher<rviz_legged_msgs::msg::Paths>> feet_trajectories_publisher_ = nullptr;
 
         /* ============== Variables Saved By The Subscriptions ============== */
+
+        std::vector<Vector3d> feet_positions = {
+            Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero()
+        };
+        std::vector<Vector3d> feet_velocities = {
+            Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero()
+        };
 
         VectorXd q_ = (VectorXd(7) << 0, 0, 0, 0, 0, 0, 1).finished();
         VectorXd v_ = VectorXd::Zero(6);
