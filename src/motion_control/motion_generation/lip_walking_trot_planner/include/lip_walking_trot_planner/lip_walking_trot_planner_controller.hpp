@@ -82,12 +82,8 @@ class LIPController : public controller_interface::ControllerInterface {
 
         /* ============== Variables Saved By The Subscriptions ============== */
 
-        std::vector<Vector3d> feet_positions = {
-            Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero()
-        };
-        std::vector<Vector3d> feet_velocities = {
-            Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero()
-        };
+        std::vector<Vector3d> feet_positions = {};
+        std::vector<Vector3d> feet_velocities = {};
 
         VectorXd q_ = (VectorXd(7) << 0, 0, 0, 0, 0, 0, 1).finished();
         VectorXd v_ = VectorXd::Zero(6);

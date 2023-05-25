@@ -1,5 +1,7 @@
 #include "lip_walking_trot_planner/lip_walking_trot_planner_controller.hpp"
 
+#include "lip_walking_trot_planner/quaternion_math.hpp"
+
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "pluginlib/class_list_macros.hpp"
 
@@ -14,50 +16,6 @@ using hardware_interface::HW_IF_VELOCITY;
 using hardware_interface::HW_IF_EFFORT;
 
 using namespace Eigen;
-
-
-
-Quaterniond quat_mult(const Quaterniond& q1, const Quaterniond& q2)
-{
-    double x1 = q1.x();
-    double y1 = q1.y();
-    double z1 = q1.z();
-    double w1 = q1.w();
-
-    double x2 = q2.x();
-    double y2 = q2.y();
-    double z2 = q2.z();
-    double w2 = q2.w();
-
-    double x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2;
-    double y = w1 * y2 + y1 * w2 + z1 * x2 - x1 * z2;
-    double z = w1 * z2 + z1 * w2 + x1 * y2 - y1 * x2;
-    double w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2;
-
-    return {w, x, y, z};
-}
-
-void quat_rot(const Quaterniond& quat, Vector3d& vec)
-{
-    Quaterniond vec_quat = Quaterniond(0, vec[0], vec[1], vec[2]);
-
-    Quaternion vec_out = quat_mult(quat_mult(quat, vec_quat), quat.conjugate());
-
-    vec[0] = vec_out.x();
-    vec[1] = vec_out.y();
-    vec[2] = vec_out.z();
-}
-
-
-Quaterniond compute_quaternion_from_euler_angles(double roll, double pitch, double yaw)
-{
-    double q_x = std::sin(roll/2) * std::cos(pitch/2) * std::cos(yaw/2) - std::cos(roll/2) * std::sin(pitch/2) * std::sin(yaw/2);
-    double q_y = std::cos(roll/2) * std::sin(pitch/2) * std::cos(yaw/2) + std::sin(roll/2) * std::cos(pitch/2) * std::sin(yaw/2);
-    double q_z = std::cos(roll/2) * std::cos(pitch/2) * std::sin(yaw/2) - std::sin(roll/2) * std::sin(pitch/2) * std::cos(yaw/2);
-    double q_w = std::cos(roll/2) * std::cos(pitch/2) * std::cos(yaw/2) + std::sin(roll/2) * std::sin(pitch/2) * std::sin(yaw/2);
-
-    return {q_w, q_x, q_y, q_z};
-}
 
 
 /* ================================= On_init ================================ */
@@ -165,6 +123,8 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
         "/logging/feet_positions", 1,
         [this](const std_msgs::msg::Float64MultiArray& msg) -> void
         {
+            feet_positions.resize(4);
+
             for (int i = 0; i < 4; i++) {
                 feet_positions[i] << msg.data[3*i + 0],
                                      msg.data[3*i + 1],
@@ -177,6 +137,8 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
         "/logging/feet_velocities", 1,
         [this](const std_msgs::msg::Float64MultiArray& msg) -> void
         {
+            feet_velocities.resize(4);
+
             for (int i = 0; i < 4; i++) {
                 feet_velocities[i] << msg.data[3*i + 0],
                                       msg.data[3*i + 1],
@@ -300,10 +262,10 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
 
         gen_pose_ = planner_.update(
             q_.head(3), v_.head(3), a_b,
-            (Vector2d() << velocity_forward_, velocity_lateral_).finished(), yaw_rate_
+            (Vector2d() << velocity_forward_, velocity_lateral_).finished(), yaw_rate_,
+            plane_coeffs_,
+            feet_positions, feet_velocities
         );
-
-        correct_with_terrain_plane();
 
         publish_feet_trajectories();
     } else if (time_double > zero_time_) {
@@ -311,8 +273,14 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
 
         Vector3d base_pos, base_vel, base_acc;
 
+        double roll = std::atan(plane_coeffs_[1]);
+        double pitch = - std::atan(plane_coeffs_[0]);
+        double yaw = planner_.get_dtheta();
+
         Vector3d end_pos = init_pos_;
-        end_pos[2] = planner_.get_height_com() + plane_coeffs_[0] * q_[3] + plane_coeffs_[1] * q_[1] + plane_coeffs_[2];
+        end_pos[0] += planner_.get_height_com() * std::sin(pitch);
+        end_pos[1] -= planner_.get_height_com() * std::sin(roll);
+        end_pos[2] = planner_.get_height_com() * std::cos(roll) * std::cos(pitch) + plane_coeffs_[0] * q_[3] + plane_coeffs_[1] * q_[1] + plane_coeffs_[2];
 
         std::tie(base_pos, base_vel, base_acc) = MotionPlanner::spline(
             init_pos_, 
@@ -326,9 +294,19 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
         gen_pose_.base_pos = generalized_pose::Vector3(base_pos);
 
         gen_pose_.base_angvel = generalized_pose::Vector3(0, 0, 0);
-        gen_pose_.base_quat = generalized_pose::Quaternion(
-            0, 0, std::sin(planner_.get_dtheta()/2), std::cos(planner_.get_dtheta()/2)
+
+        Quaterniond quat = compute_quaternion_from_euler_angles(
+            roll,
+            pitch,
+            yaw
         );
+        gen_pose_.base_quat = generalized_pose::Quaternion(
+            quat.x(), quat.y(), quat.z(), quat.w()
+        );
+
+    gen_pose_.base_quat = generalized_pose::Quaternion(
+        quat.x(), quat.y(), quat.z(), quat.w()
+    );
     } else {
         // Initialize the planner starting position and orientation.
 
@@ -339,7 +317,7 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
             1 - 2 * (q_[4]*q_[4] +  q_[5]*q_[5])
         );
 
-        planner_.update_initial_conditions(init_pos_, dtheta);
+        planner_.update_initial_conditions(init_pos_, dtheta, feet_positions);
 
         return controller_interface::return_type::OK;
     }
@@ -375,33 +353,6 @@ void LIPController::publish_feet_trajectories()
     }
 
     feet_trajectories_publisher_->publish(msg);
-}
-
-
-void LIPController::correct_with_terrain_plane()
-{
-    // Local terrain height
-    double delta_h =   plane_coeffs_[0] * gen_pose_.base_pos.x
-                     + plane_coeffs_[1] * gen_pose_.base_pos.y
-                     + plane_coeffs_[2];
-
-    // Shift the desired base pose and the desired feet positions.
-    gen_pose_.base_pos.z += delta_h;
-    
-    for (int i = 2; i < static_cast<int>(gen_pose_.feet_pos.size()); i+=3) {
-        gen_pose_.feet_pos[i] += delta_h;
-    }
-
-    // Align the desired base pose and pitch angles to the local terrain plane.
-    Quaterniond quat = compute_quaternion_from_euler_angles(
-          std::atan(plane_coeffs_[1]),
-        - std::atan(plane_coeffs_[0]),
-          planner_.get_dtheta()
-    );
-
-    gen_pose_.base_quat = generalized_pose::Quaternion(
-        quat.x(), quat.y(), quat.z(), quat.w()
-    );
 }
 
 } // namespace lip_walking_trot_planner

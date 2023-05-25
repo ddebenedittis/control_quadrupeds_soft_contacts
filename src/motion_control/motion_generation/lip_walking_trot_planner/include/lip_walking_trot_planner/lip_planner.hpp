@@ -25,12 +25,14 @@ public:
 
     void update_initial_conditions(
         const Ref<Vector3d>& p_0 = (Vector3d() << 0, 0, 0).finished(),
-        double yaw = 0
+        double yaw = 0,
+        const std::vector<Vector3d>& feet_positions = {}
     );
 
     generalized_pose::GeneralizedPoseStruct update(
         const Ref<Vector3d>& p_com, const Ref<Vector3d>& v_com, const Ref<Vector3d>& a_com,
         const Ref<Vector2d>& vel_cmd, double yaw_rate_cmd,
+        const Vector3d& plane_coeffs = {0, 0, 0},
         const std::vector<Vector3d>& feet_positions = {}, const std::vector<Vector3d>& feet_velocities = {}
     );
 
@@ -106,7 +108,7 @@ private:
         const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
     );
 
-    void switch_swing_feet();
+    void switch_swing_feet(const std::vector<Vector3d>& feet_positions);
 
     std::tuple<Vector3d, Vector3d, Vector3d> get_des_base_pose(
         const Vector2d& Xcom_0, const Vector2d& Ycom_0,
@@ -116,12 +118,18 @@ private:
     generalized_pose::GeneralizedPoseStruct mpc(
         const Vector3d& p_com, const Vector3d& v_com, const Vector3d& a_com,
         const Vector2d& vel_cmd, double yaw_rate_cmd,
+        const Vector3d& plane_coeffs,
         const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
     );
 
     /// @brief Return true when the robot should stop moving.
     /// @details True when the commanded linear and angular velocity has been equal to 0 for a number of robot steps grater than _max_fixed_steps and the previous swing phase has finished.
     bool check_stop(const Vector2d& vel_cmd, double yaw_rate_cmd);
+
+    void correct_with_terrain_plane(
+        const Vector3d& plane_coeffs, bool correct_feet_trajectory,
+        generalized_pose::GeneralizedPoseStruct& gen_pose
+    ) const;
 
     bool stop_flag_ = true;
 

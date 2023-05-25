@@ -194,6 +194,8 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_spline(
         std::tie(p_z, v_z, a_z) = spline(step_height_, - foot_penetration_, phi_2);
     }
 
+    p_z += init_pos[2];
+
     // The velocity and acceleration must be scaled to take into account the time in which the swing is performed (since phi is a normalized quantity).
     v_z /= step_duration_ / 2;
     a_z /= step_duration_ / 2;
@@ -226,7 +228,7 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_spline(
 
         double phi_up = dt / remaining_upward_phase_duration;
         std::tie(p_z, v_z, a_z) = spline(
-            init_pos[2], init_vel[2],
+            0, init_vel[2],
             step_height_, 0,
             phi_up, InterpolationMethod::Spline_3rd);
 
@@ -237,13 +239,15 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_spline(
 
         double phi_down = dt / remaining_downward_phase_duration;
         std::tie(p_z, v_z, a_z) = spline(
-            init_pos[2], init_vel[2],
+            0, init_vel[2],
             - foot_penetration_, 0,
             phi_down, InterpolationMethod::Spline_3rd);
 
         v_z /= remaining_downward_phase_duration;
         a_z /= remaining_downward_phase_duration;
     }
+
+    p_z += init_pos[2];
 
     Vector2d init_pos_xy = init_pos.head(2);
     Vector2d init_vel_xy = init_vel.head(2);
@@ -296,6 +300,8 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_cycloid(
         z_dot = - z_dot;
         z_ddot = - z_ddot;
     }
+
+    z += init_pos[2];
 
     Vector3d p_t = init_pos + Vector3d{x * std::cos(theta), x * std::sin(theta), z};
     Vector3d v_t = Vector3d{x_dot * std::cos(theta), x_dot * std::sin(theta), z_dot};

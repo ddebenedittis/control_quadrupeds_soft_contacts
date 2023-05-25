@@ -66,6 +66,7 @@ set(LIBRARY_DEPENDENCIES
 )
 
 add_library(${LIBRARY_NAME} SHARED
+    src/quaternion_math.cpp
     src/interpolator.cpp
     src/lip_planner.cpp
     src/lip_walking_trot_planner_controller.cpp
