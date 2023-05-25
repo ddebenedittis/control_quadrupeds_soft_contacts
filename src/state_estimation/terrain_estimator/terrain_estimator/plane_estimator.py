@@ -11,10 +11,10 @@ class PlaneEstimator():
     def __init__(self) -> None:
         # Save the position of each foot the last time they were in contact with the terrain. These positions are used to compute the plane coefficients.
         self.contact_feet_positions = np.array([
-             1.,  1., 0.,   # LF
-             1., -1., 0.,   # RF
-            -1.,  1., 0.,   # LH
-            -1., -1., 0.    # RH
+            np.nan, np.nan, np.nan,   # LF
+            np.nan, np.nan, np.nan,   # RF
+            np.nan, np.nan, np.nan,   # LH
+            np.nan, np.nan, np.nan    # RH
         ])
         
     

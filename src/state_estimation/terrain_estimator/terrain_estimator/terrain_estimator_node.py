@@ -98,13 +98,19 @@ class TerrainEstimator(Node):
             if self.all_feet_names[i] in self.contact_feet_names:
                 # Filter the measurement only if the feet is among the feet in contact with the terrain.
                 
-                self.plane_estimator.contact_feet_positions[3*i:3*i+3] = self.filter.filter(
-                    self.plane_estimator.contact_feet_positions[3*i:3*i+3],
-                    np.array([msg.data[3*i:3*i+3]])
-                )
-
+                if not np.isnan(self.plane_estimator.contact_feet_positions[3*i]):
+                    self.plane_estimator.contact_feet_positions[3*i:3*i+3] = self.filter.filter(
+                        self.plane_estimator.contact_feet_positions[3*i:3*i+3],
+                        np.array([msg.data[3*i:3*i+3]])
+                    )
+                else:
+                    self.plane_estimator.contact_feet_positions[3*i:3*i+3] = np.array([msg.data[3*i:3*i+3]])
+    
     
     def timer_callback(self):
+        if np.isnan(self.plane_estimator.contact_feet_positions[1]):
+            return
+        
         # Publish the estimated terrain plane coefficients.
         
         # The plane is z = a x + b y + c, where self.plane_coeffs = {a, b, c}.
