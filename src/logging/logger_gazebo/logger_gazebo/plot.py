@@ -411,60 +411,39 @@ class Plot:
             axs[i].set_xlim([self.time_init, self.time_end])
 
 
-    def plot_desired_vs_true_feet_pos(self, axs):
-        custom_cycler = (
-            cycler(color=['#0072BD', '#D95319', '#EDB120', '#0072BD', '#D95319', '#EDB120']) +
-            cycler(linestyle=['-', '-', '-', '--', '--', '--'])
+    def plot_desired_vs_true_foot_pos(self, axs, foot_idx: int):
+        for i in range(3):
+            axs[i].plot(self.time_vector,
+                        self.feet_positions[self.i_init:self.i_end, 3*foot_idx + i])
+            
+            axs[i].plot(self.time_vector,
+                        self.desired_feet_positions[self.i_init:self.i_end, 3*foot_idx + i])
+            
+            axs[i].set(
+                xlabel = "time [s]",
+                ylabel = "position [m]",
+                title = "measured vs desired " + self.feet_names[foot_idx] + " foot position" \
+                    + " - " + self.dir_names[i] + " coordinate",
+            )
+            
+            axs[i].legend(["measured", "reference"])
+            axs[i].set_xlim([self.time_init, self.time_end])
+
+
+    def plot_feet_pos_error(self, ax, foot_idx: int):
+        ax.plot(self.time_vector,
+                self.feet_positions[self.i_init:self.i_end, 3*foot_idx:3*foot_idx+3]
+                - self.desired_feet_positions[self.i_init:self.i_end, 3*foot_idx:3*foot_idx+3])
+
+        ax.set(
+            xlabel = "time [s]",
+            ylabel = "position [m]",
+            title = self.feet_names[foot_idx] + " foot position error"
         )
 
-        for i, axi in enumerate(axs):
-            for j, ax in enumerate(axi):
-                k = i * axs.shape[0] + j
+        ax.legend(["x-coordinate", "y-coordinate", "z-coordinate"])
 
-                ax.plot(self.time_vector,
-                            self.feet_positions[self.i_init:self.i_end, 3*k:3*k+3])
-
-                ax.plot(self.time_vector,
-                            self.desired_feet_positions[self.i_init:self.i_end, 3*k:3*k+3])
-
-                plt.gca().set_prop_cycle(custom_cycler)
-
-                ax.set(
-                    xlabel = "time [s]",
-                    ylabel = "position [m]",
-                    title = "desired vs true " + self.feet_names[k] + " foot position",
-                )
-
-                lines = [
-                    Line2D([0,1],[0,1],linestyle='-', color='#0072BD'),
-                    Line2D([0,1],[0,1],linestyle='-', color='#D95319'),
-                    Line2D([0,1],[0,1],linestyle='-', color='#EDB120'),
-                    Line2D([0,1],[0,1],linestyle='--', color='black'),
-                ]
-
-                ax.legend(lines, ["measured-x", "measured-y", "measured-z", "commanded"])
-                ax.set_xlim([self.time_init, self.time_end])
-
-
-    def plot_feet_pos_error(self, axs):
-        for i, axi in enumerate(axs):
-            for j, ax in enumerate(axi):
-                k = i * axs.shape[0] + j
-
-                # TODO fai misura - riferimento
-                ax.plot(self.time_vector,
-                            self.feet_positions[self.i_init:self.i_end, 3*k:3*k+3]
-                            - self.desired_feet_positions[self.i_init:self.i_end, 3*k:3*k+3])
-
-                ax.set(
-                    xlabel = "time [s]",
-                    ylabel = "position [m]",
-                    title = self.feet_names[k] + " foot position error"
-                )
-
-                ax.legend(["x-coordinate", "y-coordinate", "z-coordinate"])
-
-                ax.set_xlim([self.time_init, self.time_end])
+        ax.set_xlim([self.time_init, self.time_end])
 
 
     def save_megaplot_i(self, i):
@@ -510,10 +489,15 @@ class Plot:
 
 
     def save_feet_pos_plots(self):
-        fig, axs = plt.subplots(2, 4, figsize=[3.5*self.x_size_def, 1.25*self.y_size_def])
-        self.plot_feet_pos_error(axs[0:2,0:2])
-        self.plot_desired_vs_true_feet_pos(axs[0:2,2:4])
-
+        fig, axs = plt.subplots(2, 2, figsize=[2*self.x_size_def, 1.5*self.y_size_def])
+        
+        foot_idx = 0
+        
+        axs = axs.flatten()
+        self.plot_desired_vs_true_foot_pos(axs[0:3], foot_idx = foot_idx)
+        self.plot_feet_pos_error(axs[3], foot_idx = foot_idx)
+        axs.reshape((2,2))
+        
         fig_path = os.path.join(self.foldername, self.format, self.subdir,
                                 'feet_pos.' + self.format)
         plt.savefig(fig_path, bbox_inches="tight", format=self.format)
