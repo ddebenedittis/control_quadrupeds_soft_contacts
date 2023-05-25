@@ -303,6 +303,8 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
             (Vector2d() << velocity_forward_, velocity_lateral_).finished(), yaw_rate_
         );
 
+        correct_with_terrain_plane();
+
         publish_feet_trajectories();
     } else if (time_double > zero_time_) {
         // Interpolate between the initial position and the starting position of the trot.
@@ -310,7 +312,7 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
         Vector3d base_pos, base_vel, base_acc;
 
         Vector3d end_pos = init_pos_;
-        end_pos[2] = planner_.get_height_com();
+        end_pos[2] = planner_.get_height_com() + plane_coeffs_[0] * q_[3] + plane_coeffs_[1] * q_[1] + plane_coeffs_[2];
 
         std::tie(base_pos, base_vel, base_acc) = MotionPlanner::spline(
             init_pos_, 
@@ -333,16 +335,14 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
         init_pos_ = q_.head(3);
 
         double dtheta = std::atan2(
-            2 * (q_[3]*q_[2] + q_[0]*q_[1]), 
-            1 - 2 * (q_[1]*q_[1] +  q_[2]*q_[2])
+            2 * (q_[6]*q_[5] + q_[3]*q_[4]), 
+            1 - 2 * (q_[4]*q_[4] +  q_[5]*q_[5])
         );
 
         planner_.update_initial_conditions(init_pos_, dtheta);
 
         return controller_interface::return_type::OK;
     }
-
-    // correct_with_terrain_plane();
 
     gen_pose_publisher_->publish(gen_pose_.get_msg());
 
@@ -388,7 +388,7 @@ void LIPController::correct_with_terrain_plane()
     // Shift the desired base pose and the desired feet positions.
     gen_pose_.base_pos.z += delta_h;
     
-    for (int i = 0; i < static_cast<int>(gen_pose_.feet_pos.size()); i+=3) {
+    for (int i = 2; i < static_cast<int>(gen_pose_.feet_pos.size()); i+=3) {
         gen_pose_.feet_pos[i] += delta_h;
     }
 

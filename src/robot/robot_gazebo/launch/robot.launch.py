@@ -261,7 +261,9 @@ def spawn_things(ld):
         package = 'gazebo_ros',
         executable = 'spawn_entity.py',
         arguments = ['-entity', 'ground_plane',
-                     '-topic', '/ground_plane/robot_description'],
+                     '-topic', '/ground_plane/robot_description',
+                     '-x', '0', '-y', '0', '-z', '0',
+                     '-R', '0', '-P', '0', '-Y', '0'],
         output = 'screen',
     )
     
