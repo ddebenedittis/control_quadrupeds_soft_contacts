@@ -85,6 +85,8 @@ public:
 
     void set_foot_penetration(double foot_penetration) {return interpolator_.set_foot_penetration(foot_penetration);}
 
+    void set_interpolate_swing_feet_from_current_position(bool flag) {interpolate_swing_feet_from_current_position_ = flag;}
+
     /* =============================== Getters ============================== */
 
     [[nodiscard]] double get_dtheta() const {return dtheta_;}
@@ -105,6 +107,7 @@ private:
     void compute_desired_footholds(const Vector2d& p_star);
 
     std::tuple<VectorXd, VectorXd, VectorXd> compute_swing_feet_trajectories(
+        const Vector3d& plane_coeffs,
         const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
     );
 
@@ -127,7 +130,7 @@ private:
     bool check_stop(const Vector2d& vel_cmd, double yaw_rate_cmd);
 
     void correct_with_terrain_plane(
-        const Vector3d& plane_coeffs, bool correct_feet_trajectory,
+        const Vector3d& plane_coeffs,
         generalized_pose::GeneralizedPoseStruct& gen_pose
     ) const;
 
@@ -182,8 +185,11 @@ private:
     /// @brief Short ordered names of the swing feet.
     std::vector<std::string> all_feet_names_ = {"LF", "RF", "LH", "RH"};
 
-    /// Number of samples of a swing trajectory computed by compute_trajectory_sample_points().
+    /// @brief Number of samples of a swing trajectory computed by compute_trajectory_sample_points().
     int n_sample_points_ = 10;
+
+    /// @brief
+    bool interpolate_swing_feet_from_current_position_ = false;
 };
 
 }

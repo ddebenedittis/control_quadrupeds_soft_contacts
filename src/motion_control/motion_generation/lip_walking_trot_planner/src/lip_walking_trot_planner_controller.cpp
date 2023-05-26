@@ -38,6 +38,8 @@ CallbackReturn LIPController::on_init()
 
         auto_declare<bool>("correct_with_terrain_penetrations", bool());
         auto_declare<double>("gain_correction_with_terrain_penetrations", double());
+
+        auto_declare<bool>("interpolate_swing_feet_from_current_position", bool());
     }
     catch(const std::exception& e) {
         fprintf(stderr,"Exception thrown during init stage with message: %s \n", e.what());
@@ -140,6 +142,10 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
         RCLCPP_ERROR(get_node()->get_logger(),"'acc_filter_beta' parameter is not an acceptable value.");
         return CallbackReturn::ERROR;
     }
+
+    planner_.set_interpolate_swing_feet_from_current_position(
+        get_node()->get_parameter("interpolate_swing_feet_from_current_position").as_bool()
+    );
     
 
     /* ============================= Subscribers ============================ */

@@ -208,3 +208,5 @@ lip_planner:
 
         correct_with_terrain_penetrations: true
         gain_correction_with_terrain_penetrations: 0.5
+
+        interpolate_swing_feet_from_current_position: false

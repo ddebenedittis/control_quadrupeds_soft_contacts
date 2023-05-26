@@ -204,6 +204,8 @@ private:
         const Vector3d& init_pos, double d, double theta, double phi
     ) const;
 
+    void limit_feet_vel_acc(Vector3d& feet_velocities, Vector3d& feet_accelerations) const;
+
     /* ====================================================================== */
 
     InterpolationMethod method_ = InterpolationMethod::Spline_3rd;
@@ -219,6 +221,9 @@ private:
 
     // Positive when the foot penetrates the terrain.
     double foot_penetration_ = - 0.025;
+
+    double max_foot_velocity = 4;
+    double max_foot_acceleration = 20;
 };
 
 }

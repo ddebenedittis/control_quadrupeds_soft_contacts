@@ -277,16 +277,19 @@ void MotionPlanner::compute_desired_footholds(const Vector2d& p_star)
 /* ===================== Compute_swing_feet_trajectories ==================== */
 
 std::tuple<VectorXd, VectorXd, VectorXd> MotionPlanner::compute_swing_feet_trajectories(
+    const Vector3d& plane_coeffs,
     const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities)
 {
     bool good_feet_positions = false;
-    //! Not used for the interpolation right now.
-    // for (const auto& foot_position : feet_positions) {
-    //     if (foot_position.norm() > 1e-6) {
-    //         good_feet_positions = true;
-    //         break;
-    //     }
-    // }
+
+    if (interpolate_swing_feet_from_current_position_) {
+        for (const auto& foot_position : feet_positions) {
+            if (foot_position.norm() > 1e-6) {
+                good_feet_positions = true;
+                break;
+            }
+        }
+    }
 
     int n_swing_feet = final_pos_swing_feet_.size();
     VectorXd r_s_des = VectorXd::Zero(3 * n_swing_feet);
@@ -299,11 +302,11 @@ std::tuple<VectorXd, VectorXd, VectorXd> MotionPlanner::compute_swing_feet_traje
         if (it != swing_feet_names_.end()) {
             int j = it - swing_feet_names_.begin();
 
-            Vector3d end_pos = {final_pos_swing_feet_[j][0], final_pos_swing_feet_[j][1], 0.0};
-
-            if (!feet_positions.empty()) {
-                end_pos[2] = feet_positions[i][2];
-            }
+            Vector3d end_pos = {
+                final_pos_swing_feet_[j][0],
+                final_pos_swing_feet_[j][1],
+                plane_coeffs[0] * final_pos_swing_feet_[j][0] + plane_coeffs[1] * final_pos_swing_feet_[j][1] + plane_coeffs[2]
+            };
             
             if (good_feet_positions) {
                 std::forward_as_tuple(
@@ -316,6 +319,7 @@ std::tuple<VectorXd, VectorXd, VectorXd> MotionPlanner::compute_swing_feet_traje
                     phi_, dt_);
             } else {
                 auto init_pos = init_pos_swing_feet_[i];
+                init_pos[2] = plane_coeffs[0] * init_pos[0] + plane_coeffs[1] * init_pos[1] + plane_coeffs[2];
 
                 std::forward_as_tuple(
                     r_s_des.segment(3*j, 3),
@@ -344,7 +348,7 @@ void MotionPlanner::switch_swing_feet(const std::vector<Vector3d>& feet_position
         if (it == old_swing_feet_names.end()) {
             swing_feet_names_.push_back(all_feet_names_[i]);
 
-            if (!feet_positions.empty()) {
+            if (feet_positions.size() == 4) {
                 init_pos_swing_feet_[i] << feet_positions[i][0],
                                            feet_positions[i][1],
                                            feet_positions[i][2];
@@ -421,6 +425,7 @@ generalized_pose::GeneralizedPoseStruct MotionPlanner::mpc(
 
     // Compute the feet trajectories.
     auto [r_s_ddot_des, r_s_dot_des, r_s_des] = compute_swing_feet_trajectories(
+        plane_coeffs,
         feet_positions, feet_velocities
     );
 
@@ -459,7 +464,7 @@ generalized_pose::GeneralizedPoseStruct MotionPlanner::mpc(
     );
 
     correct_with_terrain_plane(
-        plane_coeffs, feet_positions.empty(),
+        plane_coeffs,
         des_gen_pose
     );
     
@@ -499,7 +504,7 @@ bool MotionPlanner::check_stop(
 /* ======================= Correct_with_terrain_plane ======================= */
 
 void MotionPlanner::correct_with_terrain_plane(
-    const Vector3d& plane_coeffs, bool correct_feet_trajectory,
+    const Vector3d& plane_coeffs,
     generalized_pose::GeneralizedPoseStruct& gen_pose
 ) const {
     // Local terrain height
@@ -509,12 +514,6 @@ void MotionPlanner::correct_with_terrain_plane(
 
     // Shift the desired base pose and the desired feet positions.
     gen_pose.base_pos.z += delta_h;
-    
-    if (correct_feet_trajectory) {
-        for (int i = 2; i < static_cast<int>(gen_pose.feet_pos.size()); i+=3) {
-            gen_pose.feet_pos[i] += delta_h;
-        }
-    }
 
     // Align the desired base pose and pitch angles to the local terrain plane.
     Quaterniond quat = compute_quaternion_from_euler_angles(

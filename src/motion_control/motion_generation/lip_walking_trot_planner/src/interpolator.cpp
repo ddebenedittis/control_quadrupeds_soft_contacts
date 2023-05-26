@@ -188,13 +188,11 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_spline(
 
     if (phi <= 0.5) {
         double phi_2 = phi * 2;
-        std::tie(p_z, v_z, a_z) = spline(0., step_height_, phi_2);
+        std::tie(p_z, v_z, a_z) = spline(init_pos[2], end_pos[2] + step_height_, phi_2);
     } else {
         double phi_2 = 2 * phi - 1;
-        std::tie(p_z, v_z, a_z) = spline(step_height_, - foot_penetration_, phi_2);
+        std::tie(p_z, v_z, a_z) = spline(end_pos[2] + step_height_, end_pos[2] - foot_penetration_, phi_2);
     }
-
-    p_z += init_pos[2];
 
     // The velocity and acceleration must be scaled to take into account the time in which the swing is performed (since phi is a normalized quantity).
     v_z /= step_duration_ / 2;
@@ -224,30 +222,28 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_spline(
     double p_z, v_z, a_z;
 
     if (phi <= 0.5) {
-        double remaining_upward_phase_duration = step_duration_ / 2 * (0.5 - phi);
+        double remaining_upward_phase_duration = step_duration_ * (0.5 - phi);
 
         double phi_up = dt / remaining_upward_phase_duration;
         std::tie(p_z, v_z, a_z) = spline(
-            0, init_vel[2],
-            step_height_, 0,
+            init_pos[2], init_vel[2],
+            end_pos[2] + step_height_, 0,
             phi_up, InterpolationMethod::Spline_3rd);
 
         v_z /= remaining_upward_phase_duration;
         a_z /= remaining_upward_phase_duration;
     } else {
-        double remaining_downward_phase_duration = step_duration_ / 2 * (1 - phi);
+        double remaining_downward_phase_duration = step_duration_ * (1 - phi);
 
         double phi_down = dt / remaining_downward_phase_duration;
         std::tie(p_z, v_z, a_z) = spline(
-            0, init_vel[2],
-            - foot_penetration_, 0,
+            end_pos[2] + step_height_, init_vel[2],
+            end_pos[2] - foot_penetration_, 0,
             phi_down, InterpolationMethod::Spline_3rd);
 
         v_z /= remaining_downward_phase_duration;
         a_z /= remaining_downward_phase_duration;
     }
-
-    p_z += init_pos[2];
 
     Vector2d init_pos_xy = init_pos.head(2);
     Vector2d init_vel_xy = init_vel.head(2);
@@ -267,6 +263,8 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_spline(
     Vector3d p_t = {p_xy[0], p_xy[1], p_z};
     Vector3d v_t = {v_xy[0], v_xy[1], v_z};
     Vector3d a_t = {a_xy[0], a_xy[1], a_z};
+
+    limit_feet_vel_acc(v_t, a_t);
 
     return {p_t, v_t, a_t};
 }
@@ -308,6 +306,29 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_cycloid(
     Vector3d a_t = Vector3d{x_ddot * std::cos(theta), x_ddot * std::sin(theta), z_ddot};
 
     return {p_t, v_t, a_t};
+}
+
+
+/* =========================== Limit_feet_vel_acc =========================== */
+
+void Interpolator::limit_feet_vel_acc(
+    Vector3d& feet_velocities, Vector3d& feet_accelerations
+) const {
+    for (auto& vel : feet_velocities) {
+        if (vel > max_foot_velocity) {
+            vel = max_foot_velocity;
+        } else if (vel < - max_foot_velocity) {
+            vel = - max_foot_velocity;
+        }
+    }
+
+    for (auto& acc : feet_accelerations) {
+        if (acc > max_foot_acceleration) {
+            acc = max_foot_acceleration;
+        } else if (acc < - max_foot_acceleration) {
+            acc = - max_foot_acceleration;
+        }
+    }
 }
 
 }

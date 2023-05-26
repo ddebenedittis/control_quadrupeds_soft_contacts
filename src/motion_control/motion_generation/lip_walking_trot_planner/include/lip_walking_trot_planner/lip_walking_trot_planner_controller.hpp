@@ -107,6 +107,8 @@ class LIPController : public controller_interface::ControllerInterface {
         bool correct_with_terrain_penetrations_ = false;
         double gain_correction_with_terrain_penetrations_ = 1;
 
+        bool interpolate_swing_feet_from_current_position_ = false;
+
         /* ========================= Internal State ========================= */
 
         Vector3d init_pos_ = {0, 0, 0};
