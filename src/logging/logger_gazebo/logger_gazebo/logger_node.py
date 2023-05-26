@@ -154,6 +154,7 @@ class LoggerSubscriber(Node):
         self.desired_base_quat = np.zeros(4); self.desired_base_quat[3] = 1
         self.desired_base_vel = np.zeros(3)
         self.desired_feet_pos = np.nan * np.zeros(12)
+        self.desired_feet_vel = np.nan * np.zeros(12)
         self.contact_feet_names = []
 
         # Contact sensor
@@ -166,7 +167,7 @@ class LoggerSubscriber(Node):
 
         # The locomotion data is saved inside the timer_callback.
 
-        timer_period = 1/25
+        timer_period = 1/100
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
 
@@ -258,6 +259,7 @@ class LoggerSubscriber(Node):
         self.velocity_error_vector = np.zeros((self.n, 3))
 
         self.desired_feet_positions_vector = np.zeros((self.n, 12))
+        self.desired_feet_velocities_vector = np.zeros((self.n, 12))
 
         self.slippage_vector = np.zeros(self.n)
 
@@ -358,9 +360,11 @@ class LoggerSubscriber(Node):
         for i, foot_name in enumerate(self.generic_feet_names):
             if foot_name not in self.contact_feet_names:
                 self.desired_feet_pos[3*i:3*i+3] = msg.feet_pos[3*j:3*j+3]
+                self.desired_feet_vel[3*i:3*i+3] = msg.feet_vel[3*j:3*j+3]
                 j += 1
             else:
                 self.desired_feet_pos[3*i:3*i+3] = np.nan * np.ones(3)
+                self.desired_feet_vel[3*i:3*i+3] = np.nan * np.ones(3)
 
 
     def contact_state_callback(self, msg, foot_name):
@@ -494,6 +498,7 @@ class LoggerSubscriber(Node):
         self.velocity_error_vector[self.i, :] = self.v[0:3] - self.desired_base_vel
 
         self.desired_feet_positions_vector[self.i, :] = self.desired_feet_pos
+        self.desired_feet_velocities_vector[self.i, :] = self.desired_feet_vel
 
         self.optimal_joints_accelerations_vector[self.i, :] = self.optimal_joints_accelerations
         self.optimal_torques_vector[self.i, :] = self.optimal_torques
@@ -535,6 +540,7 @@ class LoggerSubscriber(Node):
             np.savetxt(path+"velocity_error.csv", self.velocity_error_vector, delimiter=",")
 
             np.savetxt(path+"desired_feet_positions.csv", self.desired_feet_positions_vector, delimiter=",")
+            np.savetxt(path+"desired_feet_velocities.csv", self.desired_feet_velocities_vector, delimiter=",")
 
             np.savetxt(path+"optimal_joints_accelerations.csv", self.optimal_joints_accelerations_vector, delimiter=",")
             np.savetxt(path+"optimal_torques.csv", self.optimal_torques_vector, delimiter=",")

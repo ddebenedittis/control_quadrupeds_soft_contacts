@@ -69,6 +69,7 @@ class Plot:
             self.time = np.loadtxt(fullfolder + 'time.csv', delimiter=",")
             self.velocity_error = np.loadtxt(fullfolder + 'velocity_error.csv', delimiter=",")
             self.desired_feet_positions = np.loadtxt(fullfolder + 'desired_feet_positions.csv', delimiter=",")
+            self.desired_feet_velocities = np.loadtxt(fullfolder + 'desired_feet_velocities.csv', delimiter=",")
             
 
         # Get the indexes of time_init and time_end in the time vector.
@@ -168,7 +169,7 @@ class Plot:
     # i (int): the index of the foot whose quantities are plotted:
     #          0 = LF, 1 = RF, 2 =  LH, 3 = RH
 
-    def plot_optimal_deformations(self, ax: plt.Axes, i):
+    def _plot_optimal_deformations(self, ax: plt.Axes, i):
         if self.optimal_deformations.size > 0:
             k = 1000
 
@@ -192,7 +193,7 @@ class Plot:
             ax.set(title="There's a time and place for everything, but not now.")
 
 
-    def plot_optimal_forces(self, ax: plt.Axes, i):
+    def _plot_optimal_forces(self, ax: plt.Axes, i):
         ax.plot(self.time_vector,
                 self.optimal_forces[self.i_init:self.i_end,
                                     3*i:3*i+3])
@@ -206,7 +207,7 @@ class Plot:
         ax.set_xlim([self.time_init, self.time_end])
 
 
-    def plot_optimal_torques(self, ax: plt.Axes, i):
+    def _plot_optimal_torques(self, ax: plt.Axes, i):
         ax.plot(self.time_vector,
                 self.optimal_torques[self.i_init:self.i_end,
                                      3*i:3*i+3])
@@ -220,7 +221,7 @@ class Plot:
         ax.set_xlim([self.time_init, self.time_end])
 
 
-    def plot_tangential_over_normal_optimal_forces(self, ax):
+    def _plot_tangential_over_normal_optimal_forces(self, ax):
         """
         Plot the ratio of the tangential and normal component of the contact forces of the four feet.
         """
@@ -244,7 +245,7 @@ class Plot:
         ax.set_xlim([self.time_init, self.time_end])
 
 
-    def plot_meas_vs_opti_forces(self, axs, i):
+    def _plot_meas_vs_opti_forces(self, axs, i):
         for j in range(3):
             axs[j].plot(self.time_vector,
                         self.contact_forces[self.i_init:self.i_end,
@@ -278,7 +279,7 @@ class Plot:
         axs[3].set_xlim([self.time_init, self.time_end])
 
 
-    def plot_meas_vs_opti_depths(self, ax: plt.Axes, i):
+    def _plot_meas_vs_opti_depths(self, ax: plt.Axes, i):
         if self.optimal_deformations.size > 0:
             k = int(self.optimal_deformations.shape[1] / 4)
 
@@ -298,7 +299,7 @@ class Plot:
             ax.set(title = "Not in my house!")
 
 
-    def plot_meas_vs_opti_foot_positions(self, axs, i):
+    def _plot_meas_vs_opti_foot_positions(self, axs, i):
         #! Considers that all feet are in contact with the terrain
 
         for j in range(3):
@@ -317,7 +318,7 @@ class Plot:
             axs[j].set_xlim([self.time_init, self.time_end])
 
 
-    def plot_meas_vs_opti_feet_velocities(self, axs, i):
+    def _plot_meas_vs_opti_feet_velocities(self, axs, i):
         for j in range(3):
             axs[j].plot(self.time_vector,
                         self.feet_pos_int[0:self.i_end-self.i_init, j + 3*i] - self.feet_pos_meas[0:self.i_end-self.i_init, j + 3*i])
@@ -335,7 +336,7 @@ class Plot:
             axs[j].set_xlim([self.time_init, self.time_end])
 
 
-    def plot_meas_vs_opti_feet_accelerations(self, axs, i):
+    def _plot_meas_vs_opti_feet_accelerations(self, axs, i):
         for j in range(3):
             axs[j].plot(self.time_vector,
                         self.feet_vel_int[self.i_init:self.i_end, j + 3*i] - self.feet_pos_meas[0:self.i_end-self.i_init, j + 3*i])
@@ -353,7 +354,7 @@ class Plot:
             axs[j].set_xlim([self.time_init, self.time_end])
 
 
-    def plot_slippage(self, ax):
+    def _plot_slippage(self, ax):
         ax.plot(self.time_vector, self.slippage[self.i_init:self.i_end])
 
         ax.set(
@@ -364,7 +365,7 @@ class Plot:
         ax.set_xlim([self.time_init, self.time_end])
 
 
-    def plot_normalized_slippage(self, ax):
+    def _plot_normalized_slippage(self, ax):
         if self.speed != 0:
             # + 1e-9 in order to avoid dividing by zero.
             ax.plot(self.time_vector,
@@ -381,7 +382,7 @@ class Plot:
             ax.set(title = "No, no, no.",)
 
 
-    def plot_reference_vs_measured_velocity(self, axs):
+    def _plot_reference_vs_measured_velocity(self, axs):
         dir_names = ["forward", "lateral"]
 
         for i in range(3):
@@ -411,13 +412,15 @@ class Plot:
             axs[i].set_xlim([self.time_init, self.time_end])
 
 
-    def plot_desired_vs_true_foot_pos(self, axs, foot_idx: int):
+    def _plot_desired_vs_true_foot_pos(self, axs, foot_idx: int):
         for i in range(3):
             axs[i].plot(self.time_vector,
-                        self.feet_positions[self.i_init:self.i_end, 3*foot_idx + i])
+                        self.feet_positions[self.i_init:self.i_end, 3*foot_idx + i],
+                        marker=".")
             
             axs[i].plot(self.time_vector,
-                        self.desired_feet_positions[self.i_init:self.i_end, 3*foot_idx + i])
+                        self.desired_feet_positions[self.i_init:self.i_end, 3*foot_idx + i],
+                        marker=".")
             
             axs[i].set(
                 xlabel = "time [s]",
@@ -430,10 +433,11 @@ class Plot:
             axs[i].set_xlim([self.time_init, self.time_end])
 
 
-    def plot_feet_pos_error(self, ax, foot_idx: int):
+    def _plot_feet_pos_error(self, ax, foot_idx: int):
         ax.plot(self.time_vector,
-                self.feet_positions[self.i_init:self.i_end, 3*foot_idx:3*foot_idx+3]
-                - self.desired_feet_positions[self.i_init:self.i_end, 3*foot_idx:3*foot_idx+3])
+                (self.feet_positions[self.i_init+1:self.i_end+1, 3*foot_idx:3*foot_idx+3]
+                - self.desired_feet_positions[self.i_init:self.i_end, 3*foot_idx:3*foot_idx+3]),
+                marker=".")
 
         ax.set(
             xlabel = "time [s]",
@@ -444,18 +448,56 @@ class Plot:
         ax.legend(["x-coordinate", "y-coordinate", "z-coordinate"])
 
         ax.set_xlim([self.time_init, self.time_end])
+        
+    
+    def _plot_desired_vs_true_foot_vel(self, axs, foot_idx: int):
+        for i in range(3):
+            axs[i].plot(self.time_vector,
+                        self.feet_velocities[self.i_init:self.i_end, 3*foot_idx + i],
+                        marker=".")
+            
+            axs[i].plot(self.time_vector,
+                        self.desired_feet_velocities[self.i_init:self.i_end, 3*foot_idx + i],
+                        marker=".")
+            
+            axs[i].set(
+                xlabel = "time [s]",
+                ylabel = "velocity [m/s]",
+                title = "measured vs desired " + self.feet_names[foot_idx] + " foot velocity" \
+                    + " - " + self.dir_names[i] + " coordinate",
+            )
+            
+            axs[i].legend(["measured", "reference"])
+            axs[i].set_xlim([self.time_init, self.time_end])
 
 
-    def save_megaplot_i(self, i):
+    def _plot_feet_vel_error(self, ax, foot_idx: int):
+        ax.plot(self.time_vector,
+                (self.feet_velocities[self.i_init+1:self.i_end+1, 3*foot_idx:3*foot_idx+3]
+                - self.desired_feet_velocities[self.i_init:self.i_end, 3*foot_idx:3*foot_idx+3]),
+                marker=".")
+
+        ax.set(
+            xlabel = "time [s]",
+            ylabel = "velocity [m/s]",
+            title = self.feet_names[foot_idx] + " foot velocity error"
+        )
+
+        ax.legend(["x-coordinate", "y-coordinate", "z-coordinate"])
+
+        ax.set_xlim([self.time_init, self.time_end])
+
+
+    def _save_megaplot_i(self, i):
         fig, axs = plt.subplots(4, 4, figsize=[3.5*self.x_size_def, 2.5*self.y_size_def], layout="constrained")
 
-        self.plot_meas_vs_opti_forces(axs[0:4, 0], i)
-        self.plot_meas_vs_opti_depths(axs[0,1], i)
-        self.plot_optimal_deformations(axs[1,1], i)
-        self.plot_optimal_forces(axs[2,1], i)
-        self.plot_optimal_torques(axs[3,1], i)
-        self.plot_meas_vs_opti_foot_positions(axs[0:3,2], i)
-        self.plot_meas_vs_opti_feet_velocities(axs[0:3,3], i)
+        self._plot_meas_vs_opti_forces(axs[0:4, 0], i)
+        self._plot_meas_vs_opti_depths(axs[0,1], i)
+        self._plot_optimal_deformations(axs[1,1], i)
+        self._plot_optimal_forces(axs[2,1], i)
+        self._plot_optimal_torques(axs[3,1], i)
+        self._plot_meas_vs_opti_foot_positions(axs[0:3,2], i)
+        self._plot_meas_vs_opti_feet_velocities(axs[0:3,3], i)
 
         fig_path = os.path.join(self.foldername, self.format, self.subdir,
                                 "megaplot_" + self.feet_names[i] + '.' + self.format)
@@ -463,10 +505,10 @@ class Plot:
         plt.close(fig)
 
 
-    def save_meas_vs_opti_forces_plot(self):
+    def _save_meas_vs_opti_forces_plot(self):
         fig, axs = plt.subplots(4, 4, figsize=[3.5*self.x_size_def, 2.5*self.y_size_def])
         for i in range(len(self.feet_names)):
-            self.plot_meas_vs_opti_forces(axs[0:4, i], i)
+            self._plot_meas_vs_opti_forces(axs[0:4, i], i)
 
         fig_path = os.path.join(self.foldername, self.format, self.subdir,
                                 'meas_vs_opti_forces.' + self.format)
@@ -474,13 +516,13 @@ class Plot:
         plt.close(fig)
 
 
-    def save_performance_plots(self):
+    def _save_performance_plots(self):
         fig, axs = plt.subplots(3, 2, figsize=[self.x_size_def, 2*self.y_size_def])
-        self.plot_slippage(axs[0,0])
-        self.plot_normalized_slippage(axs[1,0])
+        self._plot_slippage(axs[0,0])
+        self._plot_normalized_slippage(axs[1,0])
 
         if self.gait in ["walking_trot", "teleop_walking_trot"]:
-            self.plot_reference_vs_measured_velocity(axs[0:3,1])
+            self._plot_reference_vs_measured_velocity(axs[0:3,1])
 
         fig_path = os.path.join(self.foldername, self.format, self.subdir,
                                 'performance.' + self.format)
@@ -488,18 +530,19 @@ class Plot:
         plt.close(fig)
 
 
-    def save_feet_pos_plots(self):
-        fig, axs = plt.subplots(2, 2, figsize=[2*self.x_size_def, 1.5*self.y_size_def])
+    def _save_feet_pos_plots(self):
+        fig, axs = plt.subplots(2, 4, figsize=[3.5*self.x_size_def, 1.5*self.y_size_def])
         
         foot_idx = 0
         
-        axs = axs.flatten()
-        self.plot_desired_vs_true_foot_pos(axs[0:3], foot_idx = foot_idx)
-        self.plot_feet_pos_error(axs[3], foot_idx = foot_idx)
-        axs.reshape((2,2))
+        self._plot_desired_vs_true_foot_pos(axs[0,0:3], foot_idx = foot_idx)
+        self._plot_feet_pos_error(axs[0,3], foot_idx = foot_idx)
+        
+        self._plot_desired_vs_true_foot_vel(axs[1,0:3], foot_idx = foot_idx)
+        self._plot_feet_vel_error(axs[1,3], foot_idx = foot_idx)
         
         fig_path = os.path.join(self.foldername, self.format, self.subdir,
-                                'feet_pos.' + self.format)
+                                'feet_pos_vel.' + self.format)
         plt.savefig(fig_path, bbox_inches="tight", format=self.format)
         plt.close(fig)
 
@@ -510,11 +553,11 @@ class Plot:
         """
 
         for i in range(len(self.feet_names)):
-            self.save_megaplot_i(i)
+            self._save_megaplot_i(i)
 
-        self.save_meas_vs_opti_forces_plot()
-        self.save_performance_plots()
-        self.save_feet_pos_plots()
+        self._save_meas_vs_opti_forces_plot()
+        self._save_performance_plots()
+        self._save_feet_pos_plots()
 
 
 
@@ -565,7 +608,7 @@ def main():
                   str(counter) + \
                   "-th folder out of " + \
                   str(n_to_process) + \
-                  " total folders.")
+                  " total folders...")
 
             plot = Plot(file)
             plot.save_all_plots()
