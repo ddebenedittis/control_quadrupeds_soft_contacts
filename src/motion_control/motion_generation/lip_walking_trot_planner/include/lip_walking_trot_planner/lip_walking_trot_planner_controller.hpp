@@ -102,6 +102,11 @@ class LIPController : public controller_interface::ControllerInterface {
         double zero_time_ = 0;
         double init_time_ = 0;
 
+        double default_step_height_ = 0.1;
+
+        bool correct_with_terrain_penetrations_ = false;
+        double gain_correction_with_terrain_penetrations_ = 1;
+
         /* ========================= Internal State ========================= */
 
         Vector3d init_pos_ = {0, 0, 0};

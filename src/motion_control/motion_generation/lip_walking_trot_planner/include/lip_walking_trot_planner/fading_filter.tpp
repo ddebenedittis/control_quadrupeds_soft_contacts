@@ -45,27 +45,29 @@ public:
     
     void set_order(FilterOrder order) {order_ = order;}
 
-    void set_order(int order)
+    int set_order(int order)
     {
         switch (order) {
         case 1:
             order_ = FilterOrder::First;
-            break;
+            return 0;
         case 2:
             order_ = FilterOrder::Second;
-            break;
+            return 0;
         default:
             std::cerr << "In lip_walking_trot_planner::FadingFilter.set_order(int), the input order is not an acceptable value. It bust be in {1, 2}." << std::endl;
-            break;
+            return 1;
         }
     }
 
-    void set_beta(double beta)
+    int set_beta(double beta)
     {
-        if (beta < 0 || beta > 0) {
+        if (beta < 0 || beta > 1) {
             std::cerr << "In lip_walking_trot_planner::FadingFilter.set_beta(double), the beta coefficient must be in [0; 1]." << std::endl;
+            return 1;
         } else {
             beta_ = beta;
+            return 0;
         }
     }
 

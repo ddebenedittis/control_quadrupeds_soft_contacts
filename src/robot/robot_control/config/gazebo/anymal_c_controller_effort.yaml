@@ -205,3 +205,6 @@ lip_planner:
 
         acc_filter_order: 2
         acc_filter_beta: 0.9
+
+        correct_with_terrain_penetrations: true
+        gain_correction_with_terrain_penetrations: 0.5

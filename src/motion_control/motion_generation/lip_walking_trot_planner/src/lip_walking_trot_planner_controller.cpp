@@ -32,6 +32,12 @@ CallbackReturn LIPController::on_init()
 
         auto_declare<int>("acc_filter_order", int());
         auto_declare<double>("acc_filter_beta", double());
+
+        auto_declare<int>("acc_filter_order", int());
+        auto_declare<double>("acc_filter_beta", double());
+
+        auto_declare<bool>("correct_with_terrain_penetrations", bool());
+        auto_declare<double>("gain_correction_with_terrain_penetrations", double());
     }
     catch(const std::exception& e) {
         fprintf(stderr,"Exception thrown during init stage with message: %s \n", e.what());
@@ -100,8 +106,8 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
         return CallbackReturn::ERROR;
     }
 
-    double step_height = get_node()->get_parameter("step_height").as_double();
-    if (planner_.set_step_height(step_height) == 1) {
+    default_step_height_ = get_node()->get_parameter("step_height").as_double();
+    if (planner_.set_step_height(default_step_height_) == 1) {
         RCLCPP_ERROR(get_node()->get_logger(),"'step_height' parameter must be > 0.");
         return CallbackReturn::ERROR;
     }
@@ -115,6 +121,25 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
     planner_.set_foot_penetration(
         get_node()->get_parameter("foot_penetration").as_double()
     );
+
+
+    correct_with_terrain_penetrations_ = get_node()->get_parameter("correct_with_terrain_penetrations").as_bool();
+
+    gain_correction_with_terrain_penetrations_ = get_node()->get_parameter("gain_correction_with_terrain_penetrations").as_double();
+    if (gain_correction_with_terrain_penetrations_ < 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'gain_correction_with_terrain_penetrations_' parameter must be >= 0.");
+        return CallbackReturn::ERROR;
+    }
+
+    if (filter_.set_order(get_node()->get_parameter("acc_filter_order").as_int()) == 1) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'acc_filter_order' parameter is not an acceptable value.");
+        return CallbackReturn::ERROR;
+    }
+
+    if (filter_.set_beta(get_node()->get_parameter("acc_filter_beta").as_double()) == 1) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'acc_filter_beta' parameter is not an acceptable value.");
+        return CallbackReturn::ERROR;
+    }
     
 
     /* ============================= Subscribers ============================ */
@@ -259,6 +284,14 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
         // Vector3d a_b_meas_body = quat_conj * a_ + g;
 
         Vector3d a_b = - filter_.filter(a_b_meas_body, planner_.get_sample_time());
+
+        if (correct_with_terrain_penetrations_) {
+            planner_.set_step_height(
+                default_step_height_
+                + gain_correction_with_terrain_penetrations_ * terrain_penetrations_.mean()
+            );
+        }
+        
 
         gen_pose_ = planner_.update(
             q_.head(3), v_.head(3), a_b,
