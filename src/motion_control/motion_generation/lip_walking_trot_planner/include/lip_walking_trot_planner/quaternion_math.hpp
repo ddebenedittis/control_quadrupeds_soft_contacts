@@ -11,8 +11,10 @@ using namespace Eigen;
 
 Quaterniond compute_quaternion_from_euler_angles(double roll, double pitch, double yaw);
 
-Quaterniond quat_mult(const Quaterniond& q1, const Quaterniond& q2);
-
+/// @brief Rotate the input vector vec with quat: vec = q * vec * q.conj.
+/// 
+/// @param[in] quat 
+/// @param[in,out] vec 
 void quat_rot(const Quaterniond& quat, Vector3d& vec);
 
 } // lip_walking_trot_planner

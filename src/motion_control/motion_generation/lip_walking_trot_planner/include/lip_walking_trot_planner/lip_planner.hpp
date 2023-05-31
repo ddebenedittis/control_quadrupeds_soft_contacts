@@ -24,24 +24,45 @@ public:
     MotionPlanner();
 
     void update_initial_conditions(
-        const Ref<Vector3d>& p_0 = (Vector3d() << 0, 0, 0).finished(),
+        const Ref<Vector3d>& pos_0 = (Vector3d() << 0, 0, 0).finished(),
         double yaw = 0,
         const std::vector<Vector3d>& feet_positions = {}
     );
 
+    /// @brief Compute the desired generalized pose.
+    /// 
+    /// @param pos_com Position of the center of mass
+    /// @param vel_com Velocity of the center of mass
+    /// @param acc_com Acceleration of the center of mass
+    /// @param vel_cmd Linear velocity command {vel_forward, vel_lateral}
+    /// @param yaw_rate_cmd Yaw rate command
+    /// @param plane_coeffs Terrain plane coefficients {a, b, c} where the plane is z = a x + b y + c
+    /// @param feet_positions 
+    /// @param feet_velocities 
+    /// @return generalized_pose::GeneralizedPoseStruct 
     generalized_pose::GeneralizedPoseStruct update(
-        const Ref<Vector3d>& p_com, const Ref<Vector3d>& v_com, const Ref<Vector3d>& a_com,
+        const Ref<Vector3d>& pos_com, const Ref<Vector3d>& vel_com, const Ref<Vector3d>& acc_com,
         const Ref<Vector2d>& vel_cmd, double yaw_rate_cmd,
         const Vector3d& plane_coeffs = {0, 0, 0},
         const std::vector<Vector3d>& feet_positions = {}, const std::vector<Vector3d>& feet_velocities = {}
     );
 
+    /// @brief Interpolate a position between p_i and p_f using a polynomial spline.
+    /// 
+    /// @param init_pos Initial position
+    /// @param final_pos Final position
+    /// @param phi Phase \in [0, 1]
+    /// @param method Interpolation method
+    /// @return {position, velocity, acceleration} 
     static std::tuple<Vector3d, Vector3d, Vector3d> spline(
-        const Vector3d& p_i, const Vector3d& p_f, double phi, InterpolationMethod method
+        const Vector3d& init_pos, const Vector3d& final_pos, double phi, InterpolationMethod method
     ) {
-        return Interpolator::spline<Vector3d>(p_i, p_f, phi, method);
+        return Interpolator::spline<Vector3d>(init_pos, final_pos, phi, method);
     };
 
+    /// @brief Return a list of trajectories of the swing feet sampled in n_sample_points_.
+    /// 
+    /// @return std::vector<std::vector<Vector3d>> 
     [[nodiscard]] std::vector<std::vector<Vector3d>> compute_trajectory_sample_points() const;
 
     /* =============================== Setters ============================== */
@@ -89,22 +110,39 @@ public:
 
     /* =============================== Getters ============================== */
 
-    [[nodiscard]] double get_dtheta() const {return dtheta_;}
+    [[nodiscard]] double get_dtheta() const {return yaw_;}
 
     [[nodiscard]] double get_height_com() const {return height_com_;}
 
     [[nodiscard]] double get_sample_time() const {return dt_;}
 
 private:
-    static MatrixXd compute_A_t(double omega, double t);
-    static MatrixXd compute_b_t(double omega, double t);
+    [[nodiscard]] generalized_pose::GeneralizedPoseStruct stand_still(
+        const Vector3d& plane_coeffs
+    ) const;
 
-    double mpc_qp(
-        const Vector2d& Xcom_0, double p_0,
-        double xcom_dot_des
+    generalized_pose::GeneralizedPoseStruct mpc(
+        const Vector3d& pos_com, const Vector3d& vel_com, const Vector3d& acc_com,
+        const Vector2d& vel_cmd, double yaw_rate_cmd,
+        const Vector3d& plane_coeffs,
+        const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
     );
 
-    void compute_desired_footholds(const Vector2d& p_star);
+    static Matrix2d compute_A_t(double omega, double time);
+    static Vector2d compute_b_t(double omega, double time);
+
+    /// @brief Formulate and solve the QP problem along a single direction.
+    /// 
+    /// @param Xcom_0 State along a single direction {x_com, x_dot_com}
+    /// @param x_zmp_0 Measured zmp coordinate at the current step
+    /// @param xcom_dot_des Desired velocity along a single direction
+    /// @return Optimal ZMP coordinate at the next step
+    double mpc_qp(
+        const Vector2d& X_com_0, double x_zmp_0,
+        double x_com_dot_des
+    );
+
+    void compute_desired_footholds(const Vector2d& pos_zmp);
 
     std::tuple<VectorXd, VectorXd, VectorXd> compute_swing_feet_trajectories(
         const Vector3d& plane_coeffs,
@@ -113,17 +151,10 @@ private:
 
     void switch_swing_feet(const std::vector<Vector3d>& feet_positions);
 
-    std::tuple<Vector3d, Vector3d, Vector3d> get_des_base_pose(
-        const Vector2d& Xcom_0, const Vector2d& Ycom_0,
-        double px_0, double py_0
-    );
-
-    generalized_pose::GeneralizedPoseStruct mpc(
-        const Vector3d& p_com, const Vector3d& v_com, const Vector3d& a_com,
-        const Vector2d& vel_cmd, double yaw_rate_cmd,
-        const Vector3d& plane_coeffs,
-        const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
-    );
+    [[nodiscard]] std::tuple<Vector3d, Vector3d, Vector3d> get_des_base_pose(
+        const Vector2d& X_com_0, const Vector2d& Y_com_0,
+        double x_zmp_0, double y_zmp_0
+    ) const;
 
     /// @brief Return true when the robot should stop moving.
     /// @details True when the commanded linear and angular velocity has been equal to 0 for a number of robot steps grater than _max_fixed_steps and the previous swing phase has finished.
@@ -134,6 +165,9 @@ private:
         generalized_pose::GeneralizedPoseStruct& gen_pose
     ) const;
 
+    /* ====================================================================== */
+
+    /// @brief When true, the robot stands still and does not solve the mpc.
     bool stop_flag_ = true;
 
     /// @brief Number of future steps over which the optimization is performed
@@ -156,17 +190,20 @@ private:
     /// @brief Kinematic reachability limit for the stance feet
     double step_reachability_ = 0.2;
 
-    // Parameters used to describe the feet position with respect to the ZMP
+    // Parameters used to describe the feet position with respect to the ZMP.
+    // The LF foot is positioned in r_ * [cos(theta_0_), sin(theta_0_)] with respect to the base in base frame.
     double theta_0_ = 0.64;
     double r_ = 0.5;
 
     /// @brief Commanded yaw angle
-    double dtheta_ = 0.;
+    double yaw_ = 0.;
 
     Interpolator interpolator_ = Interpolator(
-        InterpolationMethod::Spline_3rd, 0.2,
-        0.1, 0.0,
-        -0.025
+        InterpolationMethod::Spline_3rd,
+        /* step_duration*/ 0.2,
+        /* step_height */ 0.1,
+        /* horizontal_phase_delay */ 0.0,
+        /* foot_penetration */ -0.025
     );
 
     /// @brief Initial swing feet positions at the start of the swing phase. It is the last contact position.
@@ -192,4 +229,4 @@ private:
     bool interpolate_swing_feet_from_current_position_ = false;
 };
 
-}
+} // lip_walking_trot_planner
