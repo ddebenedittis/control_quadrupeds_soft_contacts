@@ -152,16 +152,25 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const GeneralizedPoseStruct& gen_pose)
     {
-        os << "base acc:    " << gen_pose.base_acc << "\n"
-           << "base vel:    " << gen_pose.base_vel << "\n"
-           << "base pos:    " << gen_pose.base_pos << "\n"
-           << "base angvel: " << gen_pose.base_angvel << "\n"
-           << "base quat:   " << gen_pose.base_quat << "\n"
-           << "feet_pos:    ";
+        os << "base acc:           " << gen_pose.base_acc << "\n"
+           << "base vel:           " << gen_pose.base_vel << "\n"
+           << "base pos:           " << gen_pose.base_pos << "\n"
+           << "base ang vel:       " << gen_pose.base_angvel << "\n"
+           << "base quat:          " << gen_pose.base_quat << "\n"
+           << "feet_pos:           [";
 
-        for (auto e : gen_pose.feet_pos) {
+        for (int i = 0; i < gen_pose.feet_pos.size(); i+=3) {
+            os << "[" << gen_pose.feet_pos[i] << ", "
+                      << gen_pose.feet_pos[i+1] << ", "
+                      << gen_pose.feet_pos[i+2] << "] ";
+        }
+        os << "]\n";
+
+        os << "contact feet names: [";
+        for (auto& e : gen_pose.contact_feet_names) {
             os << e << " ";
         }
+        os << "]";
 
         return os;
     }
@@ -233,4 +242,4 @@ private:
     }
 };
 
-};
+} // generalized_pose

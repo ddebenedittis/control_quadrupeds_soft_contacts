@@ -1,0 +1,2 @@
+generalized_pose_msgs/GeneralizedPose generalized_pose
+float64 time
