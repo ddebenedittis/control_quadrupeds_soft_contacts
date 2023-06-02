@@ -66,3 +66,4 @@ Upcoming (2023-06-02)
 - The logger_node does save the data inside the log/csv/yyyy-mm-dd-hh:mm::ss folder (changes with the hour so it does not overwrite). The plot.py script processes all the folders in the log/csv folder that do not have a corresponding non-empty folder in log/svg. If the plot.py code has changed, delete the folders in log/svg that need to be processed again.
 - Implemented the walking_trot_planner in C++.
 - The LIP Planner returns multiple generalized poses, not only for the next instant but for a certain time window.
+- Updated to ROS 2 Iron

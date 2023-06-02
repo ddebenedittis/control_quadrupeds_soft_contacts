@@ -95,11 +95,12 @@ CallbackReturn LIPController::on_init()
         auto_declare<double>("init_time", double());
 
         auto_declare<double>("sample_time", double());
+
+        auto_declare<std::string>("interpolation_method", std::string());
         auto_declare<double>("step_duration", double());
         auto_declare<double>("step_height", double());
-
-        auto_declare<int>("acc_filter_order", int());
-        auto_declare<double>("acc_filter_beta", double());
+        auto_declare<double>("step_horizontal_phase_delay", double());
+        auto_declare<double>("foot_penetration", double());
 
         auto_declare<int>("acc_filter_order", int());
         auto_declare<double>("acc_filter_beta", double());
@@ -193,14 +194,6 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
     );
 
 
-    correct_with_terrain_penetrations_ = get_node()->get_parameter("correct_with_terrain_penetrations").as_bool();
-
-    gain_correction_with_terrain_penetrations_ = get_node()->get_parameter("gain_correction_with_terrain_penetrations").as_double();
-    if (gain_correction_with_terrain_penetrations_ < 0) {
-        RCLCPP_ERROR(get_node()->get_logger(),"'gain_correction_with_terrain_penetrations_' parameter must be >= 0.");
-        return CallbackReturn::ERROR;
-    }
-
     if (filter_.set_order(get_node()->get_parameter("acc_filter_order").as_int()) == 1) {
         RCLCPP_ERROR(get_node()->get_logger(),"'acc_filter_order' parameter is not an acceptable value.");
         return CallbackReturn::ERROR;
@@ -210,6 +203,16 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
         RCLCPP_ERROR(get_node()->get_logger(),"'acc_filter_beta' parameter is not an acceptable value.");
         return CallbackReturn::ERROR;
     }
+
+
+    correct_with_terrain_penetrations_ = get_node()->get_parameter("correct_with_terrain_penetrations").as_bool();
+
+    gain_correction_with_terrain_penetrations_ = get_node()->get_parameter("gain_correction_with_terrain_penetrations").as_double();
+    if (gain_correction_with_terrain_penetrations_ < 0) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'gain_correction_with_terrain_penetrations_' parameter must be >= 0.");
+        return CallbackReturn::ERROR;
+    }
+
 
     planner_.set_interpolate_swing_feet_from_current_position(
         get_node()->get_parameter("interpolate_swing_feet_from_current_position").as_bool()

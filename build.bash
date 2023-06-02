@@ -6,7 +6,7 @@ mkdir -p build install log
 
 # Change these values to use different versions of ROS or different base images. The rest of the script should be left unchanged.
 BASE_IMAGE=osrf/ros
-BASE_TAG=humble-desktop
+BASE_TAG=iron-desktop
 IMAGE_NAME=qcsc
 
 

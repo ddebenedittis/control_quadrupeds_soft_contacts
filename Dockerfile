@@ -1,5 +1,5 @@
 ARG BASE_IMAGE=osrf/ros
-ARG BASE_TAG=humble-desktop
+ARG BASE_TAG=iron-desktop
 
 FROM ${BASE_IMAGE}:${BASE_TAG}
 
@@ -17,14 +17,14 @@ RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,s
     apt-get update && apt-get install --no-install-recommends -qqy \
     bash-completion \
     python3-pip \
-    ros-humble-gazebo-ros-pkgs \
-    ros-humble-gazebo-ros2-control \
-    ros-humble-joint-state-publisher \
-    ros-humble-joint-state-publisher-gui \
-    ros-humble-pinocchio \
-    ros-humble-ros2-control \
-    ros-humble-ros2-controllers \
-    ros-humble-xacro \
+    ros-iron-gazebo-ros-pkgs \
+    ros-iron-gazebo-ros2-control \
+    ros-iron-joint-state-publisher \
+    ros-iron-joint-state-publisher-gui \
+    ros-iron-pinocchio \
+    ros-iron-ros2-control \
+    ros-iron-ros2-controllers \
+    ros-iron-xacro \
     sudo \
     xterm
 
@@ -41,7 +41,7 @@ ARG DEVELOPMENT=0
 RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,sharing=locked,target=/var/lib/apt \
     if [ "${DEVELOPMENT}" = "1" ] ; then \
         apt-get update && apt-get install --no-install-recommends -qqy \
-        ros-humble-ament-clang-tidy ; \
+        ros-iron-ament-clang-tidy ; \
     fi
 
 # If $PLOT is 1, install the packages required to use plot.py in the container.
