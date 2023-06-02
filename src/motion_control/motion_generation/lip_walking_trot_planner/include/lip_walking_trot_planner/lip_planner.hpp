@@ -24,8 +24,8 @@ public:
     MotionPlanner();
 
     void update_initial_conditions(
-        const Ref<Vector3d>& pos_0 = (Vector3d() << 0, 0, 0).finished(),
-        double yaw = 0,
+        const Ref<Vector3d>& init_pos = (Vector3d() << 0, 0, 0).finished(),
+        double init_yaw = 0,
         const std::vector<Vector3d>& feet_positions = {}
     );
 
@@ -40,7 +40,7 @@ public:
     /// @param feet_positions 
     /// @param feet_velocities 
     /// @return generalized_pose::GeneralizedPoseStruct 
-    generalized_pose::GeneralizedPoseStruct update(
+    std::vector<generalized_pose::GeneralizedPoseStruct> update(
         const Ref<Vector3d>& pos_com, const Ref<Vector3d>& vel_com, const Ref<Vector3d>& acc_com,
         const Ref<Vector2d>& vel_cmd, double yaw_rate_cmd,
         const Vector3d& plane_coeffs = {0, 0, 0},
@@ -61,8 +61,6 @@ public:
     };
 
     /// @brief Return a list of trajectories of the swing feet sampled in n_sample_points_.
-    /// 
-    /// @return std::vector<std::vector<Vector3d>> 
     [[nodiscard]] std::vector<std::vector<Vector3d>> compute_trajectory_sample_points() const;
 
     /* =============================== Setters ============================== */
@@ -108,6 +106,28 @@ public:
 
     void set_interpolate_swing_feet_from_current_position(bool flag) {interpolate_swing_feet_from_current_position_ = flag;}
 
+    int set_dt_gen_poses(double dt)
+    {
+        if (dt > 0) {
+            dt_gen_poses_ = dt;
+            return 0;
+        } else {
+            std::cerr << "In lip_walking_trot_planner::MotionPlanner.set_dt_gen_poses(double) the sample time of the generalized poses must be positive." << std::endl;
+            return 1;
+        }
+    }
+
+    int set_n_gen_poses(int n)
+    {
+        if (n > 0) {
+            n_gen_poses_ = n;
+            return 0;
+        } else {
+            std::cerr << "In lip_walking_trot_planner::MotionPlanner.set_n_gen_poses(int) the number of gen_poses computed must be positive." << std::endl;
+            return 1;
+        }
+    }
+
     /* =============================== Getters ============================== */
 
     [[nodiscard]] double get_dtheta() const {return yaw_;}
@@ -116,12 +136,28 @@ public:
 
     [[nodiscard]] double get_sample_time() const {return dt_;}
 
+    /* ====================================================================== */
+
+    [[nodiscard]] std::vector<std::string> get_other_feet(std::vector<std::string> feet_names) const
+    {
+        std::vector<std::string> new_feet_names = {};
+        new_feet_names.reserve(all_feet_names_.size() - feet_names.size());
+
+        for (const auto& foot_name : all_feet_names_) {
+            if (std::find(feet_names.begin(), feet_names.end(), foot_name) == feet_names.end()) {
+                new_feet_names.push_back(foot_name);
+            }
+        }
+
+        return new_feet_names;
+    }
+
 private:
-    [[nodiscard]] generalized_pose::GeneralizedPoseStruct stand_still(
+    [[nodiscard]] std::vector<generalized_pose::GeneralizedPoseStruct> stand_still(
         const Vector3d& plane_coeffs
     ) const;
 
-    generalized_pose::GeneralizedPoseStruct mpc(
+    std::vector<generalized_pose::GeneralizedPoseStruct> mpc(
         const Vector3d& pos_com, const Vector3d& vel_com, const Vector3d& acc_com,
         const Vector2d& vel_cmd, double yaw_rate_cmd,
         const Vector3d& plane_coeffs,
@@ -137,46 +173,47 @@ private:
     /// @param x_zmp_0 Measured zmp coordinate at the current step
     /// @param xcom_dot_des Desired velocity along a single direction
     /// @return Optimal ZMP coordinate at the next step
-    double mpc_qp(
+    std::vector<double> mpc_qp(
         const Vector2d& X_com_0, double x_zmp_0,
         double x_com_dot_des
     );
 
-    void compute_desired_footholds(const Vector2d& pos_zmp);
+    void compute_desired_footholds(const std::vector<Vector2d>& pos_zmp);
 
-    std::tuple<VectorXd, VectorXd, VectorXd> compute_swing_feet_trajectories(
+    std::tuple<std::vector<VectorXd>, std::vector<VectorXd>, std::vector<VectorXd>> compute_swing_feet_trajectories(
         const Vector3d& plane_coeffs,
         const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
     );
 
     void switch_swing_feet(const std::vector<Vector3d>& feet_positions);
 
-    [[nodiscard]] std::tuple<Vector3d, Vector3d, Vector3d> get_des_base_pose(
+    [[nodiscard]] std::tuple<std::vector<Vector3d>, std::vector<Vector3d>, std::vector<Vector3d>> get_des_base_poses(
         const Vector2d& X_com_0, const Vector2d& Y_com_0,
-        double x_zmp_0, double y_zmp_0
+        const std::vector<double>& x_zmp, const std::vector<double>& y_zmp
     ) const;
 
     /// @brief Return true when the robot should stop moving.
     /// @details True when the commanded linear and angular velocity has been equal to 0 for a number of robot steps grater than _max_fixed_steps and the previous swing phase has finished.
     bool check_stop(const Vector2d& vel_cmd, double yaw_rate_cmd);
 
-    void correct_with_terrain_plane(
+    static void correct_base_pose_with_terrain_plane(
         const Vector3d& plane_coeffs,
+        double yaw,
         generalized_pose::GeneralizedPoseStruct& gen_pose
-    ) const;
+    );
 
     /* ====================================================================== */
 
     /// @brief When true, the robot stands still and does not solve the mpc.
     bool stop_flag_ = true;
 
-    /// @brief Number of future steps over which the optimization is performed
-    int n_ = 3;
+    /// @brief Number of future steps over which the optimization is performed.
+    int n_steps_prediction_horizon = 3;
 
     // Cost function matrices
     // cost = sum 1/2 [ (xcom_dot - xcom_dot_des)^T Q (xcom_dot - xcom_dot_des) + (px - px_m)^T R (px - px_m) ]
-    MatrixXd Q_ = 1000 * MatrixXd::Identity(n_, n_);
-    MatrixXd R_ = 1 * MatrixXd::Identity(n_, n_);
+    MatrixXd Q_ = 1000 * MatrixXd::Identity(n_steps_prediction_horizon, n_steps_prediction_horizon);
+    MatrixXd R_ = 1 * MatrixXd::Identity(n_steps_prediction_horizon, n_steps_prediction_horizon);
 
     /// @brief Planner time step
     double dt_ = 1. / 200.;
@@ -210,7 +247,7 @@ private:
     std::vector<Vector3d> init_pos_swing_feet_ = {};
 
     /// @brief Desired foothold positions of the swing feet at the end of the swing phase.
-    std::vector<Vector2d> final_pos_swing_feet_ = {};
+    std::vector<std::vector<Vector2d>> final_pos_swing_feet_ = {};
 
     /// @brief Desired height of the center of mass
     double height_com_ = 0.5;
@@ -227,6 +264,12 @@ private:
 
     /// @brief
     bool interpolate_swing_feet_from_current_position_ = false;
+
+    /// @brief Sample time at which the output generalized poses are sampled.
+    double dt_gen_poses_ = 1. / 40.;
+
+    /// @brief Number of output generalized poses.
+    int n_gen_poses_ = 16;
 };
 
 } // lip_walking_trot_planner

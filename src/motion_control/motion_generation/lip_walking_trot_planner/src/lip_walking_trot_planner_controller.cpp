@@ -18,6 +18,74 @@ using hardware_interface::HW_IF_EFFORT;
 using namespace Eigen;
 
 
+/* ============================== Get_base_path ============================= */
+
+nav_msgs::msg::Path get_base_path(const std::vector<generalized_pose::GeneralizedPoseStruct>& gen_poses)
+{
+    nav_msgs::msg::Path path;
+
+    path.header.frame_id = "ground_plane_link";
+
+    path.poses.resize(gen_poses.size());
+
+    for (int i = 0; i < static_cast<int>(gen_poses.size()); i++) {
+        path.poses[i].pose.position.x = gen_poses[i].base_pos.x;
+        path.poses[i].pose.position.y = gen_poses[i].base_pos.y;
+        path.poses[i].pose.position.z = gen_poses[i].base_pos.z;
+
+        path.poses[i].pose.orientation.x = gen_poses[i].base_quat.x;
+        path.poses[i].pose.orientation.y = gen_poses[i].base_quat.y;
+        path.poses[i].pose.orientation.z = gen_poses[i].base_quat.z;
+        path.poses[i].pose.orientation.w = gen_poses[i].base_quat.w;
+    }
+
+    return path;
+}
+
+
+/* ============================== Get_feet_path ============================= */
+
+rviz_legged_msgs::msg::Paths get_feet_paths(const std::vector<generalized_pose::GeneralizedPoseStruct>& gen_poses)
+{
+    rviz_legged_msgs::msg::Paths paths;
+    paths.paths.resize(4);
+    paths.header.frame_id = "ground_plane_link";
+
+    std::vector<std::string> all_feet_names = {
+        "LF", "RF", "LH", "RH"
+    };
+
+    for (int i = 0; i < 4; i++) {
+        paths.paths[i].header.frame_id = "ground_plane_link";
+
+        paths.paths[i].poses = {};
+
+        for (const auto& gen_pose: gen_poses) {
+            auto it = std::find(
+                gen_pose.contact_feet_names.begin(), gen_pose.contact_feet_names.end(), all_feet_names[i]
+            );
+
+            if (it == gen_pose.contact_feet_names.end()) {
+                double j = 0;
+                if (i == 2 || i == 3) {
+                    j = 1;
+                }
+                
+                geometry_msgs::msg::PoseStamped msg = geometry_msgs::msg::PoseStamped();
+
+                msg.pose.position.x = gen_pose.feet_pos[3 * j + 0];
+                msg.pose.position.y = gen_pose.feet_pos[3 * j + 1];
+                msg.pose.position.z = gen_pose.feet_pos[3 * j + 2];
+
+                paths.paths[i].poses.push_back(msg);
+            }
+        }
+    }
+
+    return paths;
+}
+
+
 /* ================================= On_init ================================ */
 
 CallbackReturn LIPController::on_init()
@@ -250,6 +318,14 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
     feet_trajectories_publisher_ = get_node()->create_publisher<rviz_legged_msgs::msg::Paths>(
         "rviz/feet_trajectory", rclcpp::SystemDefaultsQoS()
     );
+
+    base_trajectory_publisher_ = get_node()->create_publisher<nav_msgs::msg::Path>(
+        "rviz/base_trajectory", rclcpp::SystemDefaultsQoS()
+    );
+
+    feet_trajectories_2_publisher_ = get_node()->create_publisher<rviz_legged_msgs::msg::Paths>(
+        "rviz/feet_trajectories_2", rclcpp::SystemDefaultsQoS()
+    );
     
     return CallbackReturn::SUCCESS;
 }
@@ -298,15 +374,21 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
             );
         }
         
-
-        gen_pose_ = planner_.update(
+        auto gen_poses = planner_.update(
             q_.head(3), v_.head(3), a_b,
             (Vector2d() << velocity_forward_, velocity_lateral_).finished(), yaw_rate_,
             plane_coeffs_,
             feet_positions, feet_velocities
         );
+        gen_pose_ = gen_poses[0];
 
         publish_feet_trajectories();
+
+        auto base_path = get_base_path(gen_poses);
+        auto feet_paths = get_feet_paths(gen_poses);
+
+        base_trajectory_publisher_->publish(base_path);
+        feet_trajectories_2_publisher_->publish(feet_paths);
     } else if (time_double > zero_time_) {
         // Interpolate between the initial position and the starting position of the trot.
 

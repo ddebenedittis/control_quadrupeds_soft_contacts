@@ -56,7 +56,7 @@
 - The `terrain_estimator` package gives a very rough estimate of the contact plane. The local terrain height is used by the trotting planner to adjust the commanded height.
 - Important bug fix in the whole-body controller. Previously, it did not work when the orientation was very different from zero roll, pitch, and yaw.
 
-Upcoming (2023-05-23)
+Upcoming (2023-06-02)
 ------------------
 - Started using clang-tidy. The docker image installs ament-clang-tidy if the image is built with the `-d` option.
 - The estimated robot pose is displayed in RViz.
@@ -65,3 +65,4 @@ Upcoming (2023-05-23)
 - The robot measures the penetration with the terrain and increase the step height accordingly.
 - The logger_node does save the data inside the log/csv/yyyy-mm-dd-hh:mm::ss folder (changes with the hour so it does not overwrite). The plot.py script processes all the folders in the log/csv folder that do not have a corresponding non-empty folder in log/svg. If the plot.py code has changed, delete the folders in log/svg that need to be processed again.
 - Implemented the walking_trot_planner in C++.
+- The LIP Planner returns multiple generalized poses, not only for the next instant but for a certain time window.

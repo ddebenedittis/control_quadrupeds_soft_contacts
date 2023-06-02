@@ -58,6 +58,7 @@ set(LIBRARY_DEPENDENCIES
 
     gazebo_msgs
     generalized_pose_msgs
+    nav_msgs
     rviz_legged_msgs
     sensor_msgs
     velocity_command_msgs

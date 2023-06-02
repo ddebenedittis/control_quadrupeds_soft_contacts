@@ -80,6 +80,9 @@ class LIPController : public controller_interface::ControllerInterface {
         std::shared_ptr<rclcpp::Publisher<generalized_pose_msgs::msg::GeneralizedPose>> gen_pose_publisher_ = nullptr;
         std::shared_ptr<rclcpp::Publisher<rviz_legged_msgs::msg::Paths>> feet_trajectories_publisher_ = nullptr;
 
+        std::shared_ptr<rclcpp::Publisher<nav_msgs::msg::Path>> base_trajectory_publisher_ = nullptr;
+        std::shared_ptr<rclcpp::Publisher<rviz_legged_msgs::msg::Paths>> feet_trajectories_2_publisher_ = nullptr;
+
         /* ============== Variables Saved By The Subscriptions ============== */
 
         std::vector<Vector3d> feet_positions = {};

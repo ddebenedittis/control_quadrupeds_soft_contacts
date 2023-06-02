@@ -23,6 +23,7 @@
 
     <depend>gazebo_msgs</depend>
     <depend>generalized_pose_msgs</depend>
+    <depend>nav_msgs</depend>
     <depend>rviz_legged_msgs</depend>
     <depend>sensor_msgs</depend>
     <depend>velocity_command_msgs</depend>
