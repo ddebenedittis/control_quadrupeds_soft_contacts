@@ -4,6 +4,7 @@
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "pluginlib/class_list_macros.hpp"
+#include <rclcpp/logging.hpp>
 
 
 
@@ -354,9 +355,7 @@ CallbackReturn LIPController::on_deactivate(const rclcpp_lifecycle::State& /*pre
 
 controller_interface::return_type LIPController::update(const rclcpp::Time& time, const rclcpp::Duration& /*period*/)
 {
-    double time_double = static_cast<double>(time.seconds()) + static_cast<double>(time.nanoseconds()) * std::pow(10, -9);
-
-    if (time_double > init_time_ + zero_time_) {
+    if (time.seconds() > init_time_ + zero_time_) {
         Quaterniond quat_conj = Quaterniond(
             q_[6], q_[3], q_[4], q_[5]
         );
@@ -392,7 +391,7 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
 
         base_trajectory_publisher_->publish(base_path);
         feet_trajectories_2_publisher_->publish(feet_paths);
-    } else if (time_double > zero_time_) {
+    } else if (time.seconds() > zero_time_) {
         // Interpolate between the initial position and the starting position of the trot.
 
         Vector3d base_pos, base_vel, base_acc;
@@ -409,7 +408,7 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
         std::tie(base_pos, base_vel, base_acc) = MotionPlanner::spline(
             init_pos_, 
             end_pos,
-            (time_double - zero_time_) / init_time_,
+            (time.seconds() - zero_time_) / init_time_,
             InterpolationMethod::Spline_5th
         );
 

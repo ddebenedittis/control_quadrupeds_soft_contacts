@@ -21,8 +21,7 @@ using namespace Eigen;
 enum class InterpolationMethod {
     Spline_5th,
     Spline_3rd,
-    Cycloid,
-    Last
+    Cycloid
 };
 
 
@@ -155,7 +154,7 @@ public:
     [[nodiscard]] double get_foot_penetration() const {return foot_penetration_;}
 
 private:
-    /// @brief Compute a modified phi that is 0 when the phase is smaller that _horizontal_phase_delay/2 or bigger than (1 - _horizontal_phase_delay/2). This modified phi is used to ensure that the foot horizontal velocity is zero when it leaves and touches the ground.
+    /// @brief Compute a modified phi that is 0 when the phase is smaller than _horizontal_phase_delay/2 or bigger than (1 - _horizontal_phase_delay/2). This modified phi is used to ensure that the foot horizontal velocity is zero when it leaves and touches the ground.
     [[nodiscard]] double _compute_modified_phi(double phi) const
     {
         double phi_m = (phi - this->step_horizontal_phase_delay_/2) / (1 - this->step_horizontal_phase_delay_);
@@ -169,7 +168,7 @@ private:
     /// @param p_i initial position
     /// @param p_f final position
     /// @param phi swing phase (\in [0; 1])
-    /// @return std::tuple<T, T, T> {pos, vel, acc}
+    /// @return {position, velocity, acceleration}
     template <typename T>
     std::tuple<T, T, T> spline(
         const T& p_i, const T& p_f, double phi
@@ -204,7 +203,11 @@ private:
         const Vector3d& init_pos, double d, double theta, double phi
     ) const;
 
-    void limit_feet_vel_acc(Vector3d& feet_velocities, Vector3d& feet_accelerations) const;
+    /// @brief Saturate the computed feet velocities and accelerations.
+    /// 
+    /// @param feet_velocities 
+    /// @param feet_accelerations 
+    void saturate_feet_vel_acc(Vector3d& feet_velocities, Vector3d& feet_accelerations) const;
 
     /* ====================================================================== */
 

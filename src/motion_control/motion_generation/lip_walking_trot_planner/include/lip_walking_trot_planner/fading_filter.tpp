@@ -38,7 +38,7 @@ public:
     /// 
     /// @param meas measurement
     /// @param Ts Sample time
-    /// @return T Filtered value
+    /// @return Filtered measurement
     T filter(const T& meas, double Ts = 0);
 
     /* =============================== Setters ============================== */
@@ -72,6 +72,7 @@ public:
     }
 
 private:
+    // When false, initialize x_ to the meas and x_dot_ to 0. Otherwise, filter the measurement.
     bool initialized_ = false;
 
     FilterOrder order_ = FilterOrder::First;

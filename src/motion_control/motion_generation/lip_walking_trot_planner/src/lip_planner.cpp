@@ -108,14 +108,14 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::update(
 
     if (stop_flag_) {
         return stand_still(plane_coeffs);
-    } else {        
-        return mpc(
-            pos_com, vel_com, acc_com,
-            vel_cmd, yaw_rate_cmd,
-            plane_coeffs,
-            feet_positions, feet_velocities
-        );
     }
+
+    return mpc(
+        pos_com, vel_com, acc_com,
+        vel_cmd, yaw_rate_cmd,
+        plane_coeffs,
+        feet_positions, feet_velocities
+    );
 }
 
 
@@ -133,6 +133,7 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::stand_still(
         pos_y += elem[1] / static_cast<double>(init_pos_swing_feet_.size());
     }
 
+    // Align the base with the estimated terrain plane.
     double roll = std::atan(plane_coeffs[1]);
     double pitch = - std::atan(plane_coeffs[0]);
 
@@ -163,7 +164,7 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::mpc(
     const Vector3d& plane_coeffs,
     const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
 ) {
-    // Initial CoM position
+    // Initial CoM state (position and velocity in the two directions).
     Vector2d X_com_0 = {pos_com[0], vel_com[0]};
     Vector2d Y_com_0 = {pos_com[1], vel_com[1]};
 
@@ -172,33 +173,213 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::mpc(
     double x_zmp_0 = pos_com[0] - acc_com[0] * height_com_ / g;
     double y_zmp_0 = pos_com[1] - acc_com[1] * height_com_ / g;
     
-    // Compute the heading and lateral coordinates of the zmp
-    double h_zmp_0 =   x_zmp_0 * std::cos(yaw_) + y_zmp_0 * std::sin(yaw_);
-    double l_zmp_0 = - x_zmp_0 * std::sin(yaw_) + y_zmp_0 * std::cos(yaw_);
+
+    std::vector<Vector2d> pos_zmp_star = solve_qps(
+        X_com_0, Y_com_0,
+        x_zmp_0, y_zmp_0,
+        vel_cmd, yaw_rate_cmd
+    );
+
+    auto des_gen_poses = compute_gen_poses(
+        X_com_0, Y_com_0,
+        x_zmp_0, y_zmp_0,
+        pos_zmp_star,
+        yaw_rate_cmd,
+        plane_coeffs,
+        feet_positions, feet_velocities
+    );
+
+    /* ===================== Update Some Internal States ==================== */
+
+    yaw_ += yaw_rate_cmd * dt_;
+
+    // Update the normalized phase. When it becomes >=1, switch the contact feet and reset phi to zero.
+    phi_ += dt_ / interpolator_.get_step_duration();
+    if (phi_ >= 1) {
+        phi_ = 0;
+        switch_swing_feet(feet_positions);
+    }
     
+    return des_gen_poses;
+}
+
+
+/* ================================ Solve_qps =============================== */
+
+std::vector<Vector2d> MotionPlanner::solve_qps(
+    const Vector2d& X_com_0, const Vector2d& Y_com_0,
+    double x_zmp_0, double y_zmp_0,
+    const Vector2d& vel_cmd, double yaw_rate_cmd
+) const {
+    // Compute the heading and lateral state of the com.
     Vector2d H_com_0 =   X_com_0 * std::cos(yaw_) + Y_com_0 * std::sin(yaw_);
     Vector2d L_com_0 = - X_com_0 * std::sin(yaw_) + Y_com_0 * std::cos(yaw_);
+    
+    // Compute the heading and lateral coordinates of the zmp.
+    double h_zmp_0 =   x_zmp_0 * std::cos(yaw_) + y_zmp_0 * std::sin(yaw_);
+    double l_zmp_0 = - x_zmp_0 * std::sin(yaw_) + y_zmp_0 * std::cos(yaw_);
 
-    // Compute the x and y coordinates of the ZMP.
+    // Compute the heading and lateral coordinates of the ZMP.
     double h_com_dot_des = vel_cmd[0];
     double l_com_dot_des = vel_cmd[1];
     std::vector<double> h_zmp_star = mpc_qp(H_com_0, h_zmp_0, h_com_dot_des);
     std::vector<double> l_zmp_star = mpc_qp(L_com_0, l_zmp_0, l_com_dot_des);
     
-    std::vector<double> x_zmp_star(n_steps_prediction_horizon);
-    std::vector<double> y_zmp_star(n_steps_prediction_horizon);
+    // Optimal zmp position computed by the mpc for the next n_steps_prediction_horizon steps.
     std::vector<Vector2d> pos_zmp_star(n_steps_prediction_horizon);
 
     for (int i = 0; i < n_steps_prediction_horizon; i++) {
         double yaw = yaw_ + i * interpolator_.get_step_duration() * yaw_rate_cmd;
 
-        x_zmp_star[i] = h_zmp_star[i] * std::cos(yaw) - l_zmp_star[i] * std::sin(yaw);
-        y_zmp_star[i] = h_zmp_star[i] * std::sin(yaw) + l_zmp_star[i] * std::cos(yaw);
-
         // Optimal ZMP position.
-        pos_zmp_star[i] = {x_zmp_star[i], y_zmp_star[i]};
+        pos_zmp_star[i] = {
+            h_zmp_star[i] * std::cos(yaw) - l_zmp_star[i] * std::sin(yaw),  // x
+            h_zmp_star[i] * std::sin(yaw) + l_zmp_star[i] * std::cos(yaw)   // y
+        };
     }
 
+    return pos_zmp_star;
+}
+
+
+/* ================================= Mpc_qp ================================= */
+
+std::vector<double> MotionPlanner::mpc_qp(
+    const Vector2d& X_com_0, double x_zmp_0,
+    double x_com_dot_des
+) const {
+    /* ================================ State =============================== */
+        
+    // xi = [
+    //     1                             extra state equal to one
+    //     [xcom_i, x_com_dot_i].T       position and velocity coordinate (only one coordinate)
+    //     px                            ZMP coordinate
+    // ]
+
+    const double Ts = interpolator_.get_step_duration();
+    const int n = n_steps_prediction_horizon;
+
+
+    /* =========================== QP Formulation =========================== */
+
+    // min_xi   1/2 xi^T H xi + c^T xi
+    // s.t.: A xi - b  = 0
+    //       D xi - f <= 0
+
+
+    /* =========================== Cost Definition ========================== */
+
+    // cost = sum 1/2 [ (xcom_dot - xcom_dot_des)^T Q (xcom_dot - xcom_dot_des) + (px - px_m)^T R (px - px_m) ]
+
+    MatrixXd H = MatrixXd::Zero(1 + 2*n + n, 1 + 2*n + n);
+    // Part of the cost associated with the com velocity error.
+    H.block(1, 1, 2*n, 2*n) = kron_product(Q_, (MatrixXd(2,2) << 0, 0, 0, 1).finished());;
+    // Part of the cost associated with the zmp displacement with respect to the previous step.
+    H.bottomRightCorner(n, n) = R_;
+    H.bottomRightCorner(n, n) += (VectorXd(R_.rows()) << R_.diagonal().tail(R_.rows() - 1), 0).finished().asDiagonal();
+    H.bottomRightCorner(n, n).diagonal( 1) -= R_.diagonal().tail(R_.rows() - 1);
+    H.bottomRightCorner(n, n).diagonal(-1) -= R_.diagonal().tail(R_.rows() - 1);
+
+
+    VectorXd x_com_dot_des_vec = x_com_dot_des * VectorXd::Ones(n);
+
+    VectorXd c(1 + 2*n + n);
+    c(0) = x_com_dot_des_vec.transpose() * Q_ * x_com_dot_des_vec + R_(0,0) * std::pow(x_zmp_0, 2);
+    c.segment(1, 2*n) = kron_product(- 2 * Q_ * x_com_dot_des_vec, (VectorXd(2) << 0, 1).finished());
+    c(1 + 2*n) = - 2 * R_(0, 0) * x_zmp_0;
+    c.tail(n-1).setZero();
+
+
+    /* ======================== Equality Constraints ======================== */
+
+    // Enforces dynamic consistency with the linearized inverted pendulum model
+
+    double g = 9.81;
+    double omega = std::pow((g / height_com_), 0.5);
+
+    Matrix2d A_t = compute_A_t(omega, Ts);
+    Vector2d b_t = compute_b_t(omega, Ts);
+
+    MatrixXd I_off_diag = MatrixXd::Zero(n, n);
+    I_off_diag.diagonal(-1).setOnes();
+
+    MatrixXd A = MatrixXd::Zero(1 + 2*n, 1 + 3*n);
+    A(0, 0) = 1;
+    A.block(1, 1, 2*n, 2*n) = - MatrixXd::Identity(2*n, 2*n)
+                              + kron_product(I_off_diag, A_t);
+    A.bottomRightCorner(2*n, n) = kron_product(MatrixXd::Identity(n, n), (MatrixXd(2,1) << b_t(0), b_t(1)).finished());
+
+    double t_0 = Ts * (1. - phi_);
+    Matrix2d A_t0 = compute_A_t(omega, t_0);
+    Vector2d b_t0 = compute_b_t(omega, t_0);
+
+    VectorXd b = VectorXd::Zero(1 + 2*n);
+    b(0) = 1;
+    b.segment(1, 2) = - A_t * (A_t0 * X_com_0 + b_t0 * x_zmp_0);
+
+
+    /* ======================= Inequality Constraints ======================= */
+    
+    // Limit the zmp displacement between two consecutive steps
+
+    MatrixXd D = MatrixXd::Zero(2 * n, 1 + 3*n);
+    D.topRightCorner(n, n) = MatrixXd::Identity(n, n) - I_off_diag;
+    D.bottomRightCorner(n, n) = - D.topRightCorner(n, n);
+
+    VectorXd f(2 * n);
+    f(0) = x_zmp_0 + step_reachability_;
+    f.segment(1, n-1).setConstant(step_reachability_);
+    f(n) = - x_zmp_0 + step_reachability_;
+    f.tail(n - 1).setConstant(step_reachability_);
+
+
+    /* ======================= Quadprog QP Formulation ====================== */
+
+    // min  1/2 x^T G x - a^T x
+    // s.t. C^T x >= b
+    // where the first meq are equality constraints and the remaining ones are inequality constraints
+
+    double reg = 1e-9;
+    H.diagonal() += reg * VectorXd::Ones(H.rows());
+
+    MatrixXd C(A.rows() + D.rows(), A.cols());
+    C.topRows(A.rows()) = A;
+    C.bottomRows(D.rows()) = D;
+
+    VectorXd d(b.size() + f.size());
+    d.head(b.size()) = b;
+    d.tail(f.size()) = f;
+
+    VectorXd sol(1+3*n);
+
+    solve_quadprog(
+        std::move(H),
+        - c,
+        - (C).transpose(),
+        - d,
+        sol,
+        2*n + 1
+    );
+
+    std::vector<double> x_zmp_star(
+        sol.segment(1 + 2 * n, n).data(),
+        sol.segment(1 + 2 * n, n).data() + n
+    );
+
+    return x_zmp_star;
+}
+
+
+/* ============================ Compute_gen_poses =========================== */
+
+std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::compute_gen_poses(
+    const Vector2d& X_com_0, const Vector2d& Y_com_0,
+    double x_zmp_0, double y_zmp_0,
+    std::vector<Vector2d>& pos_zmp_star,
+    double yaw_rate_cmd,
+    const Vector3d& plane_coeffs,
+    const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
+) {
     // Compute the desired footholds of the feet currently in swing phase.
     compute_desired_footholds(pos_zmp_star);
 
@@ -209,9 +390,8 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::mpc(
     );
 
     // Compute the base linear trajectory.
-    x_zmp_star.insert(x_zmp_star.begin(), x_zmp_0);
-    y_zmp_star.insert(y_zmp_star.begin(), y_zmp_0);
-    auto [r_b_ddot_des, r_b_dot_des, r_b_des] = get_des_base_poses(X_com_0, Y_com_0, x_zmp_star, y_zmp_star);
+    pos_zmp_star.insert(pos_zmp_star.begin(), {x_zmp_0, y_zmp_0});
+    auto [r_b_ddot_des, r_b_dot_des, r_b_des] = get_des_base_poses(X_com_0, Y_com_0, pos_zmp_star);
 
     std::vector<generalized_pose::GeneralizedPoseStruct> des_gen_poses(n_gen_poses_);
 
@@ -251,17 +431,6 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::mpc(
         );
     }
 
-    /* ===================== Update Some Internal States ==================== */
-
-    yaw_ += yaw_rate_cmd * dt_;
-
-    // Update the normalized phase. When it becomes >=1, switch the contact feet and reset phi to zero.
-    phi_ += dt_ / interpolator_.get_step_duration();
-    if (phi_ >= 1) {
-        phi_ = 0;
-        switch_swing_feet(feet_positions);
-    }
-    
     return des_gen_poses;
 }
 
@@ -337,140 +506,6 @@ Vector2d MotionPlanner::compute_b_t(double omega, double time)
            - omega * std::sinh(omega*time);
 
     return b_t;
-}
-
-
-/* ================================= Mpc_qp ================================= */
-
-std::vector<double> MotionPlanner::mpc_qp(
-    const Vector2d& X_com_0, double x_zmp_0,
-    double x_com_dot_des
-) {
-    /* ================================ State =============================== */
-        
-    // xi = [
-    //     1                             extra state equal to one
-    //     [xcom_i, x_com_dot_i].T       position and velocity coordinate (only one coordinate)
-    //     px                            ZMP coordinate
-    // ]
-
-    double Ts = interpolator_.get_step_duration();
-
-
-    /* =========================== QP Formulation =========================== */
-
-    // min_xi   1/2 xi^T H xi + c^T xi
-    // s.t.: A xi - b  = 0
-    //       D xi - f <= 0
-
-
-    /* =========================== Cost Definition ========================== */
-
-    // cost = sum 1/2 [ (xcom_dot - xcom_dot_des)^T Q (xcom_dot - xcom_dot_des) + (px - px_m)^T R (px - px_m) ]
-
-    // Part of the cost associated with the com velocity error
-    MatrixXd H11 = kron_product(Q_, (MatrixXd(2,2) << 0, 0, 0, 1).finished());
-    // Part of the cost associated with the zmp displacement with respect to the previous step
-    MatrixXd H22 = R_;
-    H22 += (VectorXd(R_.rows()) << R_.diagonal().tail(R_.rows() - 1), 0).finished().asDiagonal();
-    H22.diagonal( 1) -= R_.diagonal().tail(R_.rows() - 1);
-    H22.diagonal(-1) -= R_.diagonal().tail(R_.rows() - 1);
-
-    MatrixXd H = MatrixXd::Zero(1 + H11.rows() + H22.rows(), 1 + H11.cols() + H22.cols());
-    H.block(1, 1, H11.rows(), H11.cols()) = H11;
-    H.block(1 + H11.rows(), 1 + H11.rows(), H22.rows(), H22.rows()) = H22;
-
-
-    VectorXd x_com_dot_des_vec = x_com_dot_des * VectorXd::Ones(n_steps_prediction_horizon);
-
-    double c0 = x_com_dot_des_vec.transpose() * Q_ * x_com_dot_des_vec + R_(0,0) * std::pow(x_zmp_0, 2);
-
-    VectorXd c1 = kron_product(- 2 * Q_ * x_com_dot_des_vec, (VectorXd(2) << 0, 1).finished());
-
-    VectorXd c2 = VectorXd::Zero(n_steps_prediction_horizon);
-    c2(0) = - 2 * R_(0, 0) * x_zmp_0;
-
-    VectorXd c(1 + c1.size() + c2.size());
-    c << c0, c1, c2;
-
-
-    /* ======================== Equality Constraints ======================== */
-
-    // Enforces dynamic consistency with the linearized inverted pendulum model
-
-    double g = 9.81;
-    double omega = std::pow((g / height_com_), 0.5);
-
-    Matrix2d A_t = compute_A_t(omega, Ts);
-    Vector2d b_t = compute_b_t(omega, Ts);
-
-    MatrixXd I_off_diag = MatrixXd::Zero(n_steps_prediction_horizon, n_steps_prediction_horizon);
-    I_off_diag.diagonal(-1).setOnes();
-
-    MatrixXd A = MatrixXd::Zero(1 + 2*n_steps_prediction_horizon, 1 + 3*n_steps_prediction_horizon);
-    A(0, 0) = 1;
-    A.block(1, 1, 2*n_steps_prediction_horizon, 2*n_steps_prediction_horizon) = - MatrixXd::Identity(2*n_steps_prediction_horizon, 2*n_steps_prediction_horizon)
-                                + kron_product(I_off_diag, A_t);
-    A.bottomRightCorner(2*n_steps_prediction_horizon, n_steps_prediction_horizon) = kron_product(MatrixXd::Identity(n_steps_prediction_horizon, n_steps_prediction_horizon), (MatrixXd(2,1) << b_t(0), b_t(1)).finished());
-
-    double t_0 = Ts * (1. - phi_);
-    Matrix2d A_t0 = compute_A_t(omega, t_0);
-    Vector2d b_t0 = compute_b_t(omega, t_0);
-
-    VectorXd b = VectorXd::Zero(1 + 2*n_steps_prediction_horizon);
-    b(0) = 1;
-    b.segment(1, 2) = - A_t * (A_t0 * X_com_0 + b_t0 * x_zmp_0);
-
-
-    /* ======================= Inequality Constraints ======================= */
-    
-    // Limit the zmp displacement between two consecutive steps
-
-    MatrixXd D = MatrixXd::Zero(2 * n_steps_prediction_horizon, 1 + 3*n_steps_prediction_horizon);
-    D.topRightCorner(n_steps_prediction_horizon, n_steps_prediction_horizon) = MatrixXd::Identity(n_steps_prediction_horizon, n_steps_prediction_horizon) - I_off_diag;
-    D.bottomRightCorner(n_steps_prediction_horizon, n_steps_prediction_horizon) = - D.topRightCorner(n_steps_prediction_horizon, n_steps_prediction_horizon);
-
-    VectorXd f(2 * n_steps_prediction_horizon);
-    f(0) = x_zmp_0 + step_reachability_;
-    f.segment(1, n_steps_prediction_horizon-1).setConstant(step_reachability_);
-    f(n_steps_prediction_horizon) = - x_zmp_0 + step_reachability_;
-    f.tail(n_steps_prediction_horizon - 1).setConstant(step_reachability_);
-
-
-    /* ======================= Quadprog QP Formulation ====================== */
-
-    // min  1/2 x^T G x - a^T x
-    // s.t. C^T x >= b
-    // where the first meq are equality constraints and the remaining ones are inequality constraints
-
-    double reg = 1e-9;
-    H.diagonal() += reg * VectorXd::Ones(H.rows());
-
-    MatrixXd C(A.rows() + D.rows(), A.cols());
-    C.topRows(A.rows()) = A;
-    C.bottomRows(D.rows()) = D;
-
-    VectorXd d(b.size() + f.size());
-    d.head(b.size()) = b;
-    d.tail(f.size()) = f;
-
-    VectorXd sol(1+3*n_steps_prediction_horizon);
-
-    solve_quadprog(
-        std::move(H),
-        - c,
-        - (C).transpose(),
-        - d,
-        sol,
-        2*n_steps_prediction_horizon + 1
-    );
-
-    std::vector<double> x_zmp_star(
-        sol.segment(1 + 2 * n_steps_prediction_horizon, n_steps_prediction_horizon).data(),
-        sol.segment(1 + 2 * n_steps_prediction_horizon, n_steps_prediction_horizon).data() + n_steps_prediction_horizon
-    );
-
-    return x_zmp_star;
 }
 
 
@@ -644,7 +679,7 @@ void MotionPlanner::switch_swing_feet(const std::vector<Vector3d>& feet_position
 
 std::tuple<std::vector<Vector3d>, std::vector<Vector3d>, std::vector<Vector3d>> MotionPlanner::get_des_base_poses(
     const Vector2d& X_com_0, const Vector2d& Y_com_0,
-    const std::vector<double>& x_zmp, const std::vector<double>& y_zmp
+    const std::vector<Vector2d>& pos_zmp
 ) const {
     std::vector<Vector3d> base_pos(n_gen_poses_);
     std::vector<Vector3d> base_vel(n_gen_poses_);
@@ -663,20 +698,20 @@ std::tuple<std::vector<Vector3d>, std::vector<Vector3d>, std::vector<Vector3d>> 
     double dt = dt_;
 
     for (int i = 0; i < n_gen_poses_; i++) {
-        Vector2d X_com = compute_A_t(omega, dt) * X_com_i + compute_b_t(omega, dt) * x_zmp[n_future_steps];
-        Vector2d Y_com = compute_A_t(omega, dt) * Y_com_i + compute_b_t(omega, dt) * y_zmp[n_future_steps];
+        Vector2d X_com = compute_A_t(omega, dt) * X_com_i + compute_b_t(omega, dt) * pos_zmp[n_future_steps][0];
+        Vector2d Y_com = compute_A_t(omega, dt) * Y_com_i + compute_b_t(omega, dt) * pos_zmp[n_future_steps][1];
 
         base_pos[i] = {X_com[0], Y_com[0], height_com_};
         base_vel[i] = {X_com[1], Y_com[1], 0};
-        base_acc[i] = {X_com_i[0] - x_zmp[n_future_steps], Y_com_i[0] - y_zmp[n_future_steps], 0};
+        base_acc[i] = {X_com_i[0] - pos_zmp[n_future_steps][0], Y_com_i[0] - pos_zmp[n_future_steps][1], 0};
         base_acc[i] *= g / height_com_;
 
         phi += dt_gen_poses_ / Ts;
         dt += dt_gen_poses_;
 
         if (phi >= 1) {
-            X_com_i = compute_A_t(omega, Ts) * X_com_i + compute_b_t(omega, Ts) * x_zmp[n_future_steps];
-            Y_com_i = compute_A_t(omega, Ts) * Y_com_i + compute_b_t(omega, Ts) * y_zmp[n_future_steps];
+            X_com_i = compute_A_t(omega, Ts) * X_com_i + compute_b_t(omega, Ts) * pos_zmp[n_future_steps][0];
+            Y_com_i = compute_A_t(omega, Ts) * Y_com_i + compute_b_t(omega, Ts) * pos_zmp[n_future_steps][1];
 
             phi--;
             n_future_steps++;

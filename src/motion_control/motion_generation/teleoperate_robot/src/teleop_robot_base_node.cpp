@@ -8,8 +8,7 @@ namespace teleoperate_robot
 {
 
 TeleopRobotBase::TeleopRobotBase()
-: TeleopRobot(),
-  l_twist_{0.0, 0.0, 0.0},
+: l_twist_{0.0, 0.0, 0.0},
   a_twist_{0.0, 0.0, 0.0},
   l_scale_(1.0),
   a_scale_(1.0)

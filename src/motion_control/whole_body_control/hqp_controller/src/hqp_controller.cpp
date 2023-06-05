@@ -388,8 +388,6 @@ CallbackReturn HQPController::on_deactivate(const rclcpp_lifecycle::State& /*pre
 controller_interface::return_type HQPController::update(
     const rclcpp::Time& time, const rclcpp::Duration& /*period*/
 ) {
-    const double time_double = static_cast<double>(time.seconds()) + static_cast<double>(time.nanoseconds()) * 1e-9;
-
     std::vector<std::string> contact_feet_names = wbc.get_generic_feet_names();
 
     for (uint i=0; i<joint_names_.size(); i++) {
@@ -400,7 +398,7 @@ controller_interface::return_type HQPController::update(
     if (des_gen_pose_.contact_feet_names.size() + des_gen_pose_.feet_pos.size()/3 != 4) {
         // The planner is not publishing messages yet. Interpolate from q0 to qi and than wait.
 
-        Eigen::VectorXd q = std::min(1., time_double / init_time_) * qi_;
+        Eigen::VectorXd q = std::min(1., time.seconds() / init_time_) * qi_;
 
         // PD for the state estimator initialization
         for (uint i=0; i<joint_names_.size(); i++) {

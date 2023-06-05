@@ -69,7 +69,7 @@ def generate_launch_description():
 
     velocity_cmd = LaunchConfiguration('velocity_cmd', default='[0., 0., 0.]')
 
-    height = LaunchConfiguration('height', default='0.63')
+    height = LaunchConfiguration('height', default='0.635')
         
     save_csv = LaunchConfiguration('save_csv', default='False')
 

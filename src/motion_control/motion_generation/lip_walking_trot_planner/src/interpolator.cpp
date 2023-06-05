@@ -37,6 +37,8 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::interpolate(
         return foot_trajectory_cycloid(init_pos, step_length, theta, phi);
     }
     else {
+        std::cerr << "In lip_walking_trot_planner::Interpolator.interpolate(const Vector3d&, const Vector3d&, double) the method_ parameter is not an acceptable value. Using a spline instead. " << std::endl;
+
         // This case should never be reached.
         return foot_trajectory_spline(init_pos, end_pos, phi);
     }
@@ -58,6 +60,8 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::interpolate(
             phi, dt
         );
     } else {
+        std::cerr << "In lip_walking_trot_planner::Interpolator.interpolate(const Vector3d&, const Vector3d&, const Vector3d&, const Vector3d&, double, double) the method_ parameter is not an acceptable value. Using a spline instead. " << std::endl;
+
         // This case should never be reached.
         return foot_trajectory_spline(
             init_pos, init_vel,
@@ -221,6 +225,7 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_spline(
 ) const {
     double p_z, v_z, a_z;
 
+    // The vertical trajectory is ascending during the first half of the swing, and descending during the second.
     if (phi <= 0.5) {
         double remaining_upward_phase_duration = step_duration_ * (0.5 - phi);
 
@@ -245,6 +250,7 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_spline(
         a_z /= remaining_downward_phase_duration;
     }
 
+    // Horizontal movement computations
     Vector2d init_pos_xy = init_pos.head(2);
     Vector2d init_vel_xy = init_vel.head(2);
     Vector2d end_pos_xy = end_pos.head(2);
@@ -260,11 +266,12 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_spline(
     v_xy /= step_duration_ * (1 - phi);
     a_xy /= step_duration_ * (1 - phi);
 
+    // Merge the horizontal and vertical movements in a single vector.
     Vector3d p_t = {p_xy[0], p_xy[1], p_z};
     Vector3d v_t = {v_xy[0], v_xy[1], v_z};
     Vector3d a_t = {a_xy[0], a_xy[1], a_z};
 
-    limit_feet_vel_acc(v_t, a_t);
+    saturate_feet_vel_acc(v_t, a_t);
 
     return {p_t, v_t, a_t};
 }
@@ -311,9 +318,10 @@ std::tuple<Vector3d, Vector3d, Vector3d> Interpolator::foot_trajectory_cycloid(
 
 /* =========================== Limit_feet_vel_acc =========================== */
 
-void Interpolator::limit_feet_vel_acc(
+void Interpolator::saturate_feet_vel_acc(
     Vector3d& feet_velocities, Vector3d& feet_accelerations
 ) const {
+    // Saturate the velocities.
     for (auto& vel : feet_velocities) {
         if (vel > max_foot_velocity) {
             vel = max_foot_velocity;
@@ -322,6 +330,7 @@ void Interpolator::limit_feet_vel_acc(
         }
     }
 
+    // Saturate the accelerations.
     for (auto& acc : feet_accelerations) {
         if (acc > max_foot_acceleration) {
             acc = max_foot_acceleration;
@@ -331,4 +340,4 @@ void Interpolator::limit_feet_vel_acc(
     }
 }
 
-}
+} // lip_walking_trot_planner

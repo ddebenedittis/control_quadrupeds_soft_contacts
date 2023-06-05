@@ -111,10 +111,10 @@ public:
         if (dt > 0) {
             dt_gen_poses_ = dt;
             return 0;
-        } else {
-            std::cerr << "In lip_walking_trot_planner::MotionPlanner.set_dt_gen_poses(double) the sample time of the generalized poses must be positive." << std::endl;
-            return 1;
         }
+
+        std::cerr << "In lip_walking_trot_planner::MotionPlanner.set_dt_gen_poses(double) the sample time of the generalized poses must be positive." << std::endl;
+        return 1;
     }
 
     int set_n_gen_poses(int n)
@@ -122,10 +122,10 @@ public:
         if (n > 0) {
             n_gen_poses_ = n;
             return 0;
-        } else {
-            std::cerr << "In lip_walking_trot_planner::MotionPlanner.set_n_gen_poses(int) the number of gen_poses computed must be positive." << std::endl;
-            return 1;
         }
+
+        std::cerr << "In lip_walking_trot_planner::MotionPlanner.set_n_gen_poses(int) the number of gen_poses computed must be positive." << std::endl;
+        return 1;
     }
 
     /* =============================== Getters ============================== */
@@ -164,8 +164,11 @@ private:
         const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
     );
 
-    static Matrix2d compute_A_t(double omega, double time);
-    static Vector2d compute_b_t(double omega, double time);
+    [[nodiscard]] std::vector<Vector2d> solve_qps(
+        const Vector2d& X_com_0, const Vector2d& Y_com_0,
+        double x_zmp_0, double y_zmp_0,
+        const Vector2d& vel_cmd, double yaw_rate_cmd
+    ) const;
 
     /// @brief Formulate and solve the QP problem along a single direction.
     /// 
@@ -173,9 +176,21 @@ private:
     /// @param x_zmp_0 Measured zmp coordinate at the current step
     /// @param xcom_dot_des Desired velocity along a single direction
     /// @return Optimal ZMP coordinate at the next step
-    std::vector<double> mpc_qp(
+    [[nodiscard]] std::vector<double> mpc_qp(
         const Vector2d& X_com_0, double x_zmp_0,
         double x_com_dot_des
+    ) const;
+
+    static Matrix2d compute_A_t(double omega, double time);
+    static Vector2d compute_b_t(double omega, double time);
+
+    std::vector<generalized_pose::GeneralizedPoseStruct> compute_gen_poses(
+        const Vector2d& X_com_0, const Vector2d& Y_com_0,
+        double x_zmp_0, double y_zmp_0,
+        std::vector<Vector2d>& pos_zmp_star,
+        double yaw_rate_cmd,
+        const Vector3d& plane_coeffs,
+        const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
     );
 
     void compute_desired_footholds(const std::vector<Vector2d>& pos_zmp);
@@ -189,7 +204,7 @@ private:
 
     [[nodiscard]] std::tuple<std::vector<Vector3d>, std::vector<Vector3d>, std::vector<Vector3d>> get_des_base_poses(
         const Vector2d& X_com_0, const Vector2d& Y_com_0,
-        const std::vector<double>& x_zmp, const std::vector<double>& y_zmp
+        const std::vector<Vector2d>& pos_zmp
     ) const;
 
     /// @brief Return true when the robot should stop moving.

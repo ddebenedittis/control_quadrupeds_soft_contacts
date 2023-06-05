@@ -10,7 +10,6 @@ Checks:          'bugprone-*,
                   readability-*,
                   -cppcoreguidelines-avoid-magic-numbers,
                   -modernize-use-trailing-return-type,
-                  -readability-else-after-return,
                   -readability-identifier-length,
                   -readability-magic-numbers,
                   '

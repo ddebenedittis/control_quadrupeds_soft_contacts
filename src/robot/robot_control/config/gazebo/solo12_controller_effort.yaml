@@ -55,7 +55,7 @@ whole_body_controller:
         sample_time: 0.0025
 
         use_estimator: false        # ! Must be the same as the use_estimator in the planner
-        initialization_time: 3.
+        initialization_time: 1.5
 
         qi:
             -  0.0
@@ -148,7 +148,7 @@ static_walk_planner:
         use_sim_time: true
 
         use_estimator: false        # ! Must be the same as the use_estimator in the whole_body_controller
-        initialization_time: 3.
+        initialization_time: 1.
 
         sample_time: 0.005
         init_phase: 0.4
