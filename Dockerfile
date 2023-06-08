@@ -17,14 +17,14 @@ RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,s
     apt-get update && apt-get install --no-install-recommends -qqy \
     bash-completion \
     python3-pip \
-    ros-iron-gazebo-ros-pkgs \
-    ros-iron-gazebo-ros2-control \
-    ros-iron-joint-state-publisher \
-    ros-iron-joint-state-publisher-gui \
-    ros-iron-pinocchio \
-    ros-iron-ros2-control \
-    ros-iron-ros2-controllers \
-    ros-iron-xacro \
+    ros-${ROS_DISTRO}-gazebo-ros-pkgs \
+    ros-${ROS_DISTRO}-gazebo-ros2-control \
+    ros-${ROS_DISTRO}-joint-state-publisher \
+    ros-${ROS_DISTRO}-joint-state-publisher-gui \
+    ros-${ROS_DISTRO}-pinocchio \
+    ros-${ROS_DISTRO}-ros2-control \
+    ros-${ROS_DISTRO}-ros2-controllers \
+    ros-${ROS_DISTRO}-xacro \
     sudo \
     xterm
 
@@ -82,14 +82,14 @@ USER ${USER}
 ENV HOME /home/${USER}
 
 # Set up environment
-COPY config/update_bashrc /sbin/update_bashrc
+COPY .config/update_bashrc /sbin/update_bashrc
 RUN sudo chmod +x /sbin/update_bashrc ; sudo chown ${USER} /sbin/update_bashrc \
  && echo 'echo "source '${PWDR}'/install/setup.bash" >> ~/.bashrc' >> /sbin/update_bashrc \
  && cat /sbin/update_bashrc \
  && sync ; /bin/bash -c /sbin/update_bashrc ; sudo rm /sbin/update_bashrc
 
 # Change entrypoint to source ~/.bashrc and start in ~
-COPY config/entrypoint.sh /ros_entrypoint.sh
+COPY .config/entrypoint.sh /ros_entrypoint.sh
 RUN sudo chmod +x /ros_entrypoint.sh ; sudo chown ${USER} /ros_entrypoint.sh \
  && echo "cd "${PWDR} >> /ros_entrypoint.sh \
  && echo 'exec bash -i -c $@' >> /ros_entrypoint.sh \
