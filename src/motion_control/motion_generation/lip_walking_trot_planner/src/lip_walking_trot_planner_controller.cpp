@@ -381,6 +381,7 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
             (Vector2d() << velocity_forward_, velocity_lateral_).finished(), yaw_rate_,
             plane_coeffs_,
             feet_positions, feet_velocities
+            // time.seconds()
         );
         gen_pose_ = gen_poses[0];
 

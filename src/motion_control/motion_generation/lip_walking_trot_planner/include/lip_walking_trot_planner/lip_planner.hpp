@@ -39,12 +39,14 @@ public:
     /// @param plane_coeffs Terrain plane coefficients {a, b, c} where the plane is z = a x + b y + c
     /// @param feet_positions 
     /// @param feet_velocities 
+    /// @param time
     /// @return generalized_pose::GeneralizedPoseStruct 
     std::vector<generalized_pose::GeneralizedPoseStruct> update(
         const Ref<Vector3d>& pos_com, const Ref<Vector3d>& vel_com, const Ref<Vector3d>& acc_com,
         const Ref<Vector2d>& vel_cmd, double yaw_rate_cmd,
         const Vector3d& plane_coeffs = {0, 0, 0},
-        const std::vector<Vector3d>& feet_positions = {}, const std::vector<Vector3d>& feet_velocities = {}
+        const std::vector<Vector3d>& feet_positions = {}, const std::vector<Vector3d>& feet_velocities = {},
+        double time = 0
     );
 
     /// @brief Interpolate a position between p_i and p_f using a polynomial spline.
@@ -161,7 +163,8 @@ private:
         const Vector3d& pos_com, const Vector3d& vel_com, const Vector3d& acc_com,
         const Vector2d& vel_cmd, double yaw_rate_cmd,
         const Vector3d& plane_coeffs,
-        const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
+        const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities,
+        double time
     );
 
     [[nodiscard]] std::vector<Vector2d> solve_qps(
@@ -285,6 +288,9 @@ private:
 
     /// @brief Number of output generalized poses.
     int n_gen_poses_ = 16;
+
+    /// @brief 
+    double last_time = 0;
 };
 
 } // lip_walking_trot_planner

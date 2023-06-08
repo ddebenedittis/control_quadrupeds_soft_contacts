@@ -102,7 +102,8 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::update(
     const Ref<Vector3d>& pos_com, const Ref<Vector3d>& vel_com, const Ref<Vector3d>& acc_com,
     const Ref<Vector2d>& vel_cmd, double yaw_rate_cmd,
     const Vector3d& plane_coeffs,
-    const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
+    const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities,
+    double time
 ) {
     stop_flag_ = check_stop(vel_cmd, yaw_rate_cmd);
 
@@ -114,7 +115,8 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::update(
         pos_com, vel_com, acc_com,
         vel_cmd, yaw_rate_cmd,
         plane_coeffs,
-        feet_positions, feet_velocities
+        feet_positions, feet_velocities,
+        time
     );
 }
 
@@ -162,7 +164,8 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::mpc(
     const Vector3d& pos_com, const Vector3d& vel_com, const Vector3d& acc_com,
     const Vector2d& vel_cmd, double yaw_rate_cmd,
     const Vector3d& plane_coeffs,
-    const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities
+    const std::vector<Vector3d>& feet_positions, const std::vector<Vector3d>& feet_velocities,
+    double time
 ) {
     // Initial CoM state (position and velocity in the two directions).
     Vector2d X_com_0 = {pos_com[0], vel_com[0]};
@@ -194,7 +197,12 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::mpc(
     yaw_ += yaw_rate_cmd * dt_;
 
     // Update the normalized phase. When it becomes >=1, switch the contact feet and reset phi to zero.
-    phi_ += dt_ / interpolator_.get_step_duration();
+    if (time > last_time) {
+        phi_ += (time - last_time) / interpolator_.get_step_duration();
+        last_time = time;
+    } else {
+        phi_ += dt_ / interpolator_.get_step_duration();
+    }
     if (phi_ >= 1) {
         phi_ = 0;
         switch_swing_feet(feet_positions);
