@@ -22,8 +22,7 @@ docker run \
     --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
     --env="XAUTHORITY=$XAUTH" \
     --volume="$XAUTH:$XAUTH" \
-    --runtime=nvidia \
-    --privileged \
+    --gpus all \
     `# Mount the folders in this directory.` \
     -v ${PWD}:${PWD} \
     `# Preserve bash history for autocomplete).` \

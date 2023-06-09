@@ -17,8 +17,10 @@ Control of quadrupedal robots with soft contact constraints.
 
 Install [Docker Community Edition](https://docs.docker.com/engine/install/ubuntu/) (ex Docker Engine) and [Manage Docker as a non-root user](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
 
+Install NVIDIA proprietary drivers if the NVIDIA graphics card should be used.
+
 Install [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#setting-up-nvidia-container-toolkit) (nvidia-docker2) for NVIDIA support in the container. \
-If you do not want to use NVIDIA, edit the Docker image and the `run.bash` script, removing the envs for NVIDIA support. In addition, remove the `additional_env` from the Gazebo process in `robot_launch/launch/robot.launch.py`.
+If you do not want to use NVIDIA, edit the Docker image to remove the NVIDIA section and the `run.bash` script, removing the `--gpus all` flag in the docker run command. In addition, remove the `additional_env` from the Gazebo process in `robot_launch/launch/robot.launch.py`.
 
 Clone the repo:
 ```shell
