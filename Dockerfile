@@ -114,6 +114,14 @@ USER ${USER}
 # Change HOME environment variable
 ENV HOME /home/${USER}
 
+# Install the required dependencies with rosdep.
+RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,sharing=locked,target=/var/lib/apt \
+    --mount=type=bind,source=./src,target=/home/${USER}/catkin_ws/src,rw \
+    cd /home/${USER}/catkin_ws \
+ && sudo apt-get update \
+ && rosdep update \
+ && rosdep install --from-paths src --ignore-src -r -y
+
 # Set up environment
 COPY .config/update_bashrc /sbin/update_bashrc
 RUN sudo chmod +x /sbin/update_bashrc ; sudo chown ${USER} /sbin/update_bashrc \
