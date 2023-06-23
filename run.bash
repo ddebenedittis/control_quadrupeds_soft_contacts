@@ -43,5 +43,8 @@ docker run \
     -v /home/$USER/.vscode:/home/$USER/.vscode \
     -v /home/$USER/.vscode-server:/home/$USER/.vscode-server \
     -v /home/$USER/.config/Code:/home/$USER/.config/Code \
+    `# Enable the kernel's address space randomization for gdb.` \
+    --cap-add=SYS_PTRACE \
+    --security-opt seccomp=unconfined \
     ${IMAGE_NAME} \
     bash
