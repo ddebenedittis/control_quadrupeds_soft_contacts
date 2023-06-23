@@ -38,7 +38,7 @@ ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
 
 # nvidia-container-runtime
 ENV NVIDIA_VISIBLE_DEVICES all
-ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+ENV NVIDIA_DRIVER_CAPABILITIES compute,graphics,utility
 
 # ============================================================================ #
 
@@ -74,6 +74,7 @@ ARG DEVELOPMENT=0
 RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,sharing=locked,target=/var/lib/apt \
     if [ "${DEVELOPMENT}" = "1" ] ; then \
         apt-get update && apt-get install --no-install-recommends -qqy \
+        gdb \
         ros-iron-ament-clang-tidy ; \
     fi
 
