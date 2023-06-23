@@ -5,7 +5,7 @@ from rclpy.node import Node
 from tf2_ros import TransformBroadcaster
 
 from gazebo_msgs.msg import LinkStates
-from generalized_pose_msgs.msg import GeneralizedPose
+from generalized_pose_msgs.msg import GeneralizedPosesWithTime
 from geometry_msgs.msg import Pose, Twist, TransformStamped
 from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import JointState, Imu
@@ -44,8 +44,8 @@ class PoseEstimatorNode(Node):
             1)
         
         self.gen_pose_subscription = self.create_subscription(
-            GeneralizedPose,
-            "/motion_planner/desired_generalized_pose",
+            GeneralizedPosesWithTime,
+            "/motion_planner/desired_generalized_poses",
             self.gen_pose_callback,
             1)
         
@@ -145,9 +145,9 @@ class PoseEstimatorNode(Node):
         self.nanosec = msg.header.stamp.nanosec / 10**9 # + msg.header.stamp.sec
         
         
-    def gen_pose_callback(self, msg):
+    def gen_pose_callback(self, msg: GeneralizedPosesWithTime):
         # It is necessary to save only the names of the feet that the planner wants to be in contact with the terrain.
-        self.contact_feet_names = msg.contact_feet
+        self.contact_feet_names = msg.generalized_poses_with_time[0].generalized_pose.contact_feet
         
     
     def publish_pose_twist(self, p, q, v, omega):

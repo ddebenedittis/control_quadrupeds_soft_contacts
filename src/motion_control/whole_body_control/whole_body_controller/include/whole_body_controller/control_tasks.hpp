@@ -27,7 +27,8 @@ public:
     /// @param[in] contact_feet_names
     void reset(
         const Eigen::VectorXd& q, const Eigen::VectorXd& v,
-        const std::vector<std::string>& contact_feet_names, ContactConstraintType contact_constraint_type);
+        const std::vector<std::string>& contact_feet_names, ContactConstraintType contact_constraint_type
+    );
 
     /// @brief Compute the matrices A and b that enforce the dynamic consistency with the Equations of Motion of the floating base.
     /// @param[out] A
@@ -50,9 +51,10 @@ public:
     /// @param[in]  r_b_ddot_des
     /// @param[in]  r_b_dot_des
     /// @param[in]  r_b_des
-    void task_linear_motion_tracking(
+    virtual void task_linear_motion_tracking(
         Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b,
-        const Eigen::Vector3d& r_b_ddot_des, const Eigen::Vector3d& r_b_dot_des, const Eigen::Vector3d& r_b_des
+        const Eigen::Vector3d& r_b_ddot_des, const Eigen::Vector3d& r_b_dot_des, const Eigen::Vector3d& r_b_des,
+        int = 0
     );
 
     /// @brief Compute A and b that enforce the tracking of the reference base angular motion.
@@ -60,9 +62,10 @@ public:
     /// @param[out] b 
     /// @param[in]  omega_des 
     /// @param[in]  q_des 
-    void task_angular_motion_tracking(
+    virtual void task_angular_motion_tracking(
         Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b,
-        const Eigen::Vector3d& omega_des, const Eigen::Vector4d& q_des
+        const Eigen::Vector3d& omega_des, const Eigen::Vector4d& q_des,
+        int = 0
     ) const;
 
     /// @brief Compute A and b that enforce the trajectory tracking of the reference swing feet motion.
@@ -71,9 +74,10 @@ public:
     /// @param[in]  r_s_ddot_des 
     /// @param[in]  r_s_dot_des 
     /// @param[in]  r_s_des 
-    void task_swing_feet_tracking(
+    virtual void task_swing_feet_tracking(
         Eigen::Ref<Eigen::MatrixXd> A, Eigen::Ref<Eigen::VectorXd> b,
-        const Eigen::VectorXd& r_s_ddot_des, const Eigen::VectorXd& r_s_dot_des, const Eigen::VectorXd& r_s_des
+        const Eigen::VectorXd& r_s_ddot_des, const Eigen::VectorXd& r_s_dot_des, const Eigen::VectorXd& r_s_des,
+        int = 0
     );
 
     /// @brief Compute A, b, C, d that enforce the soft contact constraints, assuming a Kelving-Voight soft contact model (linear springs and linear dampers).
@@ -123,7 +127,9 @@ public:
     /// @brief Enforce the non-singularity condition of the legs, by imposing that the knee joint does not change sign.
     /// @param[out] C 
     /// @param[out] d 
-    void task_joint_singularities(Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d);
+    virtual void task_joint_singularities(
+        Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d
+    );
 
     /// @brief Compute A and b that enforce the minimization of the energy (the square of the torques) and of the contact forces.
     /// @param[out] A 
@@ -133,36 +139,36 @@ public:
 
     /* =============================== Getters ============================== */
 
-    int get_nv() const {return nv;}
-    int get_nc() const {return nc;}
-    int get_nF() const {return nF;}
-    int get_nd() const {return nd;}
+    [[nodiscard]] int get_nv() const {return nv;}
+    [[nodiscard]] int get_nc() const {return nc;}
+    [[nodiscard]] int get_nF() const {return nF;}
+    [[nodiscard]] int get_nd() const {return nd;}
 
-    const pinocchio::Model& get_model() const { return robot_model.get_model(); }
+    [[nodiscard]] const pinocchio::Model& get_model() const { return robot_model.get_model(); }
     
-    const pinocchio::Data& get_data() { return robot_model.get_data(); }
+    [[nodiscard]] const pinocchio::Data& get_data() { return robot_model.get_data(); }
 
-    double get_mass() const { return robot_model.get_mass(); }
+    [[nodiscard]] double get_mass() const { return robot_model.get_mass(); }
 
-    double get_friction_coefficient() const { return mu; }
+    [[nodiscard]] double get_friction_coefficient() const { return mu; }
 
-    Eigen::Vector3d get_com_position() {return pinocchio::centerOfMass(get_model(), robot_model.get_data(), false);}
+    [[nodiscard]] Eigen::Vector3d get_com_position() {return pinocchio::centerOfMass(get_model(), robot_model.get_data(), false);}
 
-    const Eigen::MatrixXd& get_M()  const { return M; }
-    const Eigen::VectorXd& get_h()  const { return h; }
-    const Eigen::MatrixXd& get_Jc() const { return Jc; }
+    [[nodiscard]] const Eigen::MatrixXd& get_M()  const { return M; }
+    [[nodiscard]] const Eigen::VectorXd& get_h()  const { return h; }
+    [[nodiscard]] const Eigen::MatrixXd& get_Jc() const { return Jc; }
 
-    Eigen::VectorXd get_feet_positions() const{ return robot_model.get_feet_positions(); }
+    [[nodiscard]] Eigen::VectorXd get_feet_positions() const{ return robot_model.get_feet_positions(); }
 
-    Eigen::VectorXd get_feet_velocities(const Eigen::VectorXd& v) { return robot_model.get_feet_velocities(v); }
+    [[nodiscard]] Eigen::VectorXd get_feet_velocities(const Eigen::VectorXd& v) { return robot_model.get_feet_velocities(v); }
 
     /// @brief Return the generic feet names. The generic feet names are the same for all quadrupedal robots: LF, RF, LH, and RH.
-    const std::vector<std::string>& get_generic_feet_names() const {return robot_model.get_generic_feet_names();}
+    [[nodiscard]] const std::vector<std::string>& get_generic_feet_names() const {return robot_model.get_generic_feet_names();}
 
     /// @brief Return the feet names of the specific robot. These are the names of the links used for computing the contact point.
-    const std::vector<std::string>& get_all_feet_names() const {return robot_model.get_all_feet_names();}
+    [[nodiscard]] const std::vector<std::string>& get_all_feet_names() const {return robot_model.get_all_feet_names();}
 
-    const Eigen::Vector3d& get_kp_terr() const {return this->kp_terr;}
+    [[nodiscard]] const Eigen::Vector3d& get_kp_terr() const {return this->kp_terr;}
 
 
     /* =============================== Setters ============================== */
@@ -186,7 +192,7 @@ public:
 
     void set_kc_v(const Eigen::Ref<const Eigen::Vector3d>& kc_v) {this->kc_v = kc_v;}
 
-private:
+protected:
     robot_wrapper::RobotModel robot_model;
 
     int nv = 18;    ///< @brief Dimension of the generalized velocity vector
@@ -197,15 +203,6 @@ private:
     Eigen::VectorXd q;      ///< @brief Generalized coordinates vector
     Eigen::VectorXd v;      ///< @brief Generalized velocities vector
 
-    float dt;   ///< @brief Time step between two controllers cycles.
-
-    double tau_max = 80;    ///< @brief Maximum joint torques
-    double mu = 0.8;        ///< @brief friction coefficient
-    double Fn_max = 350;    ///< @brief Maximum normal contact force (this may be a function of the swing phase)
-    double Fn_min = 40;     ///< @brief Minimum normal contact force (this may be a function of the swing phase)
-
-    Eigen::MatrixXd M;                  ///< @brief Mass matrix
-    Eigen::VectorXd h;                  ///< @brief Nonlinear terms vector
     Eigen::MatrixXd Jc;                 ///< @brief Stack of the contact points jacobians
 
     Eigen::MatrixXd Jb;                 ///< @brief Base jacobian
@@ -220,13 +217,24 @@ private:
     Eigen::Vector3d kp_s_pos = {1, 1, 1};       ///< @brief Controller gains on the position error of the swing feet
     Eigen::Vector3d kd_s_pos = {1, 1, 1};       ///< @brief Controller gains on the velocity error of the swing feet
 
+    /// @brief 
+    Eigen::Vector4d knee_joint_sign = {0, 0, 0, 0};
+
+private:
+    float dt;   ///< @brief Time step between two controllers cycles.
+
+    double tau_max = 80;    ///< @brief Maximum joint torques
+    double mu = 0.8;        ///< @brief friction coefficient
+    double Fn_max = 350;    ///< @brief Maximum normal contact force (this may be a function of the swing phase)
+    double Fn_min = 40;     ///< @brief Minimum normal contact force (this may be a function of the swing phase)
+
+    Eigen::MatrixXd M;                  ///< @brief Mass matrix
+    Eigen::VectorXd h;                  ///< @brief Nonlinear terms vector
+
     Eigen::Vector3d kp_terr = {1, 1, 1};        ///< @brief Stiffness of the soft foot in the three directions
     Eigen::Vector3d kd_terr = {1, 1, 1};        ///< @brief Damping of the soft foot in the three directions
 
     Eigen::Vector3d kc_v = {0, 0, 0};           ///< @brief Contact task: Jc * u_dot + Jc_dot * u = d_ddot - Kc_v * Jc * u, where Kc_v is the diagonal matrix whose diagonal is kc_v repeated nc number of times.
-
-    /// @brief 
-    Eigen::Vector4d knee_joint_sign = {0, 0, 0, 0};
 };
 
 } // namespace wbc

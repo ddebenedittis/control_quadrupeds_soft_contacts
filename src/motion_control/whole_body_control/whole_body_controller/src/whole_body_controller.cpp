@@ -1,4 +1,6 @@
 #include "whole_body_controller/whole_body_controller.hpp"
+#include "whole_body_controller/control_tasks.hpp"
+#include "whole_body_controller/prioritized_tasks.hpp"
 
 
 
@@ -9,13 +11,14 @@ namespace wbc {
 /*                       WHOLEBODYCONTROLLER CONSTRUCTOR                      */
 /* ========================================================================== */
 
-WholeBodyController::WholeBodyController(const std::string& robot_name, float dt)
-: prioritized_tasks(robot_name, dt),
-  hierarchical_qp(prioritized_tasks.get_max_priority()),
-  x_opt(Eigen::VectorXd::Zero(prioritized_tasks.get_nv())),
-  tau_opt(Eigen::VectorXd::Zero(12)),
-  f_c_opt(Eigen::VectorXd::Zero(12)),
-  d_des_opt(Eigen::VectorXd::Zero(0))
+template <typename PrioritizedTasksType>
+WholeBodyController<PrioritizedTasksType>::WholeBodyController(const std::string& robot_name, float dt)
+: prioritized_tasks_(robot_name, dt),
+  hierarchical_qp_(prioritized_tasks_.get_max_priority()),
+  x_opt_(Eigen::VectorXd::Zero(prioritized_tasks_.get_nv())),
+  tau_opt_(Eigen::VectorXd::Zero(12)),
+  f_c_opt_(Eigen::VectorXd::Zero(12)),
+  d_des_opt_(Eigen::VectorXd::Zero(0))
 {}
 
 
@@ -23,14 +26,15 @@ WholeBodyController::WholeBodyController(const std::string& robot_name, float dt
 /*                                    STEP                                    */
 /* ========================================================================== */
 
-void WholeBodyController::step(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const GeneralizedPose& gen_pose)
+template <typename PrioritizedTasksType>
+void WholeBodyController<PrioritizedTasksType>::step(const Eigen::VectorXd& q, const Eigen::VectorXd& v, const GeneralizedPose& gen_pose)
 {
     std::pair<Eigen::VectorXd, Eigen::VectorXd> defs_pair;
 
-    if (prioritized_tasks.get_contact_constraint_type() != ContactConstraintType::rigid) {
-        deformations_history_manager.initialize_deformations_after_planning(gen_pose.contact_feet_names);
+    if (prioritized_tasks_.get_contact_constraint_type() != ContactConstraintType::rigid) {
+        deformations_history_manager_.initialize_deformations_after_planning(gen_pose.contact_feet_names);
 
-        defs_pair = deformations_history_manager.get_deformations_history();
+        defs_pair = deformations_history_manager_.get_deformations_history();
     } else {
         defs_pair = std::make_pair(Eigen::VectorXd::Zero(0), Eigen::VectorXd::Zero(0));
     }
@@ -42,41 +46,41 @@ void WholeBodyController::step(const Eigen::VectorXd& q, const Eigen::VectorXd& 
     Eigen::VectorXd we;
     Eigen::VectorXd wi;
 
-    prioritized_tasks.reset(q, v, gen_pose.contact_feet_names);
+    prioritized_tasks_.reset(q, v, gen_pose.contact_feet_names);
 
-    prioritized_tasks.compute_task_p(0, A, b, C, d, gen_pose, defs_pair.first, defs_pair.second);
+    prioritized_tasks_.compute_task_p(0, A, b, C, d, gen_pose, defs_pair.first, defs_pair.second);
 
-    for (int i = 1; i <= prioritized_tasks.get_max_priority(); i++) {
+    for (int i = 1; i <= prioritized_tasks_.get_max_priority(); i++) {
         we = Eigen::VectorXd::Ones(A.rows());
         wi = Eigen::VectorXd::Ones(C.rows());
 
-        hierarchical_qp.solve_qp(i-1, A, b, C, d, we, wi);
+        hierarchical_qp_.solve_qp(i-1, A, b, C, d, we, wi);
 
-        prioritized_tasks.compute_task_p(i, A, b, C, d, gen_pose, defs_pair.first, defs_pair.second);
+        prioritized_tasks_.compute_task_p(i, A, b, C, d, gen_pose, defs_pair.first, defs_pair.second);
     }
 
     we = Eigen::VectorXd::Ones(A.rows());
     wi = Eigen::VectorXd::Ones(C.rows());
 
-    hierarchical_qp.solve_qp(prioritized_tasks.get_max_priority(), A, b, C, d, we, wi);
+    hierarchical_qp_.solve_qp(prioritized_tasks_.get_max_priority(), A, b, C, d, we, wi);
 
-    x_opt = hierarchical_qp.get_sol();
+    x_opt_ = hierarchical_qp_.get_sol();
 
-    const int nv = prioritized_tasks.get_nv();
-    const int nF = prioritized_tasks.get_nF();
-    const int nd = prioritized_tasks.get_nd();
+    const int nv = prioritized_tasks_.get_nv();
+    const int nF = prioritized_tasks_.get_nF();
+    const int nd = prioritized_tasks_.get_nd();
 
-    Eigen::VectorXd f_c_opt_var = x_opt.segment(nv, nF);
-    Eigen::VectorXd d_des_opt_var = x_opt.segment(nv + nF, nd);
+    Eigen::VectorXd f_c_opt_var = x_opt_.segment(nv, nF);
+    Eigen::VectorXd d_des_opt_var = x_opt_.segment(nv + nF, nd);
 
     {
         auto generic_feet_names = get_generic_feet_names();
         std::string generic_foot_name;
 
-        f_c_opt.setZero();
-        d_des_opt.setZero();
+        f_c_opt_.setZero();
+        d_des_opt_.setZero();
 
-        const int def_size = deformations_history_manager.get_def_size();
+        const int def_size = deformations_history_manager_.get_def_size();
 
         for (int i=0; i<static_cast<int>(gen_pose.contact_feet_names.size()); i++) {
             generic_foot_name = gen_pose.contact_feet_names[i];
@@ -85,16 +89,16 @@ void WholeBodyController::step(const Eigen::VectorXd& q, const Eigen::VectorXd& 
 
             const int index = std::distance(generic_feet_names.begin(), it);
 
-            f_c_opt.segment(3*index,3) = f_c_opt_var.segment(3*i, 3);
+            f_c_opt_.segment(3*index,3) = f_c_opt_var.segment(3*i, 3);
             
-            if (prioritized_tasks.get_contact_constraint_type() != ContactConstraintType::rigid) {
-                d_des_opt.segment(def_size*index, def_size) = d_des_opt_var.segment(def_size*i, def_size);
+            if (prioritized_tasks_.get_contact_constraint_type() != ContactConstraintType::rigid) {
+                d_des_opt_.segment(def_size*index, def_size) = d_des_opt_var.segment(def_size*i, def_size);
             }
         }
     }
 
-    if (prioritized_tasks.get_contact_constraint_type() != ContactConstraintType::rigid) {
-        deformations_history_manager.update_deformations_after_optimization(d_des_opt_var);
+    if (prioritized_tasks_.get_contact_constraint_type() != ContactConstraintType::rigid) {
+        deformations_history_manager_.update_deformations_after_optimization(d_des_opt_var);
     }
 
     compute_torques();
@@ -105,14 +109,20 @@ void WholeBodyController::step(const Eigen::VectorXd& q, const Eigen::VectorXd& 
 /*                               COMPUTE_TORQUES                              */
 /* ========================================================================== */
 
-void WholeBodyController::compute_torques()
+template <typename PrioritizedTasksType>
+void WholeBodyController<PrioritizedTasksType>::compute_torques()
 {
-    const int nv = prioritized_tasks.get_nv();
-    const int nF = prioritized_tasks.get_nF();
+    const int nv = prioritized_tasks_.get_nv();
+    const int nF = prioritized_tasks_.get_nF();
 
-    tau_opt =   prioritized_tasks.get_M().bottomRows(nv-6) * x_opt.head(nv)
-              + prioritized_tasks.get_h().tail(nv-6)
-              - prioritized_tasks.get_Jc().rightCols(nv-6).transpose() * x_opt.segment(nv, nF);
+    tau_opt_ =   prioritized_tasks_.get_M().bottomRows(nv-6) * x_opt_.head(nv)
+              + prioritized_tasks_.get_h().tail(nv-6)
+              - prioritized_tasks_.get_Jc().rightCols(nv-6).transpose() * x_opt_.segment(nv, nF);
 }
+
+
+
+template class WholeBodyController<PrioritizedTasks<ControlTasks>>;
+template class WholeBodyController<MPCPrioritizedTasks>;
 
 } // namespace wbc

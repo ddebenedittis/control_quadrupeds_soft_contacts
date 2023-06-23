@@ -1,12 +1,10 @@
 #include "whole_body_controller/control_tasks.hpp"
 
-#include "robot_model/robot_model.hpp"
-
-#include <Eigen/Geometry>
-
 
 
 namespace wbc {
+
+using namespace Eigen;
 
 
 /* ================================== Tile ================================== */
@@ -15,6 +13,7 @@ namespace wbc {
 /// @param[in] v
 /// @param[in] repeat
 /// @return Eigen::VectorXd 
+namespace {
 Eigen::VectorXd tile(const Eigen::VectorXd& v, int repeat)
 {
     Eigen::VectorXd temp(v.size() * repeat);
@@ -24,6 +23,7 @@ Eigen::VectorXd tile(const Eigen::VectorXd& v, int repeat)
     }
 
     return temp;
+}
 }
 
 
@@ -67,7 +67,6 @@ void ControlTasks::reset(
         nd = 0;
     }
     
-
     // Initialize these matrices with all zeros (required by Pinocchio library)
     Jc = Eigen::MatrixXd::Zero(3*nc, nv);
     Jb = Eigen::MatrixXd::Zero(6, nv);
@@ -90,9 +89,8 @@ void ControlTasks::reset(
          d_des ]
 */
 
-/* ========================= task_floating_base_eom ========================= */
 
-using namespace Eigen;
+/* ========================= task_floating_base_eom ========================= */
 
 void ControlTasks::task_floating_base_eom(Ref<MatrixXd> A, Ref<VectorXd> b)
 {
@@ -184,7 +182,8 @@ void ControlTasks::task_friction_Fc_modulation(Ref<MatrixXd> C, Ref<VectorXd> d)
 
 void ControlTasks::task_linear_motion_tracking(
     Ref<MatrixXd> A, Ref<VectorXd> b,
-    const Vector3d& r_b_ddot_des, const Vector3d& r_b_dot_des, const Vector3d& r_b_des
+    const Vector3d& r_b_ddot_des, const Vector3d& r_b_dot_des, const Vector3d& r_b_des,
+    int /*i*/
 ) {
     // Compute the second order kinematics
     robot_model.compute_second_order_FK(q, v);
@@ -206,7 +205,8 @@ void ControlTasks::task_linear_motion_tracking(
 
 void ControlTasks::task_angular_motion_tracking(
     Ref<MatrixXd> A, Ref<VectorXd> b,
-    const Vector3d& omega_des, const Vector4d& q_des
+    const Vector3d& omega_des, const Vector4d& q_des,
+    int /*i*/
 ) const {
     // TODO check that this is correct. It depends on how I define q_des.
     // Quaternion<double>(w, x, y, z);
@@ -228,7 +228,8 @@ void ControlTasks::task_angular_motion_tracking(
 
 void ControlTasks::task_swing_feet_tracking(
     Ref<MatrixXd> A, Ref<VectorXd> b,
-    const VectorXd& r_s_ddot_des, const VectorXd& r_s_dot_des, const VectorXd& r_s_des
+    const VectorXd& r_s_ddot_des, const VectorXd& r_s_dot_des, const VectorXd& r_s_des,
+    int
 ) {
     MatrixXd Js = MatrixXd::Zero(4*3-nF, nv);
     robot_model.get_Js(Js);
@@ -294,8 +295,9 @@ void ControlTasks::task_contact_constraints_soft_kv(
 
 /* ======================== Task_joint_singularities ======================== */
 
-void ControlTasks::task_joint_singularities(Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d)
-{
+void ControlTasks::task_joint_singularities(
+    Eigen::Ref<Eigen::MatrixXd> C, Eigen::Ref<Eigen::VectorXd> d
+) {
     // Initialize knee_joint_sign if not already done. The desired knee joint angle sign is the same as the starting knee joint angle.
     if (knee_joint_sign[0] == 0) {
         for (int i = 0; i < 4; i++) {
@@ -458,6 +460,5 @@ void ControlTasks::task_energy_forces_minimization(Ref<MatrixXd> A, Ref<VectorXd
 
     b.topRows(nv-6) = - h.bottomRows(nv-6);
 }
-
 
 } // namespace wbc

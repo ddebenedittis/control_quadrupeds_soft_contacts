@@ -10,7 +10,7 @@ from rcl_interfaces.srv import GetParameters
 
 from gazebo_msgs.msg import LinkStates
 from gazebo_msgs.msg import ContactsState
-from generalized_pose_msgs.msg import GeneralizedPose
+from generalized_pose_msgs.msg import GeneralizedPosesWithTime
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 from velocity_command_msgs.msg import SimpleVelocityCommand
@@ -98,8 +98,8 @@ class LoggerSubscriber(Node):
             1)
 
         self.gen_pose_subscription = self.create_subscription(
-            GeneralizedPose,
-            "/motion_planner/desired_generalized_pose",
+            GeneralizedPosesWithTime,
+            "/motion_planner/desired_generalized_poses",
             self.gen_pose_callback,
             1)
 
@@ -347,20 +347,22 @@ class LoggerSubscriber(Node):
             self.v[6 + joint_names.index(msg.name[i])] = msg.velocity[i]
 
 
-    def gen_pose_callback(self, msg: GeneralizedPose):
-        self.desired_base_pos = np.array([msg.base_pos.x, msg.base_pos.y, msg.base_pos.z])
-        self.desired_base_quat = np.array([msg.base_quat.x, msg.base_quat.y, msg.base_quat.z, msg.base_quat.w])
-        self.desired_base_vel = np.array([msg.base_vel.x, msg.base_vel.y, msg.base_vel.z])
+    def gen_pose_callback(self, msg: GeneralizedPosesWithTime):
+        gen_pose = msg.generalized_poses_with_time[0].generalized_pose
+        
+        self.desired_base_pos = np.array([gen_pose.base_pos.x, gen_pose.base_pos.y, gen_pose.base_pos.z])
+        self.desired_base_quat = np.array([gen_pose.base_quat.x, gen_pose.base_quat.y, gen_pose.base_quat.z, gen_pose.base_quat.w])
+        self.desired_base_vel = np.array([gen_pose.base_vel.x, gen_pose.base_vel.y, gen_pose.base_vel.z])
 
         # These are generic feet names, independent on the particular quadrupedal robot. I.e. LF, RF, LH, RH.
-        self.contact_feet_names = msg.contact_feet
+        self.contact_feet_names = gen_pose.contact_feet
 
         j = 0
 
         for i, foot_name in enumerate(self.generic_feet_names):
             if foot_name not in self.contact_feet_names:
-                self.desired_feet_pos[3*i:3*i+3] = msg.feet_pos[3*j:3*j+3]
-                self.desired_feet_vel[3*i:3*i+3] = msg.feet_vel[3*j:3*j+3]
+                self.desired_feet_pos[3*i:3*i+3] = gen_pose.feet_pos[3*j:3*j+3]
+                self.desired_feet_vel[3*i:3*i+3] = gen_pose.feet_vel[3*j:3*j+3]
                 j += 1
             else:
                 self.desired_feet_pos[3*i:3*i+3] = np.nan * np.ones(3)

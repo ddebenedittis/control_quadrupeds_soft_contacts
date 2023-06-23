@@ -14,13 +14,14 @@
 #include "generalized_pose_msgs/generalized_pose_struct.hpp"
 
 #include "gazebo_msgs/msg/link_states.hpp"
-#include "generalized_pose_msgs/msg/generalized_pose.hpp"
+#include "generalized_pose_msgs/msg/generalized_poses_with_time.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "rviz_legged_msgs/msg/paths.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "velocity_command_msgs/msg/simple_velocity_command.hpp"
 
+#include <generalized_pose_msgs/msg/detail/generalized_poses_with_time__struct.hpp>
 #include <string>
 #include <vector>
 
@@ -67,7 +68,7 @@ class LIPController : public controller_interface::ControllerInterface {
 
         FadingFilter<Vector3d> filter_;
 
-        generalized_pose::GeneralizedPoseStruct gen_pose_;
+        std::vector<generalized_pose::GeneralizedPoseStruct> gen_poses_;
 
         rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr feet_positions_subscription_ = nullptr;
         rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr feet_velocities_subscription_ = nullptr;
@@ -78,6 +79,7 @@ class LIPController : public controller_interface::ControllerInterface {
         rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr terrain_plane_subscription_ = nullptr;
 
         std::shared_ptr<rclcpp::Publisher<generalized_pose_msgs::msg::GeneralizedPose>> gen_pose_publisher_ = nullptr;
+        std::shared_ptr<rclcpp::Publisher<generalized_pose_msgs::msg::GeneralizedPosesWithTime>> gen_poses_publisher_ = nullptr;
         std::shared_ptr<rclcpp::Publisher<rviz_legged_msgs::msg::Paths>> feet_trajectories_publisher_ = nullptr;
 
         std::shared_ptr<rclcpp::Publisher<nav_msgs::msg::Path>> base_trajectory_publisher_ = nullptr;

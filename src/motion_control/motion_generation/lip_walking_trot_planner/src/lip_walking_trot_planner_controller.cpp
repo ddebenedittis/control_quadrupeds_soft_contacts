@@ -318,6 +318,10 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
     gen_pose_publisher_ = get_node()->create_publisher<generalized_pose_msgs::msg::GeneralizedPose>(
         "/motion_planner/desired_generalized_pose", rclcpp::SystemDefaultsQoS()
     );
+    
+    gen_poses_publisher_ = get_node()->create_publisher<generalized_pose_msgs::msg::GeneralizedPosesWithTime>(
+        "/motion_planner/desired_generalized_poses", rclcpp::SystemDefaultsQoS()
+    );
 
     feet_trajectories_publisher_ = get_node()->create_publisher<rviz_legged_msgs::msg::Paths>(
         "rviz/feet_trajectory", rclcpp::SystemDefaultsQoS()
@@ -383,7 +387,7 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
             feet_positions, feet_velocities
             // time.seconds()
         );
-        gen_pose_ = gen_poses[0];
+        gen_poses_ = gen_poses;
 
         publish_feet_trajectories();
 
@@ -413,24 +417,22 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
             InterpolationMethod::Spline_5th
         );
 
-        gen_pose_.base_acc = generalized_pose::Vector3(base_acc);
-        gen_pose_.base_vel = generalized_pose::Vector3(base_vel);
-        gen_pose_.base_pos = generalized_pose::Vector3(base_pos);
+        gen_poses_.resize(1);
 
-        gen_pose_.base_angvel = generalized_pose::Vector3(0, 0, 0);
+        gen_poses_[0].base_acc = generalized_pose::Vector3(base_acc);
+        gen_poses_[0].base_vel = generalized_pose::Vector3(base_vel);
+        gen_poses_[0].base_pos = generalized_pose::Vector3(base_pos);
+
+        gen_poses_[0].base_angvel = generalized_pose::Vector3(0, 0, 0);
 
         Quaterniond quat = compute_quaternion_from_euler_angles(
             roll,
             pitch,
             yaw
         );
-        gen_pose_.base_quat = generalized_pose::Quaternion(
+        gen_poses_[0].base_quat = generalized_pose::Quaternion(
             quat.x(), quat.y(), quat.z(), quat.w()
         );
-
-    gen_pose_.base_quat = generalized_pose::Quaternion(
-        quat.x(), quat.y(), quat.z(), quat.w()
-    );
     } else {
         // Initialize the planner starting position and orientation.
 
@@ -446,7 +448,16 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
         return controller_interface::return_type::OK;
     }
 
-    gen_pose_publisher_->publish(gen_pose_.get_msg());
+    generalized_pose_msgs::msg::GeneralizedPosesWithTime gen_poses_msg;
+    gen_poses_msg.generalized_poses_with_time.resize(gen_poses_.size());
+
+    for (int i = 0; i < static_cast<int>(gen_poses_.size()); i++) {
+        gen_poses_msg.generalized_poses_with_time[i].generalized_pose = 
+            gen_poses_[i].get_msg();
+    }
+
+    gen_pose_publisher_->publish(gen_poses_[0].get_msg());
+    gen_poses_publisher_->publish(gen_poses_msg);
 
     return controller_interface::return_type::OK;
 }
@@ -460,12 +471,12 @@ void LIPController::publish_feet_trajectories()
 
     msg.header.frame_id = "ground_plane_link";
 
-    int n_paths = trajectories.size();
+    int n_paths = static_cast<int>(trajectories.size());
 
     msg.paths.resize(n_paths);
 
     for (int i = 0; i < n_paths; i++) {
-        int n_points = trajectories[i].size();
+        int n_points = static_cast<int>(trajectories[i].size());
 
         msg.paths[i].poses.resize(n_points);
 

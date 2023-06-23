@@ -2,6 +2,8 @@
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "pluginlib/class_list_macros.hpp"
+#include <generalized_pose_msgs/msg/detail/generalized_poses_with_time__struct.hpp>
+#include <whole_body_controller/prioritized_tasks.hpp>
 
 
 
@@ -162,18 +164,20 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
 
     /* ====================================================================== */
 
-    wbc = wbc::WholeBodyController(robot_name, dt);
+    wbc = wbc::MPCWholeBodyController(robot_name, dt, 1);
 
     q_.resize(wbc.get_nv() + 1);
     q_(6) = 1;
     v_.resize(wbc.get_nv());
 
-    des_gen_pose_.feet_pos.resize(3);
-    des_gen_pose_.feet_vel.resize(3);
-    des_gen_pose_.feet_acc.resize(3);
-    des_gen_pose_.feet_pos.resize(0);
-    des_gen_pose_.feet_vel.resize(0);
-    des_gen_pose_.feet_acc.resize(0);
+    for (auto& gen_pose : des_gen_poses_) {
+        gen_pose.feet_pos.resize(3);
+        gen_pose.feet_vel.resize(3);
+        gen_pose.feet_acc.resize(3);
+        gen_pose.feet_pos.resize(0);
+        gen_pose.feet_vel.resize(0);
+        gen_pose.feet_acc.resize(0);
+    }
 
 
     if (get_node()->get_parameter("contact_constraint_type").as_string().empty()) {
@@ -355,6 +359,33 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
         }
     );
 
+    des_gen_poses_ = {wbc::GeneralizedPose()};
+
+    desired_generalized_poses_subscription_ = get_node()->create_subscription<generalized_pose_msgs::msg::GeneralizedPosesWithTime>(
+        "/motion_planner/desired_generalized_poses", QUEUE_SIZE,
+        [this](const generalized_pose_msgs::msg::GeneralizedPosesWithTime::SharedPtr msg) -> void
+        {
+            des_gen_poses_.resize(static_cast<int>(msg->generalized_poses_with_time.size()));
+
+            for (int i = 0; i < static_cast<int>(msg->generalized_poses_with_time.size()); i++) {
+                const auto& gen_pose = msg->generalized_poses_with_time[i].generalized_pose;
+
+                des_gen_poses_[i].base_acc << gen_pose.base_acc.x, gen_pose.base_acc.y, gen_pose.base_acc.z;
+                des_gen_poses_[i].base_vel << gen_pose.base_vel.x, gen_pose.base_vel.y, gen_pose.base_vel.z;
+                des_gen_poses_[i].base_pos << gen_pose.base_pos.x, gen_pose.base_pos.y, gen_pose.base_pos.z;
+
+                des_gen_poses_[i].base_angvel << gen_pose.base_angvel.x, gen_pose.base_angvel.y, gen_pose.base_angvel.z;
+                des_gen_poses_[i].base_quat << gen_pose.base_quat.x, gen_pose.base_quat.y, gen_pose.base_quat.z, gen_pose.base_quat.w;
+
+                des_gen_poses_[i].feet_acc = Eigen::VectorXd::Map(gen_pose.feet_acc.data(), gen_pose.feet_acc.size());
+                des_gen_poses_[i].feet_vel = Eigen::VectorXd::Map(gen_pose.feet_vel.data(), gen_pose.feet_vel.size());
+                des_gen_poses_[i].feet_pos = Eigen::VectorXd::Map(gen_pose.feet_pos.data(), gen_pose.feet_pos.size());
+
+                des_gen_poses_[i].contact_feet_names.assign(gen_pose.contact_feet.data(), &gen_pose.contact_feet[gen_pose.contact_feet.size()]);
+            }
+        }
+    );
+
 
     /* ====================================================================== */
 
@@ -395,7 +426,7 @@ controller_interface::return_type HQPController::update(
         v_(i+6) = state_interfaces_[2*i+1].get_value();
     }
 
-    if (des_gen_pose_.contact_feet_names.size() + des_gen_pose_.feet_pos.size()/3 != 4) {
+    if (des_gen_poses_[0].contact_feet_names.size() + des_gen_poses_[0].feet_pos.size()/3 != 4) {
         // The planner is not publishing messages yet. Interpolate from q0 to qi and than wait.
 
         Eigen::VectorXd q = std::min(1., time.seconds() / init_time_) * qi_;
@@ -412,26 +443,26 @@ controller_interface::return_type HQPController::update(
     } else {
         // WBC
 
-        wbc::GeneralizedPose des_gen_pose_copy = des_gen_pose_;
+        auto des_gen_pose_copy = des_gen_poses_;
 
         //! This assumes that the robot is a quadrupedal robot, not a bipedal one.
         if (shift_base_height_) {
             int n = 0;
             
-            if (des_gen_pose_copy.contact_feet_names.size() == 2) {
+            if (des_gen_pose_copy[0].contact_feet_names.size() == 2) {
                 // If contact_feet_names has size 2, we assume that the robot is trotting and there are on average 2 contact points with the terrain.
                 n = 2;
-            } else if (des_gen_pose_copy.contact_feet_names.size() > 2) {
+            } else if (des_gen_pose_copy[0].contact_feet_names.size() > 2) {
                 // If contact_feet_names has size > 2, we assume that the robot is performing a walking gait and that there are 3 contact points on average.
                 n = 3;
             }
 
-            des_gen_pose_copy.base_pos[2] -= wbc.get_mass() * 9.81 / (n * wbc.get_kp_terr()[2]);
+            des_gen_pose_copy[0].base_pos[2] -= wbc.get_mass() * 9.81 / (n * wbc.get_kp_terr()[2]);
         }
         
         wbc.step(q_, v_, des_gen_pose_copy);
 
-        contact_feet_names = std::move(des_gen_pose_copy.contact_feet_names);
+        contact_feet_names = std::move(des_gen_pose_copy[0].contact_feet_names);
 
         tau_ = wbc.get_tau_opt();
 

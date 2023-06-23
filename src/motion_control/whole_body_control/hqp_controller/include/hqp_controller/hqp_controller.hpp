@@ -1,7 +1,7 @@
 #pragma once
 
 #include "hqp_controller/hqp_publisher.hpp"
-#include "whole_body_controller/whole_body_controller.hpp"
+#include "whole_body_controller/mpc_whole_body_controller.hpp"
 
 #include "controller_interface/controller_interface.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -9,7 +9,7 @@
 #include "rclcpp_lifecycle/state.hpp"
 
 #include "gazebo_msgs/msg/link_states.hpp"
-#include "generalized_pose_msgs/msg/generalized_pose.hpp"
+#include "generalized_pose_msgs/msg/generalized_poses_with_time.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 
@@ -46,13 +46,14 @@ public:
     // CallbackReturn on_shutdown(const rclcpp_lifecycle::State& previous_state) override;
 
 private:
-    wbc::WholeBodyController wbc;
+    wbc::MPCWholeBodyController wbc;
 
     std::vector<std::string> joint_names_;
 
     Eigen::VectorXd q_;
     Eigen::VectorXd v_;
     wbc::GeneralizedPose des_gen_pose_;
+    std::vector<wbc::GeneralizedPose> des_gen_poses_;
 
     Eigen::VectorXd tau_;
 
@@ -65,6 +66,7 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr estimated_twist_subscription_ = nullptr;
 
     rclcpp::Subscription<generalized_pose_msgs::msg::GeneralizedPose>::SharedPtr desired_generalized_pose_subscription_ = nullptr;
+    rclcpp::Subscription<generalized_pose_msgs::msg::GeneralizedPosesWithTime>::SharedPtr desired_generalized_poses_subscription_ = nullptr;
 
     /// @brief If true, the controller will publish the computed optimal joint torques, contact forces, and feet deformations.
     bool logging_ = false;

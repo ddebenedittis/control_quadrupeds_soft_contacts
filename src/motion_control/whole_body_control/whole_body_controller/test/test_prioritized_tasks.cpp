@@ -32,11 +32,11 @@ int main()
     // gen_pose.feet_acc = VectorXd::Zero(6);
     // gen_pose.feet_vel = VectorXd::Zero(6);
     // gen_pose.feet_pos = VectorXd::Zero(6);
-    // gen_pose.contact_feet_names = {"LF_FOOT", "LH_FOOT"};
+    // gen_pose.contact_feet_names = {"LF", "LH"};
     gen_pose.feet_acc = VectorXd::Zero(0);
     gen_pose.feet_vel = VectorXd::Zero(0);
     gen_pose.feet_pos = VectorXd::Zero(0);
-    gen_pose.contact_feet_names = {"LF_FOOT", "RF_FOOT", "LH_FOOT", "RH_FOOT"};
+    gen_pose.contact_feet_names = {"LF", "RF", "LH", "RH"};
 
     // VectorXd d_k1 = VectorXd::Ones(6);
     // VectorXd d_k2 = VectorXd::Ones(6);
@@ -45,7 +45,7 @@ int main()
 
     prio_tasks.reset(q, v, gen_pose.contact_feet_names);
 
-    cout << "reset successfull\n";
+    cout << "Reset successfull\n";
 
     prio_tasks.compute_task_p(0, A, b, C, d, gen_pose, d_k1, d_k2);
 

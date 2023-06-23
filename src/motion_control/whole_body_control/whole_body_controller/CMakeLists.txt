@@ -54,8 +54,11 @@ set(LIBRARY_DEPENDENCIES
 add_library(${LIBRARY_NAME} SHARED
     src/deformations_history_manager.cpp
     src/control_tasks.cpp
+    src/mpc_control_tasks.cpp
     src/prioritized_tasks.cpp
+    src/mpc_prioritized_tasks.cpp
     src/whole_body_controller.cpp
+    src/mpc_whole_body_controller.cpp
 )
 
 target_include_directories(${LIBRARY_NAME} PUBLIC

@@ -13,7 +13,7 @@ int main()
     std::string robot_name = "anymal_c";
     float dt = 1./400.;
 
-    WholeBodyController wbc(robot_name, dt);
+    WholeBodyController<> wbc(robot_name, dt);
 
     cout << "wbc constructed successfully" << endl;
 
@@ -27,12 +27,12 @@ int main()
     // gen_pose.feet_acc = VectorXd::Zero(6);
     // gen_pose.feet_vel = VectorXd::Zero(6);
     // gen_pose.feet_pos = VectorXd::Zero(6);
-    // gen_pose.contact_feet_names = {"LF_FOOT", "LH_FOOT"};
+    // gen_pose.contact_feet_names = {"LF", "LH"};
 
     gen_pose.feet_acc = VectorXd::Zero(0);
     gen_pose.feet_vel = VectorXd::Zero(0);
     gen_pose.feet_pos = VectorXd::Zero(0);
-    gen_pose.contact_feet_names = {"LF_FOOT", "RF_FOOT", "LH_FOOT", "RH_FOOT"};
+    gen_pose.contact_feet_names = {"LF", "RF", "LH", "RH"};
 
     // wbc.step(q, v, gen_pose);
 
@@ -45,7 +45,7 @@ int main()
     // cout << "get_torques completed successfully" << std::endl;
 
     gen_pose.base_pos = {0, 0, 0.55};
-    gen_pose.contact_feet_names = {"LF_FOOT", "RF_FOOT", "LH_FOOT", "RH_FOOT"};
+    gen_pose.contact_feet_names = {"LF", "RF", "LH", "RH"};
 
     wbc.set_kp_b_pos(100 * Eigen::Vector3d(1,1,1));
     wbc.set_kd_b_pos( 10 * Eigen::Vector3d(1,1,1));
@@ -121,7 +121,7 @@ int main()
     gen_pose.feet_acc = VectorXd::Zero(6);
     gen_pose.feet_vel = VectorXd::Zero(6);
     gen_pose.feet_pos = VectorXd::Zero(6);
-    gen_pose.contact_feet_names = {"LF_FOOT", "LH_FOOT"};
+    gen_pose.contact_feet_names = {"LF", "LH"};
     
     wbc.step(q, v, gen_pose);
 
