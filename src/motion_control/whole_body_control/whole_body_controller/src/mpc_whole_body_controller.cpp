@@ -14,6 +14,9 @@ MPCWholeBodyController::MPCWholeBodyController(const std::string& robot_name, fl
 : WholeBodyController<MPCPrioritizedTasks>(robot_name, dt)
 {
     prioritized_tasks_.set_optimization_horizon(horizon);
+
+    const int nv = prioritized_tasks_.get_nv();
+    x_opt_ = VectorXd::Zero(3*nv + 1);
 }
 
 

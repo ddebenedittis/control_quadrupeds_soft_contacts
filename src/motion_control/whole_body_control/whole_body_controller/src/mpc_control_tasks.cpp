@@ -66,7 +66,9 @@ void MPCControlTasks::reset(const std::vector<std::string>& contact_feet_names)
     nc = static_cast<int>(contact_feet_names.size());
     nF = 3 * nc;
 
+    Jc = Eigen::MatrixXd::Zero(3*nc, nv);
     robot_model.get_Jc(Jc);
+    Js = Eigen::MatrixXd::Zero(12 - 3*nc, nv);
     robot_model.get_Js(Js);
 }
 
@@ -192,6 +194,10 @@ void MPCControlTasks::task_swing_feet_tracking(
     const VectorXd& r_s_ddot_des, const VectorXd& r_s_dot_des, const VectorXd& r_s_des,
     int i
 ) {
+    if (nc == 4) {
+        return;
+    }
+    
     VectorXd Js_dot_times_v = VectorXd::Zero(4*3-nF);
     robot_model.get_Js_dot_times_v(Js_dot_times_v);
 
