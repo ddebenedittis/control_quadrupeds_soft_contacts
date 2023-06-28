@@ -194,6 +194,9 @@ protected:
     /// @brief Get the number of rows of the equality and inequality matrices (A and C) of a whole task of priority p (which may be composed by several elementary control tasks).
     std::pair<int, int> get_prioritized_task_dimension(int priority);
 
+    /// @brief Compute the vector that specifies the priority for each control task.
+    void compute_prioritized_tasks_vector();
+
     /// @brief List of TaskNames used to specify the priority of every task.
     std::vector<TasksNames> prioritized_tasks_list = {
         TasksNames::FloatingBaseEOM, TasksNames::ContactConstraints, TasksNames::SEPARATOR,
@@ -210,10 +213,6 @@ protected:
 
     /// @brief
     ContactConstraintType contact_constraint_type = ContactConstraintType::rigid;
-
-private:
-    /// @brief Compute the vector that specifies the priority for each control task.
-    void compute_prioritized_tasks_vector();
 };
 
 } // namespace wbc

@@ -23,6 +23,8 @@ public:
             TasksNames::LinearBaseMotionTracking, TasksNames::AngularBaseMotionTracking, TasksNames::SwingFeetMotionTracking, TasksNames::SEPARATOR,
             TasksNames::EnergyAndForcesOptimization, TasksNames::SEPARATOR
         };
+
+        compute_prioritized_tasks_vector();
     }
 
     using PrioritizedTasks<MPCControlTasks>::reset;

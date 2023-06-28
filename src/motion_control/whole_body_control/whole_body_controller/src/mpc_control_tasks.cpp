@@ -134,22 +134,19 @@ void MPCControlTasks::task_linear_motion_tracking(
             + kp_b_pos.asDiagonal() * (r_b_des - q.head(3))
             - Jb_dot_times_v.topRows(3);
     } else {
-        //             q_k-1,       v_k-1, ., ., q, v,  v_dot, . ]
-        // A = [ Kp Jb_pos T, Kd Jb_pos T, 0, 0, 0, 0, Jb_pos, 0 ]   ∈ 3 x 2 (nv+1+nv+nv+nF+nd)
+        //               q_k-1,     v_k-1, ., ., q, v,  v_dot, . ]
+        // A = [ Kp Jb_pos T^+, Kd Jb_pos, 0, 0, 0, 0, Jb_pos, 0 ]   ∈ 3 x 2 (nv+1+nv+nv+nF+nd)
         // b = [r_b_ddot_des + Kd r_b_dot_des + Kp r_b_des]
 
-        A.leftCols(3) = kp_b_pos.asDiagonal() * Jb.topRows(3);
-        A.middleCols(nv+1, 3) = kd_b_pos.asDiagonal() * Jb.topRows(3); // TODO: add Jb_dot
+        A.leftCols(nv+1) = kp_b_pos.asDiagonal() * Jb.topRows(3) * T_pinv_;
+        A.middleCols(nv+1, nv) = kd_b_pos.asDiagonal() * Jb.topRows(3); // TODO: add Jb_dot
         const int nx = 3*nv+1 + nF + nd;
-        A.middleCols(nx + 2*nv+1, 3) = Jb.topRows(3);
+        A.middleCols(nx + 2*nv+1, nv) = Jb.topRows(3);
 
         b = r_b_ddot_des
             + kd_b_pos.asDiagonal() * r_b_dot_des
             + kp_b_pos.asDiagonal() * r_b_des;
     }
-
-    // std::cout << "MPC A:\n" << A << std::endl;
-    // std::cout << "MPC b:\n" << b << std::endl;
 }
 
 
@@ -175,14 +172,14 @@ void MPCControlTasks::task_angular_motion_tracking(
             + kp_b_ang.asDiagonal() * (pinocchio::log3(quat_des.toRotationMatrix() * quat.toRotationMatrix().transpose()))
             - Jb_dot_times_v.bottomRows(3);
     } else {
-        A.middleCols(3, 4) = kp_b_ang * Jb.bottomRows(3) * T_pinv_.block(3, 3, 3, 4);
-        A.middleCols(nv+1 + 3, 4) = kd_b_ang * Jb.bottomRows(3); // TODO: add Jb_dot
+        A.leftCols(nv+1) = kp_b_ang.asDiagonal() * Jb.bottomRows(3) * T_pinv_;
+        A.middleCols(nv+1, nv) = kd_b_ang.asDiagonal() * Jb.bottomRows(3); // TODO: add Jb_dot
         const int nx = 3*nv+1 + nF + nd;
-        A.middleCols(nx + 2*nv + 4, 3) = Jb.bottomRows(3);
+        A.middleCols(nx + 2*nv+1, nv) = Jb.bottomRows(3);
 
         b =   kd_b_ang.asDiagonal() * omega_des
             + kp_b_ang.asDiagonal() * (pinocchio::log3(quat_des.toRotationMatrix() * quat.toRotationMatrix().transpose()))
-            + kp_b_ang.asDiagonal() * Jb.bottomRows(3) * T_pinv_.block(3, 3, 3, 4) * quat.coeffs(); // quat.coeffs() = {qx, qy, qz, qw}
+            + kp_b_ang.asDiagonal() * Jb.bottomRows(3) * T_pinv_ * q; // quat.coeffs() = {qx, qy, qz, qw}
     }
 }
 

@@ -433,6 +433,10 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
         gen_poses_[0].base_quat = generalized_pose::Quaternion(
             quat.x(), quat.y(), quat.z(), quat.w()
         );
+
+        // TODO: remove
+        gen_poses_.push_back(gen_poses_[0]);
+        gen_poses_.push_back(gen_poses_[0]);
     } else {
         // Initialize the planner starting position and orientation.
 

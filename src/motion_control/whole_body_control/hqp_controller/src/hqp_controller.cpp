@@ -164,7 +164,7 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
 
     /* ====================================================================== */
 
-    wbc = wbc::MPCWholeBodyController(robot_name, dt, 1);
+    wbc = wbc::MPCWholeBodyController(robot_name, dt, 2);
 
     q_.resize(wbc.get_nv() + 1);
     q_(6) = 1;
@@ -359,7 +359,7 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
         }
     );
 
-    des_gen_poses_ = {wbc::GeneralizedPose()};
+    des_gen_poses_ = {};
 
     desired_generalized_poses_subscription_ = get_node()->create_subscription<generalized_pose_msgs::msg::GeneralizedPosesWithTime>(
         "/motion_planner/desired_generalized_poses", QUEUE_SIZE,
@@ -426,7 +426,7 @@ controller_interface::return_type HQPController::update(
         v_(i+6) = state_interfaces_[2*i+1].get_value();
     }
 
-    if (des_gen_poses_[0].contact_feet_names.size() + des_gen_poses_[0].feet_pos.size()/3 != 4) {
+    if (des_gen_poses_.empty()) {
         // The planner is not publishing messages yet. Interpolate from q0 to qi and than wait.
 
         Eigen::VectorXd q = std::min(1., time.seconds() / init_time_) * qi_;
