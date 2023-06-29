@@ -75,7 +75,8 @@ RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,s
     if [ "${DEVELOPMENT}" = "1" ] ; then \
         apt-get update && apt-get install --no-install-recommends -qqy \
         gdb \
-        ros-iron-ament-clang-tidy ; \
+        ros-iron-ament-clang-tidy \
+        && pip3 install matplotlib ; \
     fi
 
 # If $PLOT is 1, install the packages required to use plot.py in the container.
