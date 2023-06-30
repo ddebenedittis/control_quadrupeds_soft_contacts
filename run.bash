@@ -22,6 +22,7 @@ docker run \
     --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
     --env="XAUTHORITY=$XAUTH" \
     --volume="$XAUTH:$XAUTH" \
+    --volume="/dev/dri:/dev/dri" \
     --gpus all \
     `# Mount the folders in this directory.` \
     -v ${PWD}:${PWD} \
