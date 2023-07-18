@@ -351,6 +351,10 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
         "/motion_planner/desired_generalized_pose", rclcpp::SystemDefaultsQoS()
     );
 
+    gen_poses_publisher_ = get_node()->create_publisher<generalized_pose_msgs::msg::GeneralizedPosesWithTime>(
+        "/motion_planner/desired_generalized_poses", rclcpp::SystemDefaultsQoS()
+    );
+
     feet_trajectories_publisher_ = get_node()->create_publisher<rviz_legged_msgs::msg::Paths>(
         "rviz/feet_trajectory", rclcpp::SystemDefaultsQoS()
     );
@@ -415,6 +419,7 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
             feet_positions, feet_velocities
             // time.seconds()
         );
+        gen_poses_ = gen_poses;
         gen_pose_ = gen_poses[0];
 
         publish_feet_trajectories();
@@ -460,9 +465,7 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
             quat.x(), quat.y(), quat.z(), quat.w()
         );
 
-    gen_pose_.base_quat = generalized_pose::Quaternion(
-        quat.x(), quat.y(), quat.z(), quat.w()
-    );
+        gen_poses_ = {gen_pose_};
     } else {
         // Initialize the planner starting position and orientation.
 
@@ -480,6 +483,15 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
 
     gen_pose_publisher_->publish(gen_pose_.get_msg());
 
+    generalized_pose_msgs::msg::GeneralizedPosesWithTime gen_poses_msg;
+    gen_poses_msg.generalized_poses_with_time.resize(gen_poses_.size());
+    for (int i = 0; i < static_cast<int>(gen_poses_.size()); i++) {
+        gen_poses_msg.generalized_poses_with_time[i].generalized_pose = 
+            gen_poses_[i].get_msg();
+    }
+
+    gen_poses_publisher_->publish(gen_poses_msg);
+
     return controller_interface::return_type::OK;
 }
 
@@ -492,12 +504,12 @@ void LIPController::publish_feet_trajectories()
 
     msg.header.frame_id = "ground_plane_link";
 
-    int n_paths = trajectories.size();
+    int n_paths = static_cast<int>(trajectories.size());
 
     msg.paths.resize(n_paths);
 
     for (int i = 0; i < n_paths; i++) {
-        int n_points = trajectories[i].size();
+        int n_points = static_cast<int>(trajectories[i].size());
 
         msg.paths[i].poses.resize(n_points);
 

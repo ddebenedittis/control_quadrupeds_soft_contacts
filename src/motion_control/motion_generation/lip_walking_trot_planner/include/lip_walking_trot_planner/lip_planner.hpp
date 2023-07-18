@@ -212,6 +212,12 @@ private:
         double time
     );
 
+    [[nodiscard]] std::vector<Vector2d> downsampled_solve_qps(
+        const Vector2d& X_com_0, const Vector2d& Y_com_0,
+        double x_zmp_0, double y_zmp_0,
+        const Vector2d& vel_cmd, double yaw_rate_cmd
+    );
+
     [[nodiscard]] std::vector<Vector2d> solve_qps(
         const Vector2d& X_com_0, const Vector2d& Y_com_0,
         double x_zmp_0, double y_zmp_0,
@@ -329,13 +335,21 @@ private:
     bool interpolate_swing_feet_from_current_position_ = false;
 
     /// @brief Sample time at which the output generalized poses are sampled.
-    double dt_gen_poses_ = 1. / 40.;
-
-    /// @brief Number of output generalized poses.
-    int n_gen_poses_ = 16;
+    double dt_gen_poses_ = 1. / 200.;
+    /// @brief Number of samples of output generalized poses.
+    int n_gen_poses_ = 4;
 
     /// @brief 
     double last_time = 0;
+
+    /// @brief Optimal ZMP positions computed.
+    std::vector<Vector2d> pos_zmp_star_;
+
+    // Used to downsample the optimal ZMP computation. Update the optimal ZMP position every once every downsample_factor_ times.
+    /// @brief The ZMP position is only updated when counter_ == 0.
+    int counter_ = 0;
+    /// @brief counter_ is reset to 0 after it becomes == downsample_factor_.
+    int downsample_factor_ = 1;
 };
 
 } // lip_walking_trot_planner

@@ -176,8 +176,7 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::mpc(
     double x_zmp_0 = pos_com[0] - acc_com[0] * height_com_ / g;
     double y_zmp_0 = pos_com[1] - acc_com[1] * height_com_ / g;
     
-
-    std::vector<Vector2d> pos_zmp_star = solve_qps(
+    auto pos_zmp_star = downsampled_solve_qps(
         X_com_0, Y_com_0,
         x_zmp_0, y_zmp_0,
         vel_cmd, yaw_rate_cmd
@@ -209,6 +208,33 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::mpc(
     }
     
     return des_gen_poses;
+}
+
+
+/* ========================== Downsampled_solve_qps ========================= */
+
+std::vector<Vector2d> MotionPlanner::downsampled_solve_qps(
+    const Vector2d& X_com_0, const Vector2d& Y_com_0,
+    double x_zmp_0, double y_zmp_0,
+    const Vector2d& vel_cmd, double yaw_rate_cmd
+) {
+    if (phi_ == 0) {
+        counter_ = 0;
+    }
+    
+    if (counter_ == 0) {
+        pos_zmp_star_ = solve_qps(
+            X_com_0, Y_com_0,
+            x_zmp_0, y_zmp_0,
+            vel_cmd, yaw_rate_cmd
+        );
+    }
+
+    counter_++;
+    counter_ = counter_ % this->downsample_factor_;
+
+    // We want to copy this, since it will be modified by compute_gen_poses but we may need to reuse it at the next iteration.
+    return pos_zmp_star_;
 }
 
 
