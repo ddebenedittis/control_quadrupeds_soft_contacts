@@ -19,43 +19,50 @@ using namespace Eigen;
 /* ========================================================================== */
 
 /*
-    A general task T can be defined as:
+    A general task T can be defined as
 
         [ we * (A x - b)  = v
     T = [
         [ wi * (C x - d) <= w
 
-    where v and w are slack variables, formulate is as a QP problem:
+    where v and w are slack variables.
 
-    min_x 1/2 (A x - b)^2 + 1/2 w^2
-    s.t.: C x - d <= w
+    Is is formulated as a QP problem
 
-    It can be written in the general QP form:
+    min_x 1/2 (A x - b)^2 + 1/2 w^2,
+    s.t.: C x - d <= w.
+
+    It can be rewritten in the general QP form:
 
     min_x 1/2 xi^T G xi + g0^T xi
     s.t: CI xi + ci0 >= 0
 
     where:
 
-    G   = A^T A
+    G   =   A^T A
     g0  = - A^T b
-    CI  = [ -C, 0
-             0, I ]
-    ci0 = [ d 
-            0 ]
+
+    CI  = [ -C, 0 ]
+          [  0, I ]
+    ci0 = [ d ]
+          [ 0 ]
+
+    xi  = [ x ]
+          [ w ]
 
     ============================================================================
 
     Given a set of tasks T1, ..., Tn, for the task Tp the QP problem becomes:
 
-    G   = [ Zq^T Ap^T Ap Zq, 0
-                          0, I ]
-    g0  = [ Zq^T Ap^T (Ap x_opt - bp) 
-                                    0 ]
-    CI  = [   0,       I
-            - C_stack, [0; I] ]
-    ci0 = [ 0       
-            d - C_stack x_opt + [w_opt_stack; 0] ]
+    G   = [ Zq^T Ap^T Ap Zq, 0 ]
+          [               0, I ]
+    g0  = [ Zq^T Ap^T (Ap x_opt - bp) ]
+          [                         0 ]
+    
+    CI  = [   0,       I      ]
+          [ - C_stack, [0; I] ]
+    ci0 = [ 0                                    ]
+          [ d - C_stack x_opt + [w_opt_stack; 0] ]
 */
 
 void HierarchicalQP::solve_qp(
