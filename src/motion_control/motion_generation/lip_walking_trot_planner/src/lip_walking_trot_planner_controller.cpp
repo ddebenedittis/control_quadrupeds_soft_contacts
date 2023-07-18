@@ -97,6 +97,13 @@ CallbackReturn LIPController::on_init()
 
         auto_declare<double>("sample_time", double());
 
+        auto_declare<double>("step_reachability", double());
+        auto_declare<double>("feet_theta", double());
+        auto_declare<double>("feet_r", double());
+        auto_declare<double>("base_height", double());
+
+        auto_declare<int>("max_fixed_steps", int());
+
         auto_declare<std::string>("interpolation_method", std::string());
         auto_declare<double>("step_duration", double());
         auto_declare<double>("step_height", double());
@@ -164,6 +171,31 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
         RCLCPP_ERROR(get_node()->get_logger(),"'sample_time' parameter must be > 0.");
         return CallbackReturn::ERROR;
     }
+
+
+    double step_reachability = get_node()->get_parameter("step_reachability").as_double();
+    if (planner_.set_step_reachability(step_reachability) == 1) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'step_reachability' parameter must be > 0.");
+        return CallbackReturn::ERROR;
+    }
+
+    double theta_0 = get_node()->get_parameter("feet_theta").as_double();
+    planner_.set_feet_theta(theta_0);
+
+    double feet_r = get_node()->get_parameter("feet_r").as_double();
+    if (planner_.set_feet_r(feet_r) == 1) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'feet_r' parameter must be > 0.");
+        return CallbackReturn::ERROR;
+    }
+
+    double base_height = get_node()->get_parameter("base_height").as_double();
+    if (planner_.set_base_height(base_height) == 1) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'base_height' parameter must be > 0.");
+        return CallbackReturn::ERROR;
+    }
+
+    int max_fixed_steps = static_cast<int>(get_node()->get_parameter("max_fixed_steps").as_int());
+    planner_.set_max_fixed_steps(max_fixed_steps);
 
 
     std::string method = get_node()->get_parameter("interpolation_method").as_string();

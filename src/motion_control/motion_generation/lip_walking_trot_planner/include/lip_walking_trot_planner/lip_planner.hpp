@@ -79,6 +79,51 @@ public:
         return 0;
     }
 
+    int set_step_reachability(double step_reachability)
+    {
+        if (step_reachability <= 0) {
+            std::cerr << "In MotionPlanner, the step reachability must be > 0." << std::endl;
+            return 1;
+        }
+        this->step_reachability_ = step_reachability;
+        return 0;
+    }
+
+    void set_feet_theta(double feet_theta)
+    {
+        this->theta_0_ = feet_theta;
+        update_initial_conditions();
+    }
+
+    int set_feet_r(double feet_r)
+    {
+        if (feet_r <= 0) {
+            std::cerr << "In MotionPlanner, the feet r must be > 0." << std::endl;
+            return 1;
+        }
+
+        this->r_ = feet_r;
+        update_initial_conditions();
+        return 0;
+    }
+
+    int set_base_height(double base_height)
+    {
+        if (base_height <= 0) {
+            std::cerr << "In MotionPlanner, the base height must be > 0." << std::endl;
+            return 1;
+        }
+
+        this->height_com_ = base_height;
+        return 0;
+    }
+
+    void set_max_fixed_steps(int max_fixed_steps)
+    {
+        this->max_fixed_steps_ = max_fixed_steps;
+        this->fixed_steps_ = max_fixed_steps;
+    }
+
     int set_interpolation_method(const std::string& method)
     {
         if (method == "spline3") {
