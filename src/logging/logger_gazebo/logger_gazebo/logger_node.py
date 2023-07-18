@@ -1,4 +1,3 @@
-import csv
 import datetime
 from enum import Enum
 import os

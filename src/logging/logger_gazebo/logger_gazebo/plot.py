@@ -5,7 +5,6 @@ import warnings
 os.environ['MPLCONFIGDIR'] = '/home/' + os.environ.get('USER') + '/.matplotlib'
 
 from cycler import cycler
-from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 import numpy as np
 import quaternion
@@ -384,6 +383,18 @@ class Plot:
 
     def _plot_reference_vs_measured_velocity(self, axs):
         dir_names = ["forward", "lateral"]
+        
+        quaternions = quaternion.from_float_array(
+            self.generalized_coordinates[self.i_init:self.i_end, [6, 3, 4, 5]]
+        )
+        
+        lin_vel_local_frame = np.zeros((self.i_end - self.i_init, 3))
+        for i in range(self.i_end - self.i_init):
+            lin_vel_local_frame[i,:] = quaternion.as_vector_part(
+                quaternions[i].conjugate() * quaternion.from_vector_part(
+                    self.generalized_velocities[self.i_init + i, 0:3]
+                ) * quaternions[i]
+            )
 
         for i in range(3):
             axs[i].plot(self.time_vector,
@@ -391,7 +402,7 @@ class Plot:
 
             if i != 2:
                 axs[i].plot(self.time_vector,
-                            self.generalized_velocities[self.i_init:self.i_end, i])
+                            lin_vel_local_frame[:,i])
                 axs[i].set(
                     xlabel = "time [s]",
                     ylabel = "velocity [m/s]",
@@ -545,6 +556,34 @@ class Plot:
                                 'feet_pos_vel.' + self.format)
         plt.savefig(fig_path, bbox_inches="tight", format=self.format)
         plt.close(fig)
+        
+        
+    def compute_performance_indexes(self):
+        quaternions = quaternion.from_float_array(
+            self.generalized_coordinates[self.i_init:self.i_end, [6, 3, 4, 5]]
+        )
+        
+        lin_vel_local_frame = np.zeros((self.i_end - self.i_init, 3))
+        for i in range(self.i_end - self.i_init):
+            lin_vel_local_frame[i,:] = quaternion.as_vector_part(
+                quaternions[i].conjugate() * quaternion.from_vector_part(
+                    self.generalized_velocities[self.i_init + i, 0:3]
+                ) * quaternions[i]
+            )
+            
+        mse_heading = (((
+            lin_vel_local_frame[:,0] - self.simple_velocity_command[self.i_init:self.i_end, 0]
+        )**2).mean())**0.5
+        mse_lateral = (((
+            lin_vel_local_frame[:,1] - self.simple_velocity_command[self.i_init:self.i_end, 1]
+        )**2).mean())**0.5
+        mse_yaw = (((
+            self.generalized_velocities[self.i_init:self.i_end, 5] - self.simple_velocity_command[self.i_init:self.i_end, 2]
+        )**2).mean())**0.5
+        
+        print(mse_heading)
+        print(mse_lateral)
+        print(mse_yaw)
 
 
     def save_all_plots(self):
@@ -558,6 +597,8 @@ class Plot:
         self._save_meas_vs_opti_forces_plot()
         self._save_performance_plots()
         self._save_feet_pos_plots()
+        
+        self.compute_performance_indexes()
 
 
 
@@ -608,7 +649,9 @@ def main():
                   str(counter) + \
                   "-th folder out of " + \
                   str(n_to_process) + \
-                  " total folders...")
+                  " total folders (" +
+                  file +
+                  ")...")
 
             plot = Plot(file)
             plot.save_all_plots()
