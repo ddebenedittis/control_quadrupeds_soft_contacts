@@ -19,6 +19,9 @@ controller_manager:
         static_walk_planner:
             type: static_walk_planner/SWPController
 
+        lip_planner:
+            type: lip_walking_trot_planner/LIPController
+
 
 joint_state_broadcaster:
     ros__parameters:
@@ -52,7 +55,7 @@ whole_body_controller:
         use_sim_time: true
 
         robot_name: anymal_c_softfoot_q
-        sample_time: 0.0025
+        sample_time: 0.005
 
         use_estimator: false        # ! Must be the same as the use_estimator in the planner
         initialization_time: 1.
@@ -90,7 +93,7 @@ whole_body_controller:
             - RH_HFE
             - RH_KFE
 
-        contact_constraint_type: soft_kv
+        contact_constraint_type: rigid
 
         shift_base_height: false
 
@@ -183,3 +186,27 @@ static_walk_planner:
         base_oscillation: 
             - 0.06
             - 0.04
+
+
+lip_planner:
+    ros__parameters:
+        use_sim_time: true
+
+        zero_time: 0.5
+        init_time: 0.25
+
+        sample_time: 0.005
+
+        interpolation_method: spline3   # must be in [spline3, spline5, cycloid]
+        step_duration: 0.2
+        step_height: 0.1
+        step_horizontal_phase_delay: 0.0
+        foot_penetration: -0.025
+
+        acc_filter_order: 2
+        acc_filter_beta: 0.9
+
+        correct_with_terrain_penetrations: true
+        gain_correction_with_terrain_penetrations: 0.5
+
+        interpolate_swing_feet_from_current_position: false

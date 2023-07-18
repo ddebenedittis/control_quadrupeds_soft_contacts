@@ -19,6 +19,9 @@ controller_manager:
         static_walk_planner:
             type: static_walk_planner/SWPController
 
+        lip_planner:
+            type: lip_walking_trot_planner/LIPController
+
 
 joint_state_broadcaster:
     ros__parameters:
@@ -183,3 +186,34 @@ static_walk_planner:
         base_oscillation: 
             - 0.04
             - 0.03
+
+
+lip_planner:
+    ros__parameters:
+        use_sim_time: true
+
+        zero_time: 0.5
+        init_time: 0.25
+
+        sample_time: 0.005
+
+        step_reachability: 0.15
+        feet_theta: 0.6
+        feet_r: 0.2
+        base_height: 0.26
+
+        max_fixed_steps: 6
+
+        interpolation_method: spline3   # must be in [spline3, spline5, cycloid]
+        step_duration: 0.2
+        step_height: 0.05
+        step_horizontal_phase_delay: 0.0
+        foot_penetration: -0.025
+
+        acc_filter_order: 2
+        acc_filter_beta: 0.9
+
+        correct_with_terrain_penetrations: true
+        gain_correction_with_terrain_penetrations: 0.5
+
+        interpolate_swing_feet_from_current_position: false

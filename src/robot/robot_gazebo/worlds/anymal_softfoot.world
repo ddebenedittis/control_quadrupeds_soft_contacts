@@ -38,7 +38,7 @@
                     <!-- <use_dynamic_moi_scaling>0</use_dynamic_moi_scaling> -->
                     <min_step_size>0.0001</min_step_size>
                     <type>quick</type>
-                    <iters>50</iters>
+                    <iters>100</iters>
                     <friction_model>pyramid_model</friction_model>
                     <sor>1</sor>
                     <precon_iters>0</precon_iters>

@@ -72,14 +72,14 @@ ros2 launch robot_gazebo anymal_c.launch.py [terrain:={rigid,soft,very_soft,mult
 
 - SOLO12 static walk simulation:
 ```shell
-ros2 launch robot_gazebo solo12.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo solo12.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
 ![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/solo12-walk-rigid.gif)
 
 - ANYmal C with SoftFoot-Qs static walk simulation:
 ```shell
-ros2 launch robot_gazebo anymal_c_softfoot_q.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo anymal_c_softfoot_q.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
 Optional arguments:
