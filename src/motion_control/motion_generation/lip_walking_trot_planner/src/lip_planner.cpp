@@ -127,13 +127,11 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::stand_still(
     const Vector3d& plane_coeffs
 ) const {
     // The commanded position along the x and y coordinates is the mean of the positions of the contact feet.
-    double pos_x = 0;
-    double pos_y = 0;
-
-    for (const auto& elem : init_pos_swing_feet_) {
-        pos_x += elem[0] / static_cast<double>(init_pos_swing_feet_.size());
-        pos_y += elem[1] / static_cast<double>(init_pos_swing_feet_.size());
+    Vector3d feet_center = Vector3d::Zero();
+    for (const auto& foot_pos: init_pos_swing_feet_) {
+        feet_center += foot_pos;
     }
+    feet_center /= static_cast<int>(init_pos_swing_feet_.size());
 
     // Align the base with the estimated terrain plane.
     double roll = std::atan(plane_coeffs[1]);
@@ -147,9 +145,9 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::stand_still(
 
     return {{
         generalized_pose::Vector3(
-            pos_x + height_com_ * std::sin(pitch),
-            pos_y - height_com_ * std::sin(roll),
-            height_com_ * std::cos(roll) * std::cos(pitch)
+            feet_center[0] + height_com_ * std::sin(pitch),
+            feet_center[1] - height_com_ * std::sin(roll),
+            feet_center[2] + height_com_ * std::cos(roll) * std::cos(pitch)
         ),
         generalized_pose::Quaternion(
             quat.x(), quat.y(), quat.z(), quat.w()

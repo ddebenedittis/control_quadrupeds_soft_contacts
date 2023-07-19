@@ -438,10 +438,15 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
         double pitch = - std::atan(plane_coeffs_[0]);
         double yaw = planner_.get_dtheta();
 
-        Vector3d end_pos = init_pos_;
+        Vector3d end_pos = Vector3d::Zero();
+        for (const auto& foot_pos: feet_positions) {
+            end_pos += foot_pos;
+        }
+        end_pos /= static_cast<int>(feet_positions.size());
+
         end_pos[0] += planner_.get_height_com() * std::sin(pitch);
         end_pos[1] -= planner_.get_height_com() * std::sin(roll);
-        end_pos[2] = planner_.get_height_com() * std::cos(roll) * std::cos(pitch) + plane_coeffs_[0] * q_[3] + plane_coeffs_[1] * q_[1] + plane_coeffs_[2];
+        end_pos[2] += planner_.get_height_com() * std::cos(roll) * std::cos(pitch);
 
         std::tie(base_pos, base_vel, base_acc) = MotionPlanner::spline(
             init_pos_, 
