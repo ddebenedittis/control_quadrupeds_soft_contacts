@@ -29,6 +29,16 @@ public:
         const std::vector<Vector3d>& feet_positions = {}
     );
 
+    void update_feet_positions(
+        const std::vector<Vector3d>& feet_positions
+    ) {
+        for (int i = 0; i < 4; i++) {
+            init_pos_swing_feet_[i] << feet_positions[i][0],
+                                       feet_positions[i][1],
+                                       feet_positions[i][2];
+        }
+    }
+
     /// @brief Compute the desired generalized pose.
     /// 
     /// @param pos_com Position of the center of mass

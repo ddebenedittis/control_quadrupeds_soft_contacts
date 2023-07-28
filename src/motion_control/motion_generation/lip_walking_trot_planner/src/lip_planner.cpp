@@ -87,11 +87,7 @@ void MotionPlanner::update_initial_conditions(
         }
     } else {
         // Initialize the swing feet positions directly with the measured position of the feet.
-        for (int i = 0; i < 4; i++) {
-            init_pos_swing_feet_[i] << feet_positions[i][0],
-                                       feet_positions[i][1],
-                                       feet_positions[i][2];
-        }
+        update_feet_positions(feet_positions);
     }
 }
 
@@ -108,6 +104,7 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::update(
     stop_flag_ = check_stop(vel_cmd, yaw_rate_cmd);
 
     if (stop_flag_) {
+        update_feet_positions(feet_positions);
         return stand_still(plane_coeffs);
     }
 
@@ -138,8 +135,8 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::stand_still(
     double pitch = - std::atan(plane_coeffs[0]);
 
     Quaterniond quat = compute_quaternion_from_euler_angles(
-        roll,
-        pitch,
+        roll * cos(yaw_) + pitch * sin(yaw_),
+        pitch * cos(yaw_) - roll * sin(yaw_),
         yaw_
     );
 
@@ -769,7 +766,9 @@ bool MotionPlanner::check_stop(
         // Stop the robot movements.
 
         return true;
-    } else if (phi_ == 0.
+    }
+    
+    if (phi_ == 0.
                && fixed_steps_ < max_fixed_steps_
                && vel_cmd.norm() < threshold
                && std::abs(yaw_rate_cmd) < threshold) {
@@ -799,10 +798,13 @@ void MotionPlanner::correct_base_pose_with_terrain_plane(
     // Shift the desired base pose and the desired feet positions.
     gen_pose.base_pos.z += delta_h;
 
-    // Align the desired base pose and pitch angles to the local terrain plane.
+    // Align the base with the estimated terrain plane.
+    double roll = std::atan(plane_coeffs[1]);
+    double pitch = - std::atan(plane_coeffs[0]);
+
     Quaterniond quat = compute_quaternion_from_euler_angles(
-            std::atan(plane_coeffs[1]),
-        - std::atan(plane_coeffs[0]),
+        roll * cos(yaw) + pitch * sin(yaw),
+        pitch * cos(yaw) - roll * sin(yaw),
         yaw
     );
 
