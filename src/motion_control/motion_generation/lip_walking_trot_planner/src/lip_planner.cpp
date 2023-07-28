@@ -142,9 +142,9 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::stand_still(
 
     return {{
         generalized_pose::Vector3(
-            feet_center[0] + height_com_ * std::sin(pitch),
-            feet_center[1] - height_com_ * std::sin(roll),
-            feet_center[2] + height_com_ * std::cos(roll) * std::cos(pitch)
+            feet_center[0],
+            feet_center[1],
+            feet_center[2] + height_com_
         ),
         generalized_pose::Quaternion(
             quat.x(), quat.y(), quat.z(), quat.w()
