@@ -17,8 +17,10 @@ from scripts import GazeboRosPaths
 
 def generate_launch_description():
     
-    global robot_name, robot_file_path, gazebo_config_file_path, rviz_config_file_path
-    global terrain_file_path, heightmap_terrain_file_path, multi_terrains_file_path, world_file_path
+    global robot_name, robot_file_path, gazebo_config_file_path
+    global rviz_config_file_path, terrain_file_path, heightmap_terrain_file_path
+    global multi_terrains_file_path, terrain_increasing_slope_file_path
+    global world_file_path
     
     robot_name = LaunchConfiguration('robot_name', default='anymal_c')
 
@@ -54,6 +56,11 @@ def generate_launch_description():
         FindPackageShare('robot_gazebo'),
         'objects/multi_terrains.xacro'
     ])
+    
+    terrain_increasing_slope_file_path = PathJoinSubstitution([
+        FindPackageShare('robot_gazebo'),
+        'objects/terrain_increasing_slope.xacro'
+    ])
 
     world_file_path = PathJoinSubstitution([
         FindPackageShare('robot_gazebo'),
@@ -69,7 +76,7 @@ def generate_launch_description():
 
     velocity_cmd = LaunchConfiguration('velocity_cmd', default='[0., 0., 0.]')
 
-    height = LaunchConfiguration('height', default='0.635')
+    height = LaunchConfiguration('height', default='0.64')
         
     save_csv = LaunchConfiguration('save_csv', default='False')
 
@@ -205,7 +212,9 @@ def spawn_things(ld):
     terrain_rsp = Node(
         condition=IfCondition(
             PythonExpression([
-                '"', terrain, '"', ' != "multi_terrains" and ', '"', terrain, '"', ' != "heightmap"'
+                '"', terrain, '" == "rigid" or "', terrain, '" == "soft" or ',
+                '"', terrain, '" == "very_soft"'
+                
             ])
         ),
         package = 'robot_state_publisher',
@@ -256,6 +265,22 @@ def spawn_things(ld):
         ],
         output = 'screen',
     )
+    
+    terrain_increasing_slope_rsp = Node(
+        condition=IfCondition(
+            PythonExpression([
+                '"', terrain, '"', ' == "increasing_slope"'
+            ])
+        ),
+        package = 'robot_state_publisher',
+        executable = 'robot_state_publisher',
+        namespace = 'ground_plane',
+        parameters = [
+            {'use_sim_time': use_sim_time},
+            {'robot_description': ParameterValue(Command(['xacro', ' ', terrain_increasing_slope_file_path, ' ', 'terrain:=', terrain]), value_type=str)}
+        ],
+        output = 'screen',
+    )
         
     spawn_terrain = Node(
         package = 'gazebo_ros',
@@ -286,6 +311,7 @@ def spawn_things(ld):
     ld.add_action(terrain_rsp)
     ld.add_action(heightmap_terrain_rsp_ev_hdl)
     ld.add_action(multi_terrain_rsp)
+    ld.add_action(terrain_increasing_slope_rsp)
     ld.add_action(spawn_terrain)
     
 

@@ -37,7 +37,7 @@
                 </material>
             </xacro:if>
 
-            <xacro:if value="${'soft' == terrain}">
+            <xacro:if value="${'very_soft' == terrain}">
                 <material name="gold">
                     <color rgba="0.8 0.8 0.0 1.0"/>
                 </material>
