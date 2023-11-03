@@ -5,6 +5,7 @@ import warnings
 os.environ['MPLCONFIGDIR'] = '/home/' + os.environ.get('USER') + '/.matplotlib'
 
 from cycler import cycler
+from scipy import signal
 import matplotlib.pyplot as plt
 import numpy as np
 import quaternion
@@ -514,7 +515,7 @@ class Plot:
                                 "megaplot_" + self.feet_names[i] + '.' + self.format)
         plt.savefig(fig_path, bbox_inches="tight", format=self.format)
         plt.close(fig)
-
+        
 
     def _save_meas_vs_opti_forces_plot(self):
         fig, axs = plt.subplots(4, 4, figsize=[3.5*self.x_size_def, 2.5*self.y_size_def])
@@ -558,7 +559,7 @@ class Plot:
         plt.close(fig)
         
         
-    def compute_performance_indexes(self):
+    def _save_performance_indexes(self):
         quaternions = quaternion.from_float_array(
             self.generalized_coordinates[self.i_init:self.i_end, [6, 3, 4, 5]]
         )
@@ -571,19 +572,43 @@ class Plot:
                 ) * quaternions[i]
             )
             
-        mse_heading = (((
+        # sos = signal.butter(4, 20, 'hp', fs=100, output='sos')
+        # lin_vel_local_frame[:,0] = signal.sosfilt(sos, lin_vel_local_frame[:,0])
+        # lin_vel_local_frame[:,1] = signal.sosfilt(sos, lin_vel_local_frame[:,1])
+            
+        rmse_heading = (((
             lin_vel_local_frame[:,0] - self.simple_velocity_command[self.i_init:self.i_end, 0]
         )**2).mean())**0.5
-        mse_lateral = (((
+        rmse_lateral = (((
             lin_vel_local_frame[:,1] - self.simple_velocity_command[self.i_init:self.i_end, 1]
         )**2).mean())**0.5
-        mse_yaw = (((
+        rmse_yaw = (((
             self.generalized_velocities[self.i_init:self.i_end, 5] - self.simple_velocity_command[self.i_init:self.i_end, 2]
         )**2).mean())**0.5
         
-        print(mse_heading)
-        print(mse_lateral)
-        print(mse_yaw)
+        vel_cmd = self.simple_velocity_command[self.i_init:self.i_end,0]
+        transport = (
+              lin_vel_local_frame[:,0] * vel_cmd / np.abs(vel_cmd) * (self.time_vector[1] - self.time_vector[0])
+        ).sum()
+        # transport = np.abs(
+        #       lin_vel_local_frame[:,0] * vel_cmd / np.abs(vel_cmd) * (self.time_vector[1] - self.time_vector[0])
+        # ).sum()
+        torques_cost = (
+            ( self.optimal_torques[self.i_init:self.i_end, 0]**2
+            + self.optimal_torques[self.i_init:self.i_end, 1]**2
+            + self.optimal_torques[self.i_init:self.i_end, 2]**2) 
+        * (self.time_vector[1] - self.time_vector[0])).sum()
+        
+        kpi_dict = {
+            'rmse_heading': rmse_heading,
+            'rmse_lateral': rmse_lateral,
+            'rmse_yaw': rmse_yaw,
+            'slippage': self.slippage[self.i_end],
+            'CoT': transport/torques_cost,
+            'torques_cost': torques_cost,
+        }
+        
+        np.save(self.foldername + '/csv/' + self.subdir + '/kpi.npy', kpi_dict)
 
 
     def save_all_plots(self):
@@ -598,7 +623,7 @@ class Plot:
         self._save_performance_plots()
         self._save_feet_pos_plots()
         
-        self.compute_performance_indexes()
+        self._save_performance_indexes()
 
 
 

@@ -193,6 +193,8 @@ public:
 
     [[nodiscard]] double get_sample_time() const {return dt_;}
 
+    [[nodiscard]] double get_step_height() const {return interpolator_.get_step_height();}
+
     /* ====================================================================== */
 
     [[nodiscard]] std::vector<std::string> get_other_feet(std::vector<std::string> feet_names) const

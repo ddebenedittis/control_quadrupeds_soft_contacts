@@ -65,26 +65,26 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_E
 
 - ANYmal C simulation:
 ```shell
-ros2 launch robot_gazebo anymal_c.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo anymal_c.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [velocity_cmd:=(0.0, 0.0, 0.0)] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
 ![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/anymal_c-trot-grass.gif)
 
 - SOLO12 static walk simulation:
 ```shell
-ros2 launch robot_gazebo solo12.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo solo12.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [velocity_cmd:=(0.0, 0.0, 0.0)] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
 ![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/solo12-walk-rigid.gif)
 
 - ANYmal C with SoftFoot-Qs static walk simulation:
 ```shell
-ros2 launch robot_gazebo anymal_c_softfoot_q.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo anymal_c_softfoot_q.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [velocity_cmd:="(0.0, 0.0, 0.0)"] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
 Optional arguments:
 - `terrain`: select the terrain type: a rigid terrain (the gray one) or a soft terrain (the grass-like one).
-- `gait`: select the gait type. With `teleop_base` the base pose can be teleoperated without moving the feet, `static_walk` implements a static walk, and `walking_trot` implements a dynamic gait. Currently, the walking trot gait is implemented only on the ANYmal C robot. With `teleop_walking_trot` the robot is teleoperated by giving it a velocity command.
+- `gait`: select the gait type. With `teleop_base` the base pose can be teleoperated without moving the feet, `static_walk` implements a static walk, and `walking_trot` implements a dynamic gait. The speed of the `walking_trot` gait is commanded with the following parameter: `velocity_cmd:="(0.0, 0.0, 0.0)"`.  With `teleop_walking_trot` the robot is teleoperated by giving it a velocity command.
 - `use_rviz`: when `True`, RViz is used to display the contact forces of the robot (still in Alpha version).
 - `save_csv`: when `True`, some data is logged and saved in several .csv files in the `log/csv/` folder. This data can be plotted with `plot.py` (in the `logger_gazebo` package).
 - `reset`: must be used in another terminal when there is an already running simulation. The simulation will be restarted. The time is not reset to avoid problems with the controllers.
