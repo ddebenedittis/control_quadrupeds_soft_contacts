@@ -26,16 +26,12 @@ controller_manager:
 joint_state_broadcaster:
     ros__parameters:
         joints:
-            - LF_HAA
             - LF_HFE
             - LF_KFE
-            - LH_HAA
             - LH_HFE
             - LH_KFE
-            - RF_HAA
             - RF_HFE
             - RF_KFE
-            - RH_HAA
             - RH_HFE
             - RH_KFE
         interfaces:
@@ -54,80 +50,85 @@ whole_body_controller:
     ros__parameters:
         use_sim_time: true
 
-        robot_name: anymal_c_softfoot_q
+        robot_name: mulinex
         sample_time: 0.005
 
         use_estimator: false        # ! Must be the same as the use_estimator in the planner
-        initialization_time: 1.
+        initialization_time: 2.5
+        initialization_phases:
+            - 0.5
+            - 0.5
 
         q1:
-            -  0.
-            -  0.3
-            - -0.6
-            -  0.
-            - -0.3
-            -  0.6
-            -  0.
-            -  0.3
-            - -0.6
-            -  0.
-            - -0.3
-            -  0.6
+            - -2.
+            -  3.
+            -  2.
+            - -3.
+            -  2.
+            - -3.
+            - -2.
+            -  3.
 
-        PD_proportional: 100.
-        PD_derivative: 1.
+        q2:
+            - -4.
+            -  5.
+            -  4.
+            - -5.
+            -  4.
+            - -5.
+            - -4.
+            -  5.
+
+        PD_proportional: 10.
+        PD_derivative: 0.1
 
         logging: true
 
         joints:
-            - LF_HAA
             - LF_HFE
             - LF_KFE
-            - LH_HAA
             - LH_HFE
             - LH_KFE
-            - RF_HAA
             - RF_HFE
             - RF_KFE
-            - RH_HAA
             - RH_HFE
             - RH_KFE
 
         contact_constraint_type: rigid
 
         shift_base_height: false
-
-        tau_max: 80.
-        mu: 0.8
-        Fn_max: 350.
-        Fn_min: 40.
+        
+        tau_max: 10.0
+        mu: 0.6
+        Fn_max: 60.
+        Fn_min: 2.
 
         kp_b_pos:
-            - 100.
-            - 100.
-            - 100.
+            - 500.
+            - 500.
+            - 500.
         kd_b_pos:
-            - 10.
-            - 10.
-            - 10.
+            - 50.
+            - 50.
+            - 50.
 
         kp_b_ang:
-            - 150.
-            - 150.
-            - 150.
+            - 750.
+            - 750.
+            - 750.
         kd_b_ang:
-            - 35.
-            - 35.
-            - 35.
+            - 150.
+            - 150.
+            - 150.
 
         kp_s_pos:
-            - 150.
-            - 150.
-            - 450.
+            - 4500.
+            - 4500.
+            - 4500.
         kd_s_pos:
-            - 45.
-            - 45.
-            - 90.
+            - 150.
+            - 150.
+            - 150.
             
         kp_terr:
             - 1000.
@@ -143,18 +144,18 @@ whole_body_controller:
             - 0.
             - 0.
 
-        regularization: 1e-6
+        regularization: 1e-9
 
 
 static_walk_planner:
     ros__parameters:
         use_sim_time: true
 
-        use_estimator: false            # ! Must be the same as the use_estimator in the whole_body_controller
-        initialization_time: 1.
+        use_estimator: false        # ! Must be the same as the use_estimator in the whole_body_controller
+        initialization_time: 5.
 
         sample_time: 0.005
-        init_phase: 0.2
+        init_phase: 0.4
 
         gait_pattern:
             - LF
@@ -166,13 +167,13 @@ static_walk_planner:
         step_duty_factor: 0.7
 
         step_length: 0.15
-        step_height: 0.25
-        desired_foot_penetration: 0.0
-        step_horizontal_delay: 0.01
+        step_height: 0.075
+        desired_foot_penetration: 0.01
+        step_horizontal_delay: 0.1
         foot_trajectory_type: splines
 
-        desired_base_height: 0.47
-        initial_base_height: 0.55
+        desired_base_height: 0.3
+        initial_base_height: 0.3
 
         terrain_height: 0.0
         terrain_penetration: 0.0
@@ -181,11 +182,11 @@ static_walk_planner:
             - 0.
             - 0.
         leg_position: 
-            - 0.30
-            - 0.30
+            - 0.165
+            - 0.11
         base_oscillation: 
-            - 0.06
             - 0.04
+            - 0.03
 
 
 lip_planner:
@@ -197,16 +198,16 @@ lip_planner:
 
         sample_time: 0.005
 
-        step_reachability: 0.2
-        feet_theta: 0.64
-        feet_r: 0.5
-        base_height: 0.5
+        step_reachability: 0.15
+        feet_theta: 0.6
+        feet_r: 0.2
+        base_height: 0.26
 
         max_fixed_steps: 6
 
         interpolation_method: spline3   # must be in [spline3, spline5, cycloid]
         step_duration: 0.2
-        step_height: 0.1
+        step_height: 0.05
         step_horizontal_phase_delay: 0.0
         foot_penetration: -0.025
 

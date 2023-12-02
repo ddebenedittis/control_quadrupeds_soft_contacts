@@ -21,3 +21,6 @@
 	path = src/rviz_legged
 	url = ../rviz_legged
 	branch = main
+[submodule "src/robot/robots/mulinex_description"]
+	path = src/robot/robots/mulinex_description
+	url = ../mulinex_description

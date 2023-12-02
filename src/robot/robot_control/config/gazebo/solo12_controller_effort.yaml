@@ -60,7 +60,7 @@ whole_body_controller:
         use_estimator: false        # ! Must be the same as the use_estimator in the planner
         initialization_time: 1.5
 
-        qi:
+        q1:
             -  0.0
             -  0.3
             - -0.6

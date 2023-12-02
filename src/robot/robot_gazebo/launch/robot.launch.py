@@ -202,7 +202,7 @@ def spawn_things(ld):
         arguments = ['-topic', '/robot_description',
                      '-entity', robot_name,
                      '-x', '0', '-y', '0', '-z', height,
-                     '-R', '0', '-P', '0', '-Y', '0'],
+                     '-R', '0', '-P', '0', '-Y', '0',],
         parameters=[{'use_sim_time': use_sim_time}],
         output = 'screen',
     )

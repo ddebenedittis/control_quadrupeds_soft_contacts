@@ -20,18 +20,18 @@ def generate_launch_description():
     terrain = LaunchConfiguration('terrain', default='rigid')
     
     use_rviz = LaunchConfiguration('use_rviz', default='False')
-    rviz_config_file = LaunchConfiguration('rviz_config_file', default="solo12_config.rviz")
+    rviz_config_file = LaunchConfiguration('rviz_config_file', default="mulinex_config.rviz")
 
     
     # ======================================================================== #
     
     launch_arguments = {
-        'robot_name': 'solo12',
-        'package_name': 'solo_description',
-        'robot_file_path': os.path.join('xacro', 'solo12.urdf.xacro'),
+        'robot_name': 'mulinex',
+        'package_name': 'mulinex_description',
+        'robot_file_path': os.path.join('urdf', 'mulinex.xacro'),
         'world_file_path': os.path.join('worlds', 'solo.world'),
         'contact_constraint_type': contact_constraint_type,
-        'height': '0.35',
+        'height': '0.05',
         'save_csv': save_csv,
         'terrain': terrain,
         'use_rviz': use_rviz,

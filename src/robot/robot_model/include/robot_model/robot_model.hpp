@@ -82,24 +82,24 @@ public:
 
     /// @brief
     /// @warning Compute_EOM must have been previously called.
-    Eigen::VectorXd get_feet_positions() const;
+    [[nodiscard]] Eigen::VectorXd get_feet_positions() const;
 
     /// @brief 
     /// @param[in] v Joint velocities
     /// @warning Compute_EOM must have been previously called.
     Eigen::VectorXd get_feet_velocities(const Eigen::VectorXd& v);
 
-    double get_mass() const { return pinocchio::computeTotalMass(model); }
+    [[nodiscard]] double get_mass() const { return pinocchio::computeTotalMass(model); }
 
-    const pinocchio::Model& get_model() const { return model; }
+    [[nodiscard]] const pinocchio::Model& get_model() const { return model; }
     
     pinocchio::Data& get_data() { return data; }
 
     /// @brief Return the generic names of a quadrupedal robot's feet: LF, RF, LH, RH. 
-    const std::vector<std::string>& get_generic_feet_names() const {return generic_feet_names;}
+    [[nodiscard]] const std::vector<std::string>& get_generic_feet_names() const {return generic_feet_names;}
 
     /// @brief Return the link names of all the robot's feet in the URDF.
-    const std::vector<std::string>& get_all_feet_names() const {return feet_names;}
+    [[nodiscard]] const std::vector<std::string>& get_all_feet_names() const {return feet_names;}
 
 
     /* =============================== Setters ============================== */

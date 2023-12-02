@@ -6,7 +6,7 @@
 #   ordered_joint_names: names of the actuader robot joints in alphabetical order. (Same as the order in the ros_control config file)
 #   ankle_feet_displacement: the feet_names do not necessarly specify the position of the expected touchdown point. For example, with ANYmal C with SoftFeet-Q, the feet_names of choice are the ankle links.
 
-### ANYmal C
+# ================================= ANYmal C ================================= #
 anymal_c:
     pkg_name: anymal_c_simple_description
     urdf_path: /urdf/anymal.urdf
@@ -33,7 +33,7 @@ anymal_c:
         - 0.    # y
         - 0.    # z
 
-### ANYmal C equipped with the SoftFoot-Q
+# =================== ANYmal C Equipped With The SoftFoot-Q ================== #
 anymal_c_softfoot_q:
     pkg_name: anymal_c_softfoot_q_description
     urdf_path: /robot/anymal_c_rigid_softfoot_q.urdf
@@ -60,10 +60,37 @@ anymal_c_softfoot_q:
         - 0.
         - -0.052
 
-### Solo12
+# ================================== Solo12 ================================== #
 solo12:
     pkg_name: solo_description
     urdf_path: /urdf/solo12.urdf
+    feet_names:
+        - FL_FOOT
+        - FR_FOOT
+        - HL_FOOT
+        - HR_FOOT
+    ordered_joint_names:
+        - FL_HAA
+        - FL_HFE
+        - FL_KFE
+        - FR_HAA
+        - FR_HFE
+        - FR_KFE
+        - HL_HAA
+        - HL_HFE
+        - HL_KFE
+        - HR_HAA
+        - HR_HFE
+        - HR_KFE
+    ankle_feet_displacement:
+        - 0.
+        - 0.
+        - 0.
+
+# ================================== Mulinex ================================= #
+mulinex:
+    pkg_name: mulinex_description
+    urdf_path: /urdf/mulinex.urdf
     feet_names:
         - FL_FOOT
         - FR_FOOT

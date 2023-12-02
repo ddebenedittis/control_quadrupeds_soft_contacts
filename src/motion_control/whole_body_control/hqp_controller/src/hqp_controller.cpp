@@ -40,8 +40,11 @@ CallbackReturn HQPController::on_init()
         auto_declare<bool>("use_estimator", bool());
 
         auto_declare<double>("initialization_time", double());
+        auto_declare<std::vector<double>>("initialization_phases", {1.});
 
-        auto_declare<std::vector<double>>("qi", std::vector<double>());
+        auto_declare<std::vector<double>>("q0", {});
+        auto_declare<std::vector<double>>("q1", std::vector<double>());
+        auto_declare<std::vector<double>>("q2", {});
 
         auto_declare<double>("PD_proportional", double());
         auto_declare<double>("PD_derivative", double());
@@ -135,19 +138,7 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
 
 
     init_time_ = get_node()->get_parameter("initialization_time").as_double();
-
-
-    /* ====================================================================== */
-
-    auto qi = get_node()->get_parameter("qi").as_double_array();
-    if (qi.size() != 12) {
-        RCLCPP_ERROR(get_node()->get_logger(),"'qi' does not have 12 elements");
-        return CallbackReturn::ERROR;
-    }
-    qi_ = Eigen::VectorXd::Map(qi.data(), qi.size());
-
-    PD_proportional_ = get_node()->get_parameter("PD_proportional").as_double();
-    PD_derivative_ = get_node()->get_parameter("PD_derivative").as_double();
+    init_phases_ = get_node()->get_parameter("initialization_phases").as_double_array();
 
 
     /* ====================================================================== */
@@ -175,6 +166,39 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
     des_gen_pose_.feet_vel.resize(0);
     des_gen_pose_.feet_acc.resize(0);
 
+
+    /* ====================================================================== */
+
+    auto q0 = get_node()->get_parameter("q0").as_double_array();
+    if (static_cast<int>(q0.size()) == 0) {
+        q0 = std::vector<double>(wbc.get_nv() - 6, 0.0);
+    } else if (static_cast<int>(q0.size()) != wbc.get_nv() - 6) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'q0' does not have nv-6 elements");
+        return CallbackReturn::ERROR;
+    }
+    q0_ = Eigen::VectorXd::Map(q0.data(), q0.size());
+
+    auto q1 = get_node()->get_parameter("q1").as_double_array();
+    if (static_cast<int>(q1.size()) != wbc.get_nv() - 6) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'q1' does not have nv-6 elements");
+        return CallbackReturn::ERROR;
+    }
+    q1_ = Eigen::VectorXd::Map(q1.data(), q1.size());
+
+    auto q2 = get_node()->get_parameter("q2").as_double_array();
+    if (static_cast<int>(q2.size()) == 0) {
+        q2 = std::vector<double>(wbc.get_nv() - 6, 0.0);
+    } else if (static_cast<int>(q2.size()) != wbc.get_nv() - 6
+        && init_phases_.size() > 1) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'q2' does not have nv-6 elements");
+        return CallbackReturn::ERROR;
+    }
+    q2_ = Eigen::VectorXd::Map(q2.data(), q2.size());
+
+    PD_proportional_ = get_node()->get_parameter("PD_proportional").as_double();
+    PD_derivative_ = get_node()->get_parameter("PD_derivative").as_double();
+
+    /* ====================================================================== */
 
     if (get_node()->get_parameter("contact_constraint_type").as_string().empty()) {
         RCLCPP_ERROR(get_node()->get_logger(),"'contact_constraint_type' parameter is empty");
@@ -398,7 +422,20 @@ controller_interface::return_type HQPController::update(
     if (des_gen_pose_.contact_feet_names.size() + des_gen_pose_.feet_pos.size()/3 != 4) {
         // The planner is not publishing messages yet. Interpolate from q0 to qi and than wait.
 
-        Eigen::VectorXd q = std::min(1., time.seconds() / init_time_) * qi_;
+        Eigen::VectorXd q;
+        if (static_cast<int>(init_phases_.size()) < 2) {
+            q = q0_ + std::min(1., time.seconds() / init_time_) * (q1_ - q0_);
+        } else {
+            if (time.seconds() / init_time_ < init_phases_[0]) {
+                double phi = time.seconds() / (init_time_ * init_phases_[0]);
+                q = q0_ + phi * (q1_ - q0_);
+            } else if ((time.seconds() - init_time_ * init_phases_[0]) / init_time_ < init_phases_[1]) {
+                double phi = (time.seconds() - init_time_ * init_phases_[0]) / (init_time_ * init_phases_[1]);
+                q = q1_ + phi * (q2_ - q1_);
+            } else {
+                q = q2_;
+            }
+        }
 
         // PD for the state estimator initialization
         for (uint i=0; i<joint_names_.size(); i++) {

@@ -76,8 +76,11 @@ private:
 
     /// @brief Initialization time to give the state estimator some time to get better estimates. During this time, a PD controller is used to keep the robot in q0 and the planner is paused.
     double init_time_ = 1;
+    std::vector<double> init_phases_ = {1};
 
-    Eigen::VectorXd qi_;
+    Eigen::VectorXd q0_;
+    Eigen::VectorXd q1_;
+    Eigen::VectorXd q2_;
 };
 
 } // namespace hqp_controller
