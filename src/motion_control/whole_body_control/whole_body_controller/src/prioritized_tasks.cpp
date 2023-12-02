@@ -46,41 +46,41 @@ void PrioritizedTasks::compute_task_p(
 
     for (int i = 0; i < static_cast<int>(tasks_vector.size()); i++) {
         if (tasks_vector[i] == priority) {
-            auto n_temp = get_task_dimension(static_cast<TasksNames>(i));
+                        auto n_temp = get_task_dimension(static_cast<TasksNames>(i));
             ne_temp = n_temp.first;     // number of rows of the equality control task
             ni_temp = n_temp.second;    // number of rows of the inequality control task
 
             switch (static_cast<TasksNames>(i))
             {
             case TasksNames::FloatingBaseEOM:
-                control_tasks.task_floating_base_eom(A.middleRows(ne, ne_temp), b.segment(ne, ne_temp));
+                                control_tasks.task_floating_base_eom(A.middleRows(ne, ne_temp), b.segment(ne, ne_temp));
                 break;
             case TasksNames::TorqueLimits:
-                control_tasks.task_torque_limits(C.middleRows(ni, ni_temp), d.segment(ni, ni_temp));
+                                control_tasks.task_torque_limits(C.middleRows(ni, ni_temp), d.segment(ni, ni_temp));
                 break;
             case TasksNames::FrictionAndFcModulation:
-                control_tasks.task_friction_Fc_modulation(C.middleRows(ni, ni_temp), d.segment(ni, ni_temp));
+                                control_tasks.task_friction_Fc_modulation(C.middleRows(ni, ni_temp), d.segment(ni, ni_temp));
                 break;
             case TasksNames::LinearBaseMotionTracking:
-                control_tasks.task_linear_motion_tracking(
+                                control_tasks.task_linear_motion_tracking(
                     A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
                     gen_pose.base_acc, gen_pose.base_vel, gen_pose.base_pos
                 );
                 break;
             case TasksNames::AngularBaseMotionTracking:
-                control_tasks.task_angular_motion_tracking(
+                                control_tasks.task_angular_motion_tracking(
                     A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
                     gen_pose.base_angvel, gen_pose.base_quat
                 );
                 break;
             case TasksNames::SwingFeetMotionTracking:
-                control_tasks.task_swing_feet_tracking(
+                                control_tasks.task_swing_feet_tracking(
                     A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
                     gen_pose.feet_acc, gen_pose.feet_vel, gen_pose.feet_pos
                 );
                 break;
             case TasksNames::ContactConstraints:
-                if (contact_constraint_type == ContactConstraintType::soft_kv) {
+                                if (contact_constraint_type == ContactConstraintType::soft_kv) {
                     control_tasks.task_contact_constraints_soft_kv(
                         A.middleRows(ne, ne_temp), b.segment(ne, ne_temp),
                         C.middleRows(ni, ni_temp), d.segment(ni, ni_temp),
@@ -100,10 +100,10 @@ void PrioritizedTasks::compute_task_p(
 
                 break;
             case TasksNames::JointSingularities:
-                control_tasks.task_joint_singularities(C.middleRows(ni, ni_temp), d.segment(ni, ni_temp));
+                                control_tasks.task_joint_singularities(C.middleRows(ni, ni_temp), d.segment(ni, ni_temp));
                 break;
             case TasksNames::EnergyAndForcesOptimization:
-                control_tasks.task_energy_forces_minimization(A.middleRows(ne, ne_temp), b.segment(ne, ne_temp));
+                                control_tasks.task_energy_forces_minimization(A.middleRows(ne, ne_temp), b.segment(ne, ne_temp));
                 break;
             case TasksNames::SEPARATOR:
                 break;
@@ -183,7 +183,7 @@ std::pair<int,int> PrioritizedTasks::get_prioritized_task_dimension(int priority
 void PrioritizedTasks::compute_prioritized_tasks_vector()
 {
     int count = static_cast<int>(TasksNames::SEPARATOR);
-    tasks_vector.resize(count);
+    tasks_vector.assign(count, -1);
 
     {
         int priority = 0;
