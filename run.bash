@@ -47,5 +47,8 @@ docker run \
     `# Enable the kernel's address space randomization for gdb.` \
     --cap-add=SYS_PTRACE \
     --security-opt seccomp=unconfined \
+    `# Add SSH Key` \
+    -v $SSH_AUTH_SOCK:/ssh-agent \
+    -e SSH_AUTH_SOCK=/ssh-agent \
     ${IMAGE_NAME} \
     bash
