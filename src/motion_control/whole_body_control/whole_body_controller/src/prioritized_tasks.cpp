@@ -213,10 +213,7 @@ template<typename ControlTasksType>
 void PrioritizedTasks<ControlTasksType>::compute_prioritized_tasks_vector()
 {
     int count = static_cast<int>(TasksNames::SEPARATOR);
-    tasks_vector.resize(count);
-    for (auto& e : tasks_vector) {
-        e = -1;
-    }
+    tasks_vector.assign(count, -1);
 
     {
         int priority = 0;
