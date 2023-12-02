@@ -268,12 +268,10 @@ CallbackReturn SWPController::on_deactivate(const rclcpp_lifecycle::State& /*pre
 
 controller_interface::return_type SWPController::update(const rclcpp::Time& time, const rclcpp::Duration& /*period*/)
 {
-    double time_double = static_cast<double>(time.seconds()) + static_cast<double>(time.nanoseconds()) * std::pow(10, -9);
-
-    if (time_double < last_time_) {
+    if (time.seconds() < last_time_) {
         planner_.reset();
     } else {
-        if (time_double > init_time_) {
+        if (time.seconds() > init_time_) {
             planner_.step(gen_pose_);
 
             publish_gen_pose();
@@ -282,7 +280,7 @@ controller_interface::return_type SWPController::update(const rclcpp::Time& time
         }
     }
 
-    last_time_ = time_double;
+    last_time_ = time.seconds();
     // last_time_ += period.nanoseconds() * std::pow(10, -9);
 
     return controller_interface::return_type::OK;
