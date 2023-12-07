@@ -56,7 +56,7 @@
 - The `terrain_estimator` package gives a very rough estimate of the contact plane. The local terrain height is used by the trotting planner to adjust the commanded height.
 - Important bug fix in the whole-body controller. Previously, it did not work when the orientation was very different from zero roll, pitch, and yaw.
 
-Upcoming (2023-06-02)
+0.1.5 (2023-12-02)
 ------------------
 - Started using clang-tidy. The docker image installs ament-clang-tidy if the image is built with the `-d` option.
 - The estimated robot pose is displayed in RViz.
@@ -67,3 +67,7 @@ Upcoming (2023-06-02)
 - Implemented the walking_trot_planner in C++.
 - The LIP Planner returns multiple generalized poses, not only for the next instant but for a certain time window.
 - Updated to ROS 2 Iron
+ 
+Upcoming (2023-12-07)
+------------------
+- Added the Mulinex quadruped to the robot description packages. The robot spawns, the controller does not crashes, but the controller does not work for it yet.

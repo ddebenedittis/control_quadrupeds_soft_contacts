@@ -22,10 +22,23 @@ Install NVIDIA proprietary drivers if the NVIDIA graphics card should be used.
 Install [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#setting-up-nvidia-container-toolkit) (nvidia-docker2) for NVIDIA support in the container. \
 If you do not want to use NVIDIA, edit the Docker image to remove the NVIDIA section and the `run.bash` script, removing the `--gpus all` flag in the docker run command. In addition, remove the `additional_env` from the Gazebo process in `robot_launch/launch/robot.launch.py`.
 
-Clone the repo:
+If you do not have access to all the submodules, including the private ones, clone the repo with
+```shell
+git clone --recursive https://github.com/ddebenedittis/control_quadrupeds_soft_contacts
+cd control_quadrupeds_soft_contacts
+git submodule update --init --recursive --remote src/external/quadprog/ src/external/rapidyaml/ src/rviz_legged/ src/robot/robots/anymal_c_simple_description/ src/robot/robots/solo_description/
+```
+
+ONLY IF you have access to all the submodules, including the private ones, clone the repo with
 ```shell
 git clone --recursive https://github.com/ddebenedittis/control_quadrupeds_soft_contacts
 ```
+
+If not already done, navigate to the workspace with
+```shell
+cd Quadruped_Control_Soft_Contacts
+```
+
 Build the docker image (-d to install additional packages for development) (-h for printing the help) (-p to install all the dependencies to use plot) (-r to rebuild the underlying images) (-t for installing bly to generate the terrain meshes from some heightmaps) (-a to install all the optional dependencies):
 ```shell
 ./build.bash [-a] [-d] [-h] [-p] [-r] [-t]
@@ -53,8 +66,8 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_E
 ## Installation
 
 ```shell
-git clone --recursive https://github.com/ddebenedittis/Quadruped_Control_Soft_Contacts Quadruped_Control_Soft_Contacts/src
-cd Quadruped_Control_Soft_Contacts
+git clone --recursive https://github.com/ddebenedittis/control_quadrupeds_soft_contacts
+cd control_quadrupeds_soft_contacts
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && source install/setup.bash
 ```
 
@@ -118,6 +131,7 @@ Create a new `effort_controller.yaml` file, similar to the ones already present 
 
 
 ## Known Bugs
+
 - None
 
 ## Author
