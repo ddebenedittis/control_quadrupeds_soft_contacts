@@ -24,7 +24,7 @@ If you do not want to use NVIDIA, edit the Docker image to remove the NVIDIA sec
 
 If you do not have access to all the submodules, including the private ones, clone the repo with
 ```shell
-git clone --recursive https://github.com/ddebenedittis/control_quadrupeds_soft_contacts
+git clone https://github.com/ddebenedittis/control_quadrupeds_soft_contacts
 cd control_quadrupeds_soft_contacts
 git submodule update --init --recursive --remote src/external/quadprog/ src/external/rapidyaml/ src/rviz_legged/ src/robot/robots/anymal_c_simple_description/ src/robot/robots/solo_description/
 ```
