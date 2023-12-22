@@ -76,7 +76,7 @@ RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,s
         apt-get update && apt-get install --no-install-recommends -qqy \
         gdb \
         ros-iron-ament-clang-tidy \
-        && pip3 install matplotlib ; \
+        && pip3 install matplotlib --upgrade ; \
     fi
 
 # If $PLOT is 1, install the packages required to use plot.py in the container.
@@ -95,6 +95,22 @@ ARG TERRAIN_GEN=0
 RUN if [ "${TERRAIN_GEN}" = "1" ] ; then \
         pip3 install \
         bpy \
+        --upgrade ; \
+    fi
+
+# If TRACING is 1, install ros2trace and tracetools-analysis.
+ARG TRACING=0
+RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,sharing=locked,target=/var/lib/apt \
+    if [ "${TRACING}" = "1" ] ; then \
+        apt-get update && apt-get install --no-install-recommends -qqy \
+        babeltrace \
+        ros-${ROS_DISTRO}-ros2trace \
+        ros-${ROS_DISTRO}-tracetools \
+        ros-${ROS_DISTRO}-tracetools-launch \
+        ros-${ROS_DISTRO}-tracetools-analysis \
+        && pip3 install \
+        bokeh \
+        pandas \
         --upgrade ; \
     fi
 

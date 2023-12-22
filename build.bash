@@ -22,6 +22,7 @@ helpFunction()
    echo -e "\t-p   --plot          Install latex in the image. Bigger image, but plot.py can be used to plot some figures."
    echo -e "\t-r   --rebuild       Rebuild the image."
    echo -e "\t-t   --terrain-gen   Install bly (blender Python API) to generate terrains from heightmaps."
+   echo -e "\t     --terrain-gen   Install ros2trace and tracetools-analysis."
    exit 1 # Exit script after printing help
 }
 
@@ -33,6 +34,7 @@ DEVELOPMENT=0
 PLOT=0
 REBUILD=0
 TERRAIN_GEN=0
+TRACING=0
 
 # Auxiliary functions
 die() { echo "$*" >&2; exit 2; }  # complain to STDERR and exit with error
@@ -48,12 +50,13 @@ while getopts adhprt-: OPT; do
     OPTARG="${OPTARG#=}"      # if long option argument, remove assigning `=`
   fi
   case "$OPT" in
-    a | all )           no_arg; DEVELOPMENT=1; PLOT=1; TERRAIN_GEN=1; ;;
+    a | all )           no_arg; DEVELOPMENT=1; PLOT=1; TERRAIN_GEN=1; TRACING=1 ;;
     d | development )   no_arg; DEVELOPMENT=1 ;;
     h | help )          no_arg; helpFunction ;;
     p | plot )          no_arg; PLOT=1 ;;
     r | rebuild )       no_arg; REBUILD=1 ;;
     t | terrain_gen )   no_arg; TERRAIN_GEN=1 ;;
+    tracing )           no_arg; TRACING=1 ;;
     ??* )               die "Illegal option --$OPT" ;;  # bad long option
     ? )                 exit 2 ;;  # bad short option (error reported via getopts)
   esac
@@ -85,4 +88,5 @@ ${cache} \
 --build-arg DEVELOPMENT=$DEVELOPMENT \
 --build-arg PLOT=$PLOT \
 --build-arg TERRAIN_GEN=$TERRAIN_GEN \
+--build-arg TRACING=$TRACING \
 -t $IMAGE_NAME .
