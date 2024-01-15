@@ -9,6 +9,7 @@ Control of quadrupedal robots with soft contact constraints.
 - [Dependencies](#dependencies)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Troubleshooting](#troubleshooting)
 - [Known Bugs](#known-bugs)
 - [Author](#author)
 
@@ -20,7 +21,7 @@ Install [Docker Community Edition](https://docs.docker.com/engine/install/ubuntu
 Install NVIDIA proprietary drivers if the NVIDIA graphics card should be used.
 
 Install [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#setting-up-nvidia-container-toolkit) (nvidia-docker2) for NVIDIA support in the container. \
-If you do not want to use NVIDIA, edit the Docker image to remove the NVIDIA section and the `run.bash` script, removing the `--gpus all` flag in the docker run command. In addition, remove the `additional_env` from the Gazebo process in `robot_launch/launch/robot.launch.py`.
+If you do not want to use NVIDIA, edit the Docker image to remove the NVIDIA section and the `run.bash` script, removing the `--gpus all` flag in the docker run command. In addition, remove the `additional_env` from the Gazebo process `gzserver` in `robot_launch/launch/robot.launch.py`.
 
 If you do not have access to all the submodules, including the private ones, clone the repo with
 ```shell
@@ -57,6 +58,7 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_E
 
 - `git`
 - `Eigen`
+- `xterm`
 - `ROS2 Humble`, and the following ROS2 packages: `ros2-control`, `ros2-controllers`, `gazebo-ros-pkgs`, `gazebo-ros2-control`, `xacro`, `joint-state-publisher`, `joint-state-publisher-gui`
 - [`Pinocchio`](https://github.com/stack-of-tasks/pinocchio)
 - `numpy`, `scipy`, `numpy_quaternion`, [`quadprog`](https://github.com/quadprog/quadprog)
@@ -65,8 +67,20 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_E
 
 ## Installation
 
+If you do not have access to all the submodules, including the private ones, clone the repo with
+```shell
+git clone https://github.com/ddebenedittis/control_quadrupeds_soft_contacts
+cd control_quadrupeds_soft_contacts
+git submodule update --init --recursive --remote src/external/quadprog/ src/external/rapidyaml/ src/rviz_legged/ src/robot/robots/anymal_c_simple_description/ src/robot/robots/solo_description/
+```
+
+ONLY IF you have access to all the submodules, including the private ones, clone the repo with
 ```shell
 git clone --recursive https://github.com/ddebenedittis/control_quadrupeds_soft_contacts
+```
+
+Build the workspace with
+```shell
 cd control_quadrupeds_soft_contacts
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && source install/setup.bash
 ```
@@ -128,6 +142,11 @@ Add a new robot description package. It is recommended to place it in `src/robot
 Generate a new launch file similar to the ones already present in `src/robot/robot_gazebo/`.
 
 Create a new `effort_controller.yaml` file, similar to the ones already present in `robot_control/config`. Edit at least the `robot_name` field and the `joints` fields (according to the names of the joints of your robot).
+
+
+## Troubleshooting
+
+- If you do not have an NVIDIA graphics card, or you do not have the propietary drivers (you can check this by using the command `nvidia-smi`), you should remove the `additional_env` from the Gazebo process `gzserver` in `robot_launch/launch/robot.launch.py`.
 
 
 ## Known Bugs
