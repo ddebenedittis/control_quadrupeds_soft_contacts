@@ -12,6 +12,7 @@ from launch_ros.descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 from scripts import GazeboRosPaths
+# from tracetools_launch.action import Trace
 
 
 
@@ -106,6 +107,10 @@ def generate_launch_description():
         
         DeclareLaunchArgument('use_rviz', default_value='False'),
     ])
+    
+    # ld.add_action(
+    #     Trace(session_name='test', append_timestamp=True)
+    # )
     
     launch_generate_dae_files(ld)
         

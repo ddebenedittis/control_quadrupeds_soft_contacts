@@ -55,7 +55,7 @@ whole_body_controller:
         use_sim_time: true
 
         robot_name: solo12
-        sample_time: 0.0025
+        sample_time: 0.005
 
         use_estimator: false        # ! Must be the same as the use_estimator in the planner
         initialization_time: 1.5
@@ -93,7 +93,7 @@ whole_body_controller:
             - HR_HFE
             - HR_KFE
 
-        contact_constraint_type: soft_sim
+        contact_constraint_type: rigid
 
         shift_base_height: false
         
