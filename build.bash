@@ -22,7 +22,7 @@ helpFunction()
    echo -e "\t-p   --plot          Install latex in the image. Bigger image, but plot.py can be used to plot some figures."
    echo -e "\t-r   --rebuild       Rebuild the image."
    echo -e "\t-t   --terrain-gen   Install bly (blender Python API) to generate terrains from heightmaps."
-   echo -e "\t     --terrain-gen   Install ros2trace and tracetools-analysis."
+   echo -e "\t     --tracing       Install ros2trace and tracetools-analysis."
    exit 1 # Exit script after printing help
 }
 

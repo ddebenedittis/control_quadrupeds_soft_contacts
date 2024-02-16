@@ -40,9 +40,9 @@ If not already done, navigate to the workspace with
 cd Quadruped_Control_Soft_Contacts
 ```
 
-Build the docker image (-d to install additional packages for development) (-h for printing the help) (-p to install all the dependencies to use plot) (-r to rebuild the underlying images) (-t for installing bly to generate the terrain meshes from some heightmaps) (-a to install all the optional dependencies):
+Build the docker image (`-d` to install additional packages for development) (`-h` for printing the help) (`-p` to install all the dependencies to use plot) (`-r` to rebuild the underlying images) (`-t` for installing bly to generate the terrain meshes from some heightmaps) (`--t` for installing tracing tools) (`-a` to install all the optional dependencies):
 ```shell
-./build.bash [-a] [-d] [-h] [-p] [-r] [-t]
+./build.bash [-a] [-d] [-h] [-p] [-r] [-t] [--tracing]
 ```
 Run the container:
 ```shell
