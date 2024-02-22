@@ -5,6 +5,8 @@
 #include "geometry_msgs/msg/polygon_stamped.hpp"
 
 #include "geometry_msgs/msg/point_stamped.hpp"
+#include "geometry_msgs/msg/pose.hpp"
+#include "geometry_msgs/msg/twist.hpp"
 #include "rviz_legged_msgs/msg/friction_cones.hpp"
 #include "rviz_legged_msgs/msg/wrenches_stamped.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
@@ -32,8 +34,9 @@ public:
         const Eigen::VectorXd& forces, const Eigen::VectorXd& deformations,
         const Eigen::VectorXd& feet_positions, const Eigen::VectorXd& feet_velocities,
         const std::vector<std::string>& contact_feet_names, const std::vector<std::string>& generic_feet_names,
-        const std::vector<std::string>& specific_feet_names, const double friction_coefficient,
-        const Eigen::Vector3d& com_position);
+        const std::vector<std::string>& specific_feet_names, double friction_coefficient,
+        const Eigen::Vector3d& com_position,
+        const Eigen::VectorXd& q, const Eigen::VectorXd& v);
 
 private:
     static inline void publish_float64_multi_array(
@@ -49,6 +52,9 @@ private:
 
     inline void publish_point(const Eigen::Vector3d& point);
 
+    inline void publish_pose(const Eigen::VectorXd& q);
+    inline void publish_twist(const Eigen::VectorXd& v);
+
     std::vector<std::string> feet_names_;
 
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr joints_accelerations_publisher_;
@@ -58,6 +64,9 @@ private:
 
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr feet_positions_publisher_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr feet_velocities_publisher_;
+
+    rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr base_pose_publisher_;
+    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr base_twist_publisher_;
 
     rclcpp::Publisher<rviz_legged_msgs::msg::WrenchesStamped>::SharedPtr wrenches_stamped_publisher_;
     rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr polygon_stamped_publisher_;

@@ -292,30 +292,21 @@ CallbackReturn LIPController::on_configure(const rclcpp_lifecycle::State& /*prev
         }
     );
 
-    link_states_subscription_ = get_node()->create_subscription<gazebo_msgs::msg::LinkStates>(
-        "/gazebo/link_states", 1,
-        [this](const gazebo_msgs::msg::LinkStates& msg) -> void
+    base_pose_subscription_ = get_node()->create_subscription<geometry_msgs::msg::Pose>(
+        "/logging/base_pose", 1,
+        [this](const geometry_msgs::msg::Pose& msg) -> void
         {
-            // The index of the base must be found by searching which link contains "base" in its name.
-            int base_id = -1;
+            q_ << msg.position.x, msg.position.y, msg.position.z,
+                  msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w;
+        }
+    );
 
-            for (int i = 0; i < static_cast<int>(msg.name.size()); i++) {
-                if (msg.name[i].find("base") != std::string::npos) {
-                    base_id = i;
-                    break;
-                }
-            }
-        
-            // /gazebo/link_states returns the pose and the twist in the inertial or world frame.
-        
-            auto pos = msg.pose[base_id].position;
-            auto quat = msg.pose[base_id].orientation;
-
-            auto vel_lin = msg.twist[base_id].linear;
-            auto vel_ang = msg.twist[base_id].angular;
-
-            q_ << pos.x, pos.y, pos.z, quat.x, quat.y, quat.z, quat.w;
-            v_ << vel_lin.x, vel_lin.y, vel_lin.z, vel_ang.x, vel_ang.y, vel_ang.z;
+    base_twist_subscription_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
+        "/logging/base_twist", 1,
+        [this](const geometry_msgs::msg::Twist& msg) -> void
+        {
+            v_ << msg.linear.x, msg.linear.y, msg.linear.z,
+                  msg.angular.x, msg.angular.y, msg.angular.z;
         }
     );
     

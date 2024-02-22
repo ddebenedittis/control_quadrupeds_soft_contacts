@@ -34,6 +34,13 @@ HQPPublisher::HQPPublisher(const std::vector<std::string>& feet_names)
         "/logging/feet_velocities", 1);
 
 
+    base_pose_publisher_ = this->create_publisher<geometry_msgs::msg::Pose>(
+        "/logging/base_pose", 1);
+    
+    base_twist_publisher_ = this->create_publisher<geometry_msgs::msg::Twist>(
+        "/logging/base_twist", 1);
+
+
     wrenches_stamped_publisher_ = this->create_publisher<rviz_legged_msgs::msg::WrenchesStamped>(
         "/logging/wrenches_stamped", 1);
 
@@ -145,6 +152,41 @@ void HQPPublisher::publish_point(const Eigen::Vector3d& point)
 }
 
 
+/* ============================== publish_pose ============================== */
+
+void HQPPublisher::publish_pose(const Eigen::VectorXd& q)
+{
+    auto pose_message = geometry_msgs::msg::Pose();
+
+    pose_message.position.x = q(0);
+    pose_message.position.y = q(1);
+    pose_message.position.z = q(2);
+    pose_message.orientation.x = q(3);
+    pose_message.orientation.y = q(4);
+    pose_message.orientation.z = q(5);
+    pose_message.orientation.w = q(6);
+
+    base_pose_publisher_->publish(pose_message);
+}
+
+
+/* ============================== publish_twist ============================= */
+
+void HQPPublisher::publish_twist(const Eigen::VectorXd& v)
+{
+    auto twist_message = geometry_msgs::msg::Twist();
+
+    twist_message.linear.x = v(0);
+    twist_message.linear.y = v(1);
+    twist_message.linear.z = v(2);
+    twist_message.angular.x = v(3);
+    twist_message.angular.y = v(4);
+    twist_message.angular.z = v(5);
+
+    base_twist_publisher_->publish(twist_message);
+}
+
+
 /* =============================== Publish_all ============================== */
 
 void HQPPublisher::publish_all(
@@ -153,7 +195,8 @@ void HQPPublisher::publish_all(
     const Eigen::VectorXd& feet_positions, const Eigen::VectorXd& feet_velocities,
     const std::vector<std::string>& contact_feet_names, const std::vector<std::string>& generic_feet_names,
     const std::vector<std::string>& specific_feet_names, const double friction_coefficient,
-    const Eigen::Vector3d& com_position)
+    const Eigen::Vector3d& com_position,
+    const Eigen::VectorXd& q, const Eigen::VectorXd& v)
 {
     publish_float64_multi_array(joints_accelerations, joints_accelerations_publisher_);
     publish_float64_multi_array(torques, torques_publisher_);
@@ -162,6 +205,9 @@ void HQPPublisher::publish_all(
 
     publish_float64_multi_array(feet_positions, feet_positions_publisher_);
     publish_float64_multi_array(feet_velocities, feet_velocities_publisher_);
+
+    publish_pose(q);
+    publish_twist(v);
 
     publish_wrenches_stamped(forces);
 

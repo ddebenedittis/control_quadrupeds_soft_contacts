@@ -15,6 +15,8 @@
 
 #include "gazebo_msgs/msg/link_states.hpp"
 #include "generalized_pose_msgs/msg/generalized_poses_with_time.hpp"
+#include "geometry_msgs/msg/pose.hpp"
+#include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "rviz_legged_msgs/msg/paths.hpp"
 #include "sensor_msgs/msg/imu.hpp"
@@ -73,7 +75,11 @@ class LIPController : public controller_interface::ControllerInterface {
         rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr feet_positions_subscription_ = nullptr;
         rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr feet_velocities_subscription_ = nullptr;
         rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_ = nullptr;
-        rclcpp::Subscription<gazebo_msgs::msg::LinkStates>::SharedPtr link_states_subscription_ = nullptr;
+
+        // rclcpp::Subscription<gazebo_msgs::msg::LinkStates>::SharedPtr link_states_subscription_ = nullptr;
+        rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr base_pose_subscription_ = nullptr;
+        rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr base_twist_subscription_ = nullptr;
+
         rclcpp::Subscription<velocity_command_msgs::msg::SimpleVelocityCommand>::SharedPtr simple_velocity_command_subscription_ = nullptr;
         rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr terrain_penetrations_subscription_ = nullptr;
         rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr terrain_plane_subscription_ = nullptr;

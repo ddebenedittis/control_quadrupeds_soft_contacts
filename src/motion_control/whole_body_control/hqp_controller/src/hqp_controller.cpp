@@ -484,7 +484,8 @@ controller_interface::return_type HQPController::update(
             wbc.get_f_c_opt(), wbc.get_d_des_opt(),
             wbc.get_feet_positions(), wbc.get_feet_velocities(v_),
             contact_feet_names, wbc.get_generic_feet_names(), wbc.get_all_feet_names(),
-            wbc.get_friction_coefficient(), wbc.get_com_position());
+            wbc.get_friction_coefficient(), wbc.get_com_position(),
+            q_, v_);
     }
 
     return controller_interface::return_type::OK;
