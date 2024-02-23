@@ -92,23 +92,19 @@ mulinex:
     pkg_name: mulinex_description
     urdf_path: /urdf/mulinex.urdf
     feet_names:
-        - FL_FOOT
-        - FR_FOOT
-        - HL_FOOT
-        - HR_FOOT
+        - LF_FOOT
+        - RF_FOOT
+        - LH_FOOT
+        - RH_FOOT
     ordered_joint_names:
-        - FL_HAA
-        - FL_HFE
-        - FL_KFE
-        - FR_HAA
-        - FR_HFE
-        - FR_KFE
-        - HL_HAA
-        - HL_HFE
-        - HL_KFE
-        - HR_HAA
-        - HR_HFE
-        - HR_KFE
+        - LF_HFE
+        - LF_KFE
+        - LH_HFE
+        - LH_KFE
+        - RF_HFE
+        - RF_KFE
+        - RH_HFE
+        - RH_KFE
     ankle_feet_displacement:
         - 0.
         - 0.
