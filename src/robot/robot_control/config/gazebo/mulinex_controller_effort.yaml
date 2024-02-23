@@ -104,13 +104,13 @@ whole_body_controller:
         Fn_min: 2.
 
         kp_b_pos:
-            - 500.
-            - 500.
-            - 500.
+            - 750.
+            - 750.
+            - 750.
         kd_b_pos:
-            - 50.
-            - 50.
-            - 50.
+            - 100.
+            - 100.
+            - 200.
 
         kp_b_ang:
             - 750.
@@ -133,11 +133,11 @@ whole_body_controller:
         kp_terr:
             - 1000.
             - 1000.
-            - 1000.
+            - 5000.
         kd_terr:
             - 1000.
             - 1000.
-            - 1000.
+            - 100.
 
         kc_v:
             - 0.
@@ -193,15 +193,15 @@ lip_planner:
     ros__parameters:
         use_sim_time: true
 
-        zero_time: 0.5
+        zero_time: 2.5
         init_time: 0.25
 
         sample_time: 0.005
 
         step_reachability: 0.15
-        feet_theta: 0.6
-        feet_r: 0.2
-        base_height: 0.26
+        feet_theta: 0.785
+        feet_r: 0.28
+        base_height: 0.28
 
         max_fixed_steps: 6
 
@@ -209,12 +209,12 @@ lip_planner:
         step_duration: 0.2
         step_height: 0.05
         step_horizontal_phase_delay: 0.0
-        foot_penetration: -0.025
+        foot_penetration: -0.01
 
         acc_filter_order: 2
         acc_filter_beta: 0.9
 
-        correct_with_terrain_penetrations: true
+        correct_with_terrain_penetrations: false
         gain_correction_with_terrain_penetrations: 0.5
 
         interpolate_swing_feet_from_current_position: false
