@@ -14,6 +14,13 @@ HQPPublisher::HQPPublisher(const std::vector<std::string>& feet_names)
 : Node("HQP_publisher"),
   feet_names_(feet_names)
 {
+    generalized_coordinates_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
+        "/logging/optimal_generalized_coordinates", 1);
+
+    generalized_velocities_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
+        "/logging/optimal_generalized_velocities", 1);
+    
+
     joints_accelerations_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
         "/logging/optimal_joints_accelerations", 1);
 
@@ -198,6 +205,9 @@ void HQPPublisher::publish_all(
     const Eigen::Vector3d& com_position,
     const Eigen::VectorXd& q, const Eigen::VectorXd& v)
 {
+    publish_float64_multi_array(q, generalized_coordinates_publisher_);
+    publish_float64_multi_array(v, generalized_velocities_publisher_);
+
     publish_float64_multi_array(joints_accelerations, joints_accelerations_publisher_);
     publish_float64_multi_array(torques, torques_publisher_);
     publish_float64_multi_array(forces, forces_publisher_);

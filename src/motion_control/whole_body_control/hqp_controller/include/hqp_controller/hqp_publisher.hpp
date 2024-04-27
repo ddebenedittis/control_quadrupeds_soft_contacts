@@ -57,6 +57,9 @@ private:
 
     std::vector<std::string> feet_names_;
 
+    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr generalized_coordinates_publisher_;
+    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr generalized_velocities_publisher_;
+
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr joints_accelerations_publisher_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr torques_publisher_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr forces_publisher_;
