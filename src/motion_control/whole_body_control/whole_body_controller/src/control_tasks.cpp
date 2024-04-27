@@ -347,14 +347,6 @@ void ControlTasks::task_contact_constraints_rigid(Ref<MatrixXd> A, Ref<VectorXd>
     A.block(rank, nv, Jc.rows() - rank, nF) = lu_decomp.kernel().transpose();
 
     b.head(rank) = Q.leftCols(rank).transpose() * (- Jc_dot_times_v - Kc_v * Jc * v);
-
-    // std::cout << A << std::endl;
-    // std::cout << b << std::endl;
-
-    // std::cout << lu_decomp.image(Jc.rightCols(nv-6).transpose()).transpose() << "\n" << std::endl; // OK
-    // std::cout << Q.leftCols(8).transpose() * Jc.rightCols(nv-6) << std::endl;
-    // std::cout << lu_decomp.kernel().transpose() << "\n\n" << std::endl; // OK
-    // std::cout << Q.rightCols(4).transpose() * Jc.rightCols(nv-6) << std::endl;
 }
 
 

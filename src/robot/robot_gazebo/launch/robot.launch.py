@@ -340,6 +340,17 @@ def spawn_controllers(ld):
     )
     
     # Spawn a different planner depending on the gait parameter.
+    
+    spawn_debug_planner = Node(
+        condition=IfCondition(
+            PythonExpression(['"', gait, '"', ' == "debug"']),
+        ),
+        package='planners_python',
+        executable='debug_planner_node',
+        parameters=[{'use_sim_time': use_sim_time}],
+        emulate_tty=True,
+        output='screen',
+    )
 
     spawn_teleop_base = Node(
         condition=IfCondition(
@@ -439,6 +450,7 @@ def spawn_controllers(ld):
     
     ld.add_action(spawn_joint_state_broadcaster)
     ld.add_action(spawn_imu_sensor_broadcaster)
+    ld.add_action(spawn_debug_planner)
     ld.add_action(spawn_teleop_base)
     ld.add_action(spawn_static_walk_planner)
     # ld.add_action(spawn_planner_mjp)

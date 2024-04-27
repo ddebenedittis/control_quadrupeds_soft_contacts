@@ -22,6 +22,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'debug_planner_node = planners_python.debug_planner_node:main',
             'planner_mjp_node = planners_python.planner_mjp_node:main',
             'planner_static_walk_node = planners_python.planner_static_walk_node:main',
         ],
