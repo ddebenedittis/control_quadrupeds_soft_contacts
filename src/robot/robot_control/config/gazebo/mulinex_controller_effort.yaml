@@ -2,7 +2,7 @@ controller_manager:
     ros__parameters:
         use_sim_time: true
 
-        update_rate: 200
+        update_rate: 400
 
         effort_controller:
             type: effort_controllers/JointGroupEffortController
@@ -51,7 +51,7 @@ whole_body_controller:
         use_sim_time: true
 
         robot_name: mulinex
-        sample_time: 0.005
+        sample_time: 0.0025
 
         use_estimator: false        # ! Must be the same as the use_estimator in the planner
         initialization_time: 2.5
@@ -144,7 +144,7 @@ whole_body_controller:
             - 0.
             - 0.
 
-        regularization: 1e-9
+        regularization: 1e-6
 
 
 static_walk_planner:
@@ -154,7 +154,7 @@ static_walk_planner:
         use_estimator: false        # ! Must be the same as the use_estimator in the whole_body_controller
         initialization_time: 5.
 
-        sample_time: 0.005
+        sample_time: 0.0025
         init_phase: 0.4
 
         gait_pattern:
@@ -194,9 +194,9 @@ lip_planner:
         use_sim_time: true
 
         zero_time: 2.5
-        init_time: 0.25
+        init_time: 0.5
 
-        sample_time: 0.005
+        sample_time: 0.0025
 
         step_reachability: 0.15
         feet_theta: 0.785
