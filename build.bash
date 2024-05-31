@@ -81,8 +81,8 @@ docker build \
 ${cache} \
 --build-arg BASE_IMAGE=$BASE_IMAGE \
 --build-arg BASE_TAG=$BASE_TAG \
---build-arg MYUID=${UID} \
---build-arg MYGID=${GID} \
+--build-arg MYUID=${MYUID} \
+--build-arg MYGID=${MYGID} \
 --build-arg USER=${USER} \
 --build-arg "PWDR=$PWD" \
 --build-arg DEVELOPMENT=$DEVELOPMENT \
