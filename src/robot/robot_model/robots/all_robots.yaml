@@ -109,3 +109,30 @@ mulinex:
         - 0.
         - 0.
         - 0.
+
+# ================================ Unitree A1 ================================ #
+unitree_a1:
+    pkg_name: a1_description
+    urdf_path: /urdf/a1.urdf
+    feet_names:
+        - FL_foot
+        - FR_foot
+        - RL_foot
+        - RR_foot
+    ordered_joint_names:
+        - FL_calf_joint
+        - FL_hip_joint
+        - FL_thigh_joint
+        - FR_calf_joint
+        - FR_hip_joint
+        - FR_thigh_joint
+        - RL_calf_joint
+        - RL_hip_joint
+        - RL_thigh_joint
+        - RR_calf_joint
+        - RR_hip_joint
+        - RR_thigh_joint
+    ankle_feet_displacement:
+        - 0.
+        - 0.
+        - 0.

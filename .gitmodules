@@ -24,3 +24,6 @@
 [submodule "src/robot/robots/mulinex_description"]
 	path = src/robot/robots/mulinex_description
 	url = ../mulinex_description
+[submodule "src/robot/robots/unitree/a1_description"]
+	path = src/robot/robots/unitree/a1_description
+	url = ../a1_description.git

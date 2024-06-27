@@ -1,0 +1,221 @@
+controller_manager:
+    ros__parameters:
+        use_sim_time: true
+
+        update_rate: 400
+
+        effort_controller:
+            type: effort_controllers/JointGroupEffortController
+            
+        joint_state_broadcaster:
+            type: joint_state_broadcaster/JointStateBroadcaster
+
+        imu_sensor_broadcaster:
+            type: imu_sensor_broadcaster/IMUSensorBroadcaster
+
+        whole_body_controller:
+            type: hqp_controller/HQPController
+
+        static_walk_planner:
+            type: static_walk_planner/SWPController
+
+        lip_planner:
+            type: lip_walking_trot_planner/LIPController
+
+
+joint_state_broadcaster:
+    ros__parameters:
+        joints:
+            - FL_calf_joint
+            - FL_hip_joint
+            - FL_thigh_joint
+            - FR_calf_joint
+            - FR_hip_joint
+            - FR_thigh_joint
+            - RL_calf_joint
+            - RL_hip_joint
+            - RL_thigh_joint
+            - RR_calf_joint
+            - RR_hip_joint
+            - RR_thigh_joint
+        interfaces:
+            - position
+            - velocity
+            - effort
+
+
+imu_sensor_broadcaster:
+    ros__parameters:
+        sensor_name: imu_sensor
+        frame_id: base
+
+
+whole_body_controller:
+    ros__parameters:
+        use_sim_time: true
+
+        robot_name: unitree_a1
+        sample_time: 0.0025
+
+        use_estimator: false        # ! Must be the same as the use_estimator in the planner
+        initialization_time: 2.
+
+        q1:
+            - -1.5
+            -  0.0
+            -  0.25
+            - -1.5
+            -  0.0
+            -  0.25
+            - -1.5
+            -  0.0
+            -  0.25
+            - -1.5
+            -  0.0
+            -  0.25
+
+        PD_proportional: 
+            - 60.
+        PD_derivative: 
+            - 2.
+
+        logging: true
+
+        joints:
+            - FL_calf_joint
+            - FL_hip_joint
+            - FL_thigh_joint
+            - FR_calf_joint
+            - FR_hip_joint
+            - FR_thigh_joint
+            - RL_calf_joint
+            - RL_hip_joint
+            - RL_thigh_joint
+            - RR_calf_joint
+            - RR_hip_joint
+            - RR_thigh_joint
+
+        contact_constraint_type: rigid
+        
+        shift_base_height: false
+        
+        tau_max: 33.5
+        mu: 1.
+        Fn_max: 100.
+        Fn_min: 5.
+
+        kp_b_pos:
+            - 100.
+            - 100.
+            - 100.
+        kd_b_pos:
+            - 1.
+            - 1.
+            - 1.
+
+        kp_b_ang:
+            - 0.
+            - 0.
+            - 0.
+        kd_b_ang:
+            - 0.
+            - 0.
+            - 0.
+
+        kp_s_pos:
+            - 90.
+            - 90.
+            - 90.
+        kd_s_pos:
+            - 3.
+            - 3.
+            - 9.
+            
+        kp_terr:
+            - 1000.
+            - 1000.
+            - 5000.
+        kd_terr:
+            - 1000.
+            - 1000.
+            - 100.
+
+        kc_v:
+            - 0.
+            - 0.
+            - 0.
+
+        regularization: 1e-6
+
+
+static_walk_planner:
+    ros__parameters:
+        use_sim_time: true
+
+        use_estimator: false            # ! Must be the same as the use_estimator in the whole_body_controller
+        initialization_time: 1.
+        
+        sample_time: 0.0025
+        init_phase: 0.2
+
+        gait_pattern:
+            - LF
+            - RH
+            - RF
+            - LH
+        
+        cycle_duration: 4.0
+        step_duty_factor: 0.7
+        
+        step_length: 0.15
+        step_height: 0.1
+        desired_foot_penetration: 0.05
+        step_horizontal_delay: 0.1
+        foot_trajectory_type: splines
+
+        desired_base_height: 0.47
+        initial_base_height: 0.541215
+
+        terrain_height: 0.0
+        terrain_penetration: 0.0
+
+        initial_position:
+            - 0.
+            - 0.
+        leg_position: 
+            - 0.4
+            - 0.3
+        base_oscillation: 
+            - 0.06
+            - 0.06
+
+
+lip_planner:
+    ros__parameters:
+        use_sim_time: true
+
+        zero_time: 1.0
+        init_time: 1.0
+
+        sample_time: 0.0025
+
+        step_reachability: 0.2
+        feet_theta: 0.64
+        feet_r: 0.5
+        base_height: 0.5
+
+        max_fixed_steps: 6
+
+        interpolation_method: spline3   # must be in [spline3, spline5, cycloid]
+        step_duration: 0.2
+        step_height: 0.1
+        step_horizontal_phase_delay: 0.0
+        foot_penetration: -0.025
+
+        acc_filter_order: 2
+        acc_filter_beta: 0.9
+
+        correct_with_terrain_penetrations: true
+        gain_correction_with_terrain_penetrations: 0.5
+
+        interpolate_swing_feet_from_current_position: false
