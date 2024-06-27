@@ -74,8 +74,10 @@ whole_body_controller:
             - -0.3
             -  0.6
 
-        PD_proportional: 5.
-        PD_derivative: 0.05
+        PD_proportional: 
+            - 5.
+        PD_derivative: 
+            - 0.05
 
         logging: true
 
@@ -98,8 +100,8 @@ whole_body_controller:
         shift_base_height: false
         
         tau_max: 2.7
-        mu: 0.6
-        Fn_max: 15.
+        mu: 1.0
+        Fn_max: 25.
         Fn_min: 2.
 
         kp_b_pos:

@@ -79,8 +79,10 @@ whole_body_controller:
             - -4.
             -  5.
 
-        PD_proportional: 10.
-        PD_derivative: 0.1
+        PD_proportional: 
+            - 10.
+        PD_derivative: 
+            - 0.1
 
         logging: true
 
@@ -126,9 +128,9 @@ whole_body_controller:
             - 4500.
             - 4500.
         kd_s_pos:
-            - 150.
-            - 150.
-            - 150.
+            - 50.
+            - 50.
+            - 50.
             
         kp_terr:
             - 1000.

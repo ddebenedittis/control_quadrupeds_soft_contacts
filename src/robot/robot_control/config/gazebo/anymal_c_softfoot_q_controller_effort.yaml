@@ -74,8 +74,10 @@ whole_body_controller:
             - -0.3
             -  0.6
 
-        PD_proportional: 100.
-        PD_derivative: 1.
+        PD_proportional:
+            - 80.
+        PD_derivative:
+            - 8.
 
         logging: true
 

@@ -56,8 +56,8 @@ private:
 
     Eigen::VectorXd tau_;
 
-    double PD_proportional_ = 1;
-    double PD_derivative_ = 1;
+    std::vector<double> PD_proportional_ = {1};
+    std::vector<double> PD_derivative_ = {1};
 
     rclcpp::Subscription<gazebo_msgs::msg::LinkStates>::SharedPtr joint_state_subscription_ = nullptr;
 

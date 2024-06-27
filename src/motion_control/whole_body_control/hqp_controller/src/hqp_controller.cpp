@@ -46,8 +46,8 @@ CallbackReturn HQPController::on_init()
         auto_declare<std::vector<double>>("q1", std::vector<double>());
         auto_declare<std::vector<double>>("q2", {});
 
-        auto_declare<double>("PD_proportional", double());
-        auto_declare<double>("PD_derivative", double());
+        auto_declare<std::vector<double>>("PD_proportional", std::vector<double>());
+        auto_declare<std::vector<double>>("PD_derivative", std::vector<double>());
 
         auto_declare<bool>("logging", bool());
 
@@ -195,8 +195,21 @@ CallbackReturn HQPController::on_configure(const rclcpp_lifecycle::State& /*prev
     }
     q2_ = Eigen::VectorXd::Map(q2.data(), q2.size());
 
-    PD_proportional_ = get_node()->get_parameter("PD_proportional").as_double();
-    PD_derivative_ = get_node()->get_parameter("PD_derivative").as_double();
+    PD_proportional_ = get_node()->get_parameter("PD_proportional").as_double_array();
+    if (static_cast<int>(PD_proportional_.size()) == 1) {
+        PD_proportional_.assign(wbc.get_nv() - 6, PD_proportional_[0]);
+    } else if (static_cast<int>(PD_proportional_.size()) != wbc.get_nv() - 6) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'PD_proportional' must have either one or nv-6 elements");
+        return CallbackReturn::ERROR;
+    }
+
+    PD_derivative_ = get_node()->get_parameter("PD_derivative").as_double_array();
+    if (static_cast<int>(PD_derivative_.size()) == 1) {
+        PD_derivative_.assign(wbc.get_nv() - 6, PD_derivative_[0]);
+    } else if (static_cast<int>(PD_derivative_.size()) != wbc.get_nv() - 6) {
+        RCLCPP_ERROR(get_node()->get_logger(),"'PD_derivative' must have either one or nv-6 elements");
+        return CallbackReturn::ERROR;
+    }
 
     /* ====================================================================== */
 
@@ -440,8 +453,8 @@ controller_interface::return_type HQPController::update(
         // PD for the state estimator initialization
         for (uint i=0; i<joint_names_.size(); i++) {
             command_interfaces_[i].set_value(
-                + PD_proportional_ * (q[i] - q_(i+7))
-                + PD_derivative_ * (- v_(i+6))
+                + PD_proportional_[i] * (q[i] - q_(i+7))
+                + PD_derivative_[i] * (- v_(i+6))
             );
         }
 
