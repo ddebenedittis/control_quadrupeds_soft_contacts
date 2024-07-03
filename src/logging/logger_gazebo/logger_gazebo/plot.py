@@ -2,10 +2,8 @@ import csv
 import os
 import warnings
 
-os.environ['MPLCONFIGDIR'] = '/home/' + os.environ.get('USER') + '/.matplotlib'
-
 from cycler import cycler
-from scipy import signal
+# from scipy import signal
 import matplotlib.pyplot as plt
 import numpy as np
 import quaternion

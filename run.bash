@@ -50,5 +50,8 @@ docker run \
     `# Add SSH Key` \
     -v $SSH_AUTH_SOCK:/ssh-agent \
     -e SSH_AUTH_SOCK=/ssh-agent \
+    `# Matplotlib environment variable.` \
+    --env="MPLCONFIGDIR=/home/$USER/.matplotlib" \
+    --env="XDG_RUNTIME_DIR=/tmp/runtime-$USER" \
     ${IMAGE_NAME} \
     bash

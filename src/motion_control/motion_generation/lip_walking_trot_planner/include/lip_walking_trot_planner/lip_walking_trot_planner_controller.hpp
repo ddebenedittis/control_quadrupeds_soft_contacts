@@ -98,6 +98,7 @@ class LIPController : public controller_interface::ControllerInterface {
 
         VectorXd q_ = (VectorXd(7) << 0, 0, 0, 0, 0, 0, 1).finished();
         VectorXd v_ = VectorXd::Zero(6);
+        /// @brief Acceleration in base frame (a_ = a_b - g_b)
         Vector3d a_ = VectorXd::Zero(3);
 
         double velocity_forward_ = 0;
