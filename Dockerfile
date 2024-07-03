@@ -63,16 +63,20 @@ RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,s
     xterm
 
 # Install the python packages.
-RUN pip3 install \
+RUN --mount=type=cache,mode=0755,target=/root/.cache/pip \
+    pip3 install \
     numpy \
     numpy-quaternion \
     quadprog \
+    ros2-numpy \
     scipy \
     --upgrade
 
 # If $DEVELOPMENT is 1, install additional development packages.
 ARG DEVELOPMENT=0
-RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,sharing=locked,target=/var/lib/apt \
+RUN --mount=type=cache,sharing=locked,target=/var/cache/apt \
+    --mount=type=cache,sharing=locked,target=/var/lib/apt \
+    --mount=type=cache,mode=0755,target=/root/.cache/pip \
     if [ "${DEVELOPMENT}" = "1" ] ; then \
         apt-get update && apt-get install --no-install-recommends -qqy \
         gdb \
@@ -93,7 +97,8 @@ RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,s
 
 # If #TERRAIN_GEN is 1, install bpy for generating the terrain meshes with Blender.
 ARG TERRAIN_GEN=0
-RUN if [ "${TERRAIN_GEN}" = "1" ] ; then \
+RUN --mount=type=cache,mode=0755,target=/root/.cache/pip \
+    if [ "${TERRAIN_GEN}" = "1" ] ; then \
         pip3 install \
         bpy \
         --upgrade ; \
@@ -101,7 +106,9 @@ RUN if [ "${TERRAIN_GEN}" = "1" ] ; then \
 
 # If TRACING is 1, install ros2trace and tracetools-analysis.
 ARG TRACING=0
-RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,sharing=locked,target=/var/lib/apt \
+RUN --mount=type=cache,sharing=locked,target=/var/cache/apt \
+    --mount=type=cache,sharing=locked,target=/var/lib/apt \
+    --mount=type=cache,mode=0755,target=/root/.cache/pip \
     if [ "${TRACING}" = "1" ] ; then \
         apt-get update && apt-get install --no-install-recommends -qqy \
         babeltrace \
