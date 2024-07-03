@@ -1,0 +1,96 @@
+{
+    "build": {
+        "dockerfile": "../Dockerfile",
+        "context": "..",
+        "args": {
+            "BASE_IMAGE": "osrf/ros",
+            "BASE_TAG": "humble-desktop",
+            "ROS_NUMBER": "2",
+            "MYUID": "${localEnv:UID}",
+            "MYGID": "${localEnv:GID}",
+            "USER": "${localEnv:USER}",
+            "PWDR": "${localEnv:PWD}",
+            "DEVELOPMENT": "1",
+            "PLOT": "1",
+            "TERRAIN_GEN": "1",
+            "TRACING": "1"
+        }
+    },
+
+    "runArgs": [
+        "--net=host",
+        "--rm",
+        "--gpus=all"
+    ],
+
+    "containerEnv": {
+        "DISPLAY": "${localEnv:DISPLAY}",
+        "QT_X11_NO_MITSHM": "1",
+        "XAUTHORITY": "${localEnv:XAUTHORITY}",
+        "HISTFILE": "/home/.bash_history",
+        "HISTFILESIZE": "${localEnv:HISTFILESIZE}",
+        "PULSE_SERVER": "unix:${localEnv:XDG_RUNTIME_DIR}/pulse/native"
+    },
+
+    "mounts": [
+        {"source": "/tmp/.X11-unix", "target": "/tmp/.X11-unix", "type": "bind"},
+        // {"source": "${localEnv:$XAUTHORITY}", "target": "${localEnv:$XAUTHORITY}", "type": "bind"},
+        {"source": "/dev/dri", "target": "/dev/dri", "type": "bind"},
+        {"source": "${localEnv:PWD}", "target": "${localEnv:PWD}", "type": "bind"},
+        {"source": "${localEnv:HOME}/.bash_history", "target": "/home/.bash_history", "type": "bind"},
+        {"source": "${localEnv:XDG_RUNTIME_DIR}/pulse/native", "target": "${localEnv:XDG_RUNTIME_DIR}/pulse/native", "type": "bind"},
+        {"source": "/dev/shm", "target": "/dev/shm", "type": "bind"}
+    ],
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "aaron-bond.better-comments",
+                "charliermarsh.ruff",
+                "codium.codium",
+                "cschlosser.doxdocgen",
+                "eamodio.gitlens",
+                "gimly81.matlab",
+                "github.copilot",
+                "github.copilot-chat",
+                "james-yu.latex-workshop",
+                "jeff-hykin.better-cpp-syntax",
+                "kevinrose.vsc-python-indent",
+                "lextudio.restructuredtext",
+                "llvm-vs-code-extensions.vscode-clangd",
+                "ms-azuretools.vscode-docker",
+                "ms-iot.vscode-ros",
+                "ms-python.debugpy",
+                "ms-python.isort",
+                "ms-python.pylint",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-toolsai.jupyter",
+                "ms-toolsai.jupyter-keymap",
+                "ms-toolsai.jupyter-renderers",
+                "ms-toolsai.vscode-jupyter-cell-tags",
+                "ms-toolsai.vscode-jupyter-slideshow",
+                "ms-vscode-remote.remote-containers",
+                "ms-vscode.cmake-tools",
+                "ms-vscode.cpptools",
+                "njpwerner.autodocstring",
+                "phr0s.bib",
+                "qiumingge.cpp-check-lint",
+                "quarto.quarto",
+                "redhat.vscode-xml",
+                "reditorsupport.r",
+                "romanpeshkov.vscode-text-tables",
+                "smilerobotics.urdf",
+                "stackbreak.comment-divider",
+                "tecosaur.latex-utilities",
+                "trond-snekvik.simple-rst",
+                "twxs.cmake",
+                "visualstudioexptteam.intellicode-api-usage-examples",
+                "visualstudioexptteam.vscodeintellicode",
+                "vscode-icons-team.vscode-icons",
+                "yzhang.markdown-all-in-one",
+                "znck.grammarly"
+            ]
+        }
+    }
+  }
