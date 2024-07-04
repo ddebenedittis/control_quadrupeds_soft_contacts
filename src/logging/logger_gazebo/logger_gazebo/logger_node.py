@@ -300,8 +300,8 @@ class LoggerSubscriber(Node):
         """
 
         #! This assumes that there is only one link whose name ends with "base".
-        for index in range(len(msg.name)):
-            if msg.name[index][-4:] == "base":
+        for index, name in enumerate(msg.name):
+            if "base" in name:
                 break
 
         # /gazebo/link_states returns the pose and the twist in the inertial or world frame.
