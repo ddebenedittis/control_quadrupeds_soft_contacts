@@ -1,11 +1,13 @@
 import datetime
 from enum import Enum
+from functools import partial
 import os
 
 import numpy as np
 import rclpy
 from rclpy.node import Node
 from rcl_interfaces.srv import GetParameters
+import ros2_numpy as rnp
 
 from gazebo_msgs.msg import LinkStates
 from gazebo_msgs.msg import ContactsState
@@ -19,6 +21,7 @@ from velocity_command_msgs.msg import SimpleVelocityCommand
 # ============================ Quaternion Distance =========================== #
 
 def q_dist(q1, q2):
+    """Compute the quaternion distance between two quaternions."""
 
     theta = np.arccos(2 * np.dot(q1, q2) - 1)
 
@@ -101,28 +104,15 @@ class LoggerSubscriber(Node):
             "/motion_planner/desired_generalized_pose",
             self.gen_pose_callback,
             1)
-
-
-        self.contact_sensor_LF_subscription = self.create_subscription(
-            ContactsState,
-            "/contact_force_sensors/LF",
-            self.contact_state_LF_callback,
-            1)
-        self.contact_sensor_RF_subscription = self.create_subscription(
-            ContactsState,
-            "/contact_force_sensors/RF",
-            self.contact_state_RF_callback,
-            1)
-        self.contact_sensor_LH_subscription = self.create_subscription(
-            ContactsState,
-            "/contact_force_sensors/LH",
-            self.contact_state_LH_callback,
-            1)
-        self.contact_sensor_RH_subscription = self.create_subscription(
-            ContactsState,
-            "/contact_force_sensors/RH",
-            self.contact_state_RH_callback,
-            1)
+        
+        
+        self.contact_sensor_subscriptions = [
+            self.create_subscription(
+                ContactsState,
+                f"/contact_force_sensors/{foot_name}",
+                partial(self.contact_state_callback, foot_name=foot_name),
+                1) for foot_name in ["LF", "RF", "LH", "RH"]
+        ]
 
 
         # ================ Variables Saved By The Subscribers ================ #
@@ -371,56 +361,13 @@ class LoggerSubscriber(Node):
 
         # Compute the average of all the elements of the message
         self.contact_forces[0+3*i:3+3*i].fill(0)
-        self.contact_positions[0+3*i:3+3*i].fill(0)
+        self.contact_positions[0+3*i:3+3*i].fill(np.nan)
         self.depths[i] = 0
 
-        # for contact_state in msg.states:
-        #     self.contact_forces[0+3*i:3+3*i] += np.array([
-        #         contact_state.total_wrench.force.x,
-        #         contact_state.total_wrench.force.y,
-        #         contact_state.total_wrench.force.z
-        #     ])
-        #     self.contact_positions[0+3*i:3+3*i] += np.array([
-        #         contact_state.contact_positions[0].x,
-        #         contact_state.contact_positions[0].y,
-        #         contact_state.contact_positions[0].z
-        #     ])
-        #     self.depths[i] += contact_state.depths[0]
-
-        # n = len(msg.states)
-
-        # if n > 0:   # avoids dividing by zero
-        #     self.contact_forces[0+3*i:3+3*i] = self.contact_forces[0+3*i:3+3*i] / n
-        #     self.contact_positions[0+3*i:3+3*i] = self.contact_positions[0+3*i:3+3*i] / n
-        #     self.depths[i] = self.depths[i] / n
-
         if len(msg.states) > 0:
-            self.contact_forces[0+3*i:3+3*i] = np.array([
-                msg.states[0].total_wrench.force.x,
-                msg.states[0].total_wrench.force.y,
-                msg.states[0].total_wrench.force.z
-            ])
-
-            self.contact_positions[0+3*i:3+3*i] = np.array([
-                msg.states[0].contact_positions[0].x,
-                msg.states[0].contact_positions[0].y,
-                msg.states[0].contact_positions[0].z
-            ])
-
+            self.contact_forces[0+3*i:3+3*i] = rnp.numpify(msg.states[0].total_wrench.force)
+            self.contact_positions[0+3*i:3+3*i] = rnp.numpify(msg.states[0].contact_positions[0])
             self.depths[i] = msg.states[0].depths[0]
-
-
-    def contact_state_LF_callback(self, msg):
-        self.contact_state_callback(msg, "LF")
-
-    def contact_state_RF_callback(self, msg):
-        self.contact_state_callback(msg, "RF")
-
-    def contact_state_LH_callback(self, msg):
-        self.contact_state_callback(msg, "LH")
-
-    def contact_state_RH_callback(self, msg):
-        self.contact_state_callback(msg, "RH")
 
 
     def simple_velocity_command_callback(self, msg):
@@ -589,7 +536,6 @@ def main(args=None):
     rclpy.init(args=args)
 
     node = LoggerSubscriber()
-
 
     # =============================== Main Loop ============================== #
 

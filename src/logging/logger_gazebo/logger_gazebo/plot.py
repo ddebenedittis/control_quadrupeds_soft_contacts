@@ -4,6 +4,7 @@ import warnings
 
 from cycler import cycler
 # from scipy import signal
+from matplotlib.cm import viridis
 import matplotlib.pyplot as plt
 import numpy as np
 import quaternion
@@ -11,6 +12,14 @@ import quaternion
 from robot_model.robot_model import RobotModel
 
 
+
+def plot_colourline(x,y,c):
+    col = viridis((c-np.min(c))/(np.max(c)-np.min(c)))
+    ax = plt.gca()
+    for i in np.arange(len(x)-1):
+        ax.plot([x[i],x[i+1]], [y[i],y[i+1]], c=col[i])
+    im = ax.scatter(x, y, c=c, s=0, cmap=viridis)
+    return im
 
 class Plot:
     """
@@ -48,26 +57,29 @@ class Plot:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             
-            self.contact_forces = np.loadtxt(fullfolder + 'contact_forces.csv', delimiter=",")
-            self.contact_positions = np.loadtxt(fullfolder + 'contact_positions.csv', delimiter=",")
-            self.depths = np.loadtxt(fullfolder + 'depths.csv', delimiter=",")
-            self.feet_positions = np.loadtxt(fullfolder + 'feet_positions.csv', delimiter=",")
-            self.feet_velocities = np.loadtxt(fullfolder + 'feet_velocities.csv', delimiter=",")
-            self.generalized_coordinates = np.loadtxt(fullfolder + 'generalized_coordinates.csv', delimiter=",")
-            self.generalized_velocities = np.loadtxt(fullfolder + 'generalized_velocities.csv', delimiter=",")
-            self.optimal_deformations = np.loadtxt(fullfolder + 'optimal_deformations.csv', delimiter=",")
-            self.optimal_forces = np.loadtxt(fullfolder + 'optimal_forces.csv', delimiter=",")
-            self.optimal_joints_accelerations = np.loadtxt(fullfolder + 'optimal_joints_accelerations.csv', delimiter=",")
-            self.optimal_torques = np.loadtxt(fullfolder + 'optimal_torques.csv', delimiter=",")
-            self.orientation_error = np.loadtxt(fullfolder + 'orientation_error.csv', delimiter=",")
-            self.position_error = np.loadtxt(fullfolder + 'position_error.csv', delimiter=",")
+            def load_csv(fullfolder, filename):
+                return np.loadtxt(fullfolder + filename, delimiter=",")
+
+            self.contact_forces = load_csv(fullfolder, 'contact_forces.csv')
+            self.contact_positions = load_csv(fullfolder, 'contact_positions.csv')
+            self.depths = load_csv(fullfolder, 'depths.csv')
+            self.feet_positions = load_csv(fullfolder, 'feet_positions.csv')
+            self.feet_velocities = load_csv(fullfolder, 'feet_velocities.csv')
+            self.generalized_coordinates = load_csv(fullfolder, 'generalized_coordinates.csv')
+            self.generalized_velocities = load_csv(fullfolder, 'generalized_velocities.csv')
+            self.optimal_deformations = load_csv(fullfolder, 'optimal_deformations.csv')
+            self.optimal_forces = load_csv(fullfolder, 'optimal_forces.csv')
+            self.optimal_joints_accelerations = load_csv(fullfolder, 'optimal_joints_accelerations.csv')
+            self.optimal_torques = load_csv(fullfolder, 'optimal_torques.csv')
+            self.orientation_error = load_csv(fullfolder, 'orientation_error.csv')
+            self.position_error = load_csv(fullfolder, 'position_error.csv')
             if self.gait in ["walking_trot", "teleop_walking_trot"]:
-                self.simple_velocity_command = np.loadtxt(fullfolder + 'simple_velocity_command.csv', delimiter=",")
-            self.slippage = np.loadtxt(fullfolder + 'slippage.csv', delimiter=",")
-            self.time = np.loadtxt(fullfolder + 'time.csv', delimiter=",")
-            self.velocity_error = np.loadtxt(fullfolder + 'velocity_error.csv', delimiter=",")
-            self.desired_feet_positions = np.loadtxt(fullfolder + 'desired_feet_positions.csv', delimiter=",")
-            self.desired_feet_velocities = np.loadtxt(fullfolder + 'desired_feet_velocities.csv', delimiter=",")
+                self.simple_velocity_command = load_csv(fullfolder, 'simple_velocity_command.csv')
+            self.slippage = load_csv(fullfolder, 'slippage.csv')
+            self.time = load_csv(fullfolder, 'time.csv')
+            self.velocity_error = load_csv(fullfolder, 'velocity_error.csv')
+            self.desired_feet_positions = load_csv(fullfolder, 'desired_feet_positions.csv')
+            self.desired_feet_velocities = load_csv(fullfolder, 'desired_feet_velocities.csv')
             
 
         # Get the indexes of time_init and time_end in the time vector.
@@ -166,6 +178,28 @@ class Plot:
     # ax (pyplot.axes): the axes (or a list of axes) that will be populated
     # i (int): the index of the foot whose quantities are plotted:
     #          0 = LF, 1 = RF, 2 =  LH, 3 = RH
+    
+    def _plot_com_wrt_support(self, fig, ax: plt.Axes):
+        
+        support_polygon_center = np.nanmean(
+            self.contact_positions[self.i_init:self.i_end,:].reshape((-1, 3, 4), order='F'),
+            axis=2)
+        
+        im = plot_colourline(
+            self.generalized_coordinates[self.i_init:self.i_end, 0] - support_polygon_center[:,0],
+            self.generalized_coordinates[self.i_init:self.i_end, 1] - support_polygon_center[:,1],
+            self.time_vector,
+        )
+        
+        cbar = fig.colorbar(im)
+        cbar.ax.set_title("Time [s]")
+
+        ax.set(
+            xlabel = "x-coordinate [m]",
+            ylabel = "y-coordinate [m]",
+            title = "CoM w.r.t. center of the support polygon",
+        )
+    
 
     def _plot_optimal_deformations(self, ax: plt.Axes, i):
         if self.optimal_deformations.size > 0:
@@ -607,6 +641,17 @@ class Plot:
         }
         
         np.save(self.foldername + '/csv/' + self.subdir + '/kpi.npy', kpi_dict)
+        
+        
+    def _save_com_wrt_support(self):
+        fig, ax = plt.subplots(1, 1, figsize=[self.x_size_def, self.y_size_def])
+        
+        self._plot_com_wrt_support(fig, ax)
+        
+        fig_path = os.path.join(self.foldername, self.format, self.subdir,
+                                'com_wrt_support.' + self.format)
+        plt.savefig(fig_path, bbox_inches="tight", format=self.format)
+        plt.close(fig)
 
 
     def save_all_plots(self):
@@ -622,6 +667,8 @@ class Plot:
         self._save_feet_pos_plots()
         
         self._save_performance_indexes()
+        
+        self._save_com_wrt_support()
 
 
 
