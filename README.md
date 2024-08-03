@@ -5,13 +5,18 @@ Control of quadrupedal robots with soft contact constraints.
 
 ## Table of Contents
 
-- [Installation with Docker](#installation-with-docker)
-- [Dependencies](#dependencies)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Troubleshooting](#troubleshooting)
-- [Known Bugs](#known-bugs)
-- [Author](#author)
+- [Control Quadrupeds Soft Contacts](#control-quadrupeds-soft-contacts)
+  - [Table of Contents](#table-of-contents)
+  - [Installation with Docker](#installation-with-docker)
+  - [Dependencies](#dependencies)
+  - [Installation](#installation)
+  - [Usage](#usage)
+    - [Simulations](#simulations)
+    - [Plot](#plot)
+    - [Add a new robot model](#add-a-new-robot-model)
+  - [Troubleshooting](#troubleshooting)
+  - [Known Bugs](#known-bugs)
+  - [Author](#author)
 
 
 ## Installation with Docker
@@ -92,14 +97,14 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_E
 
 - ANYmal C simulation:
 ```shell
-ros2 launch robot_gazebo anymal_c.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [velocity_cmd:=(0.0, 0.0, 0.0)] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo anymal_c.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [velocity_cmd:="(0.0, 0.0, 0.0)"] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
 ![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/anymal_c-trot-grass.gif)
 
 - SOLO12 static walk simulation:
 ```shell
-ros2 launch robot_gazebo solo12.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [velocity_cmd:=(0.0, 0.0, 0.0)] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
+ros2 launch robot_gazebo solo12.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [velocity_cmd:="(0.0, 0.0, 0.0)"] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
 ![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/solo12-walk-rigid.gif)
