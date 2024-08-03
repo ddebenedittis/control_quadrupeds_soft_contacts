@@ -108,8 +108,17 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::update(
         return stand_still(plane_coeffs);
     }
 
+    Eigen::Matrix2d R_b2n;
+    R_b2n << std::cos(yaw_), - std::sin(yaw_),
+             std::sin(yaw_),   std::cos(yaw_);
+    
+    // Rotate from base to navigation frame.
+    auto acc_com_n = acc_com;
+    Eigen::Vector2d acc_com_n_xy = R_b2n * acc_com.head(2);
+    acc_com_n.head(2) = acc_com_n_xy;
+
     return mpc(
-        pos_com, vel_com, acc_com,
+        pos_com, vel_com, acc_com_n,
         vel_cmd, yaw_rate_cmd,
         plane_coeffs,
         feet_positions, feet_velocities,
@@ -144,7 +153,7 @@ std::vector<generalized_pose::GeneralizedPoseStruct> MotionPlanner::stand_still(
         generalized_pose::Vector3(
             feet_center[0],
             feet_center[1],
-            feet_center[2] + height_com_
+            feet_center[2] + height_com_ * std::cos(roll) * std::cos(pitch)
         ),
         generalized_pose::Quaternion(
             quat.x(), quat.y(), quat.z(), quat.w()
@@ -757,7 +766,8 @@ std::tuple<std::vector<Vector3d>, std::vector<Vector3d>, std::vector<Vector3d>> 
 bool MotionPlanner::check_stop(
     const Vector2d& vel_cmd, double yaw_rate_cmd
 ) {
-    double threshold = 0.05;
+    // When the speed is smaller than the threshold, the robot is considered stopped.
+    double threshold = 0.01;
 
     if (phi_ == 0.
         && fixed_steps_ >= max_fixed_steps_

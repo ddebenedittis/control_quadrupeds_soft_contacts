@@ -390,9 +390,10 @@ controller_interface::return_type LIPController::update(const rclcpp::Time& time
         Vector3d g = {0, 0, - 9.81};
 
         Vector3d a_b_meas_body = a_;
-        quat_rot(quat_conj, a_b_meas_body);
-        a_b_meas_body += g;
-        // Vector3d a_b_meas_body = quat_conj * a_ + g;
+
+        quat_rot(quat_conj, a_b_meas_body);                 // acc in navigation frame.
+        a_b_meas_body += g;                                 // remove gravity.
+        quat_rot(quat_conj.conjugate(), a_b_meas_body);     // acc in base frame.
 
         Vector3d a_b = - filter_.filter(a_b_meas_body, planner_.get_sample_time());
 
