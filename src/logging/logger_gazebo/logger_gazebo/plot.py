@@ -5,6 +5,7 @@ import warnings
 from cycler import cycler
 # from scipy import signal
 from matplotlib.cm import viridis
+from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
 import numpy as np
 import quaternion
@@ -20,6 +21,45 @@ def plot_colourline(x,y,c):
         ax.plot([x[i],x[i+1]], [y[i],y[i+1]], c=col[i])
     im = ax.scatter(x, y, c=c, s=0, cmap=viridis)
     return im
+
+def plot_cov_ellipse(cov, pos, nstd=2, ax=None, **kwargs):
+    """
+    Plots an `nstd` sigma error ellipse based on the specified covariance
+    matrix (`cov`). Additional keyword arguments are passed on to the 
+    ellipse patch artist.
+
+    Parameters
+    ----------
+        cov : The 2x2 covariance matrix to base the ellipse on
+        pos : The location of the center of the ellipse. Expects a 2-element
+            sequence of [x0, y0].
+        nstd : The radius of the ellipse in numbers of standard deviations.
+            Defaults to 2 standard deviations.
+        ax : The axis that the ellipse will be plotted on. Defaults to the 
+            current axis.
+        Additional keyword arguments are pass on to the ellipse patch.
+
+    Returns
+    -------
+        A matplotlib ellipse artist
+    """
+    def eigsorted(cov):
+        vals, vecs = np.linalg.eigh(cov)
+        order = vals.argsort()[::-1]
+        return vals[order], vecs[:,order]
+
+    if ax is None:
+        ax = plt.gca()
+
+    vals, vecs = eigsorted(cov)
+    theta = np.degrees(np.arctan2(*vecs[:,0][::-1]))
+
+    # Width and height are "full" widths, not radius
+    width, height = 2 * nstd * np.sqrt(vals)
+    ellip = Ellipse(xy=pos, width=width, height=height, angle=theta, **kwargs)
+
+    ax.add_artist(ellip)
+    return ellip
 
 class Plot:
     """
@@ -185,6 +225,11 @@ class Plot:
             self.contact_positions[self.i_init:self.i_end,:].reshape((-1, 3, 4), order='F'),
             axis=2)
         
+        for i in range(support_polygon_center.shape[0] - 1):
+            if np.abs(support_polygon_center[i+1, 0] - support_polygon_center[i, 0]) > 0.1 \
+                    or np.abs(support_polygon_center[i+1, 1] - support_polygon_center[i, 1]) > 0.1:
+                support_polygon_center[i+1, 0:2] = support_polygon_center[i, 0:2]
+        
         im = plot_colourline(
             self.generalized_coordinates[self.i_init:self.i_end, 0] - support_polygon_center[:,0],
             self.generalized_coordinates[self.i_init:self.i_end, 1] - support_polygon_center[:,1],
@@ -198,6 +243,30 @@ class Plot:
             xlabel = "x-coordinate [m]",
             ylabel = "y-coordinate [m]",
             title = "CoM w.r.t. center of the support polygon",
+        )
+        
+        average = np.mean(
+            self.generalized_coordinates[self.i_init:self.i_end, 0:2] - support_polygon_center[:,0:2],
+            axis=0,
+        )
+        
+        avg = ax.scatter(
+            average[0], average[1], c='r', marker='x', s=100, zorder=20,
+            )
+        
+        cov = np.cov(
+            self.generalized_coordinates[self.i_init:self.i_end, 0:2] - support_polygon_center[:,0:2],
+            rowvar=False,
+        )
+        
+        ellip = plot_cov_ellipse(
+            cov, average, nstd=2, ax=ax, edgecolor='b', color='b',
+            linestyle='--', linewidth=1, alpha=0.125,
+        )
+        
+        ax.legend(
+            [avg, ellip],
+            ["Average relative CoM position", "2$\sigma$ error ellipse"],
         )
     
 
