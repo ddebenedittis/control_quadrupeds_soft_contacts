@@ -76,8 +76,19 @@ whole_body_controller:
 
         PD_proportional: 
             - 5.
-        PD_derivative: 
-            - 0.05
+        PD_derivative:
+            -  0.5
+            -  0.5
+            -  0.05
+            -  0.5
+            -  0.5
+            -  0.05
+            -  0.5
+            -  0.5
+            -  0.05
+            -  0.5
+            -  0.5
+            -  0.05
 
         logging: true
 
@@ -123,13 +134,13 @@ whole_body_controller:
             - 35.
 
         kp_s_pos:
-            - 900.
-            - 900.
+            - 1800.
+            - 1800.
             - 900.
         kd_s_pos:
             - 30.
             - 30.
-            - 30.
+            - 90.
             
         kp_terr:
             - 1000.
@@ -156,7 +167,7 @@ static_walk_planner:
         initialization_time: 1.
 
         sample_time: 0.0025
-        init_phase: 0.4
+        init_phase: 2.0
 
         gait_pattern:
             - LF
@@ -169,7 +180,7 @@ static_walk_planner:
 
         step_length: 0.15
         step_height: 0.075
-        desired_foot_penetration: 0.01
+        desired_foot_penetration: 0.00
         step_horizontal_delay: 0.1
         foot_trajectory_type: splines
 
@@ -184,25 +195,25 @@ static_walk_planner:
             - 0.
         leg_position: 
             - 0.165
-            - 0.11
+            - 0.13
         base_oscillation: 
             - 0.04
-            - 0.03
+            - 0.02
 
 
 lip_planner:
     ros__parameters:
         use_sim_time: true
 
-        zero_time: 0.5
-        init_time: 0.25
+        zero_time: 1.0
+        init_time: 1.0
 
         sample_time: 0.0025
 
         step_reachability: 0.15
-        feet_theta: 0.6
-        feet_r: 0.2
-        base_height: 0.26
+        feet_theta: 0.7
+        feet_r: 0.25
+        base_height: 0.22
 
         max_fixed_steps: 6
 
@@ -213,7 +224,7 @@ lip_planner:
         foot_penetration: -0.025
 
         acc_filter_order: 2
-        acc_filter_beta: 0.9
+        acc_filter_beta: 0.99
 
         correct_with_terrain_penetrations: true
         gain_correction_with_terrain_penetrations: 0.5
