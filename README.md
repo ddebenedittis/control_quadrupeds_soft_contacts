@@ -100,14 +100,14 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_E
 ros2 launch robot_gazebo anymal_c.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [velocity_cmd:="(0.0, 0.0, 0.0)"] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
-![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/anymal_c-trot-grass.gif)
+![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/anymal_c-trot-grass.webp)
 
 - SOLO12 static walk simulation:
 ```shell
 ros2 launch robot_gazebo solo12.launch.py [terrain:={rigid,soft,very_soft,multi_terrains,heightmap}] [gait:={teleop_base,static_walk,walking_trot,teleop_walking_trot}] [velocity_cmd:="(0.0, 0.0, 0.0)"] [use_rviz:={False,True}] [save_csv:={False,True}] [reset:={False,True}]
 ```
 
-![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/gif/solo12-walk-rigid.gif)
+![](https://raw.githubusercontent.com/ddebenedittis/media/main/control_quadrupeds_soft_contacts/solo12-walk-rigid.webp)
 
 - ANYmal C with SoftFoot-Qs static walk simulation:
 ```shell
@@ -121,8 +121,8 @@ Optional arguments:
 - `save_csv`: when `True`, some data is logged and saved in several .csv files in the `log/csv/` folder. This data can be plotted with `plot.py` (in the `logger_gazebo` package).
 - `reset`: must be used in another terminal when there is an already running simulation. The simulation will be restarted. The time is not reset to avoid problems with the controllers.
 
-<img src="https://raw.githubusercontent.com/ddebenedittis/media/main/rviz_legged/gif/rviz_legged_walk.gif" width="500">
-<img src="https://raw.githubusercontent.com/ddebenedittis/media/main/rviz_legged/gif/rviz_legged_trot.gif" width="500">
+<img src="https://raw.githubusercontent.com/ddebenedittis/media/main/rviz_legged/rviz_legged_walk.webp" width="500">
+<img src="https://raw.githubusercontent.com/ddebenedittis/media/main/rviz_legged/rviz_legged_trot.webp" width="500">
 
 - `contact_constraint_type`: not working. Must be changed directly in the specific robot config .yaml file.
 
