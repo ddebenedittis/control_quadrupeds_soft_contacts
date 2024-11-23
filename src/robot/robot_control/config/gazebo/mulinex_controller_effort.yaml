@@ -154,10 +154,10 @@ static_walk_planner:
         use_sim_time: true
 
         use_estimator: false        # ! Must be the same as the use_estimator in the whole_body_controller
-        initialization_time: 5.
+        initialization_time: 3.
 
         sample_time: 0.0025
-        init_phase: 0.4
+        init_phase: 1.0
 
         gait_pattern:
             - LF
@@ -168,8 +168,8 @@ static_walk_planner:
         cycle_duration: 3.0
         step_duty_factor: 0.7
 
-        step_length: 0.15
-        step_height: 0.075
+        step_length: 0.10
+        step_height: 0.1
         desired_foot_penetration: 0.01
         step_horizontal_delay: 0.1
         foot_trajectory_type: splines
@@ -184,11 +184,11 @@ static_walk_planner:
             - 0.
             - 0.
         leg_position: 
-            - 0.165
-            - 0.11
+            - 0.20
+            - 0.20
         base_oscillation: 
             - 0.04
-            - 0.03
+            - 0.0
 
 
 lip_planner:
