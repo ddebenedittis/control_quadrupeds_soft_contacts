@@ -17,6 +17,7 @@ Control of quadrupedal robots with soft contact constraints.
   - [Troubleshooting](#troubleshooting)
   - [Known Bugs](#known-bugs)
   - [Author](#author)
+  - [Citation](#citation)
 
 
 ## Installation with Docker
@@ -161,3 +162,20 @@ Create a new `effort_controller.yaml` file, similar to the ones already present 
 ## Author
 
 [Davide De Benedittis](https://3.bp.blogspot.com/-xvFfjYBPegM/VvFp02nHUjI/AAAAAAAAIoc/Mysj-ESrXPQFQI_yOJFQQz2kwZuIQiAKA/s1600/He-Man.png)
+
+## Citation
+
+If you find this project useful in your research, please consider citing my related work (available [here](https://doi.org/10.1109/TSMC.2024.3504342)):
+
+```bibtex
+@ARTICLE{debenedittis2024soft,
+  author={De Benedittis, Davide and Angelini, Franco and Garabini, Manolo},
+  journal={IEEE Transactions on Systems, Man, and Cybernetics: Systems}, 
+  title={Soft Bilinear Inverted Pendulum: A Model to Enable Locomotion With Soft Contacts}, 
+  year={2024},
+  volume={},
+  number={},
+  pages={1-14},
+  keywords={Legged locomotion;Quadrupedal robots;Foot;Vectors;Optimization;Computational modeling;Trajectory;Tracking;Planning;Jacobian matrices;Contacts;legged locomotion;optimal control;predictive control;quadratic programming},
+  doi={10.1109/TSMC.2024.3504342}}
+```
