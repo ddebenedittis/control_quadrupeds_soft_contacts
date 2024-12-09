@@ -13,11 +13,12 @@ using namespace Eigen;
 
 inline void test_eq_vectors(const VectorXd& v1, const VectorXd& v2)
 {
-     EXPECT_EQ(v1.size(), v2.size()) << "The solution has wrong dimension";
+    EXPECT_EQ(v1.size(), v2.size()) << "The solution has wrong dimension";
 
-     for (uint i = 0; i < static_cast<uint>(v1.size()); i++) {
-          EXPECT_TRUE((std::abs(v1[i] - v2[i]) < 1e-5)) << "The solution is wrong at index " << i;
-     }
+    for (uint i = 0; i < static_cast<uint>(v1.size()); i++) {
+        EXPECT_TRUE((std::abs(v1[i] - v2[i]) < 1e-5)) << "The solution is wrong at index " << i <<
+            " where " << v1[i] << " != " << v2[i] << ")";
+    }
 }
 
 inline void test_eq_tuple(
@@ -41,7 +42,9 @@ TEST(lip_walking_trot_planner, interpolator_test)
     interp.set_method(method);
 
     Vector3d init_pos = {0, 0, 0};
-    Vector3d end_pos = {1, 0, - interp.get_foot_penetration()};
+    Vector3d middle_pos = {0.5, 0, interp.get_step_height()};
+    Vector3d end_pos = {1, 0, 0};
+    Vector3d end_pos_temp = {0, 0, - interp.get_foot_penetration()};
 
     Vector3d zero = {0, 0, 0};
 
@@ -49,13 +52,13 @@ TEST(lip_walking_trot_planner, interpolator_test)
         std::make_tuple(init_pos, zero, zero),
         interp.interpolate(init_pos, end_pos, 0)
     );
-    test_eq_tuple(
-        std::make_tuple(end_pos, zero, zero),
-        interp.interpolate(init_pos, end_pos, 1)
-    );
     test_eq_vectors(
-        (Vector3d() << 0.5, 0, interp.get_step_height()).finished(),
+        middle_pos,
         std::get<0>(interp.interpolate(init_pos, end_pos, 0.5))
+    );
+    test_eq_tuple(
+        std::make_tuple(end_pos + end_pos_temp, zero, zero),
+        interp.interpolate(init_pos, end_pos, 1)
     );
 }
 
