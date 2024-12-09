@@ -27,7 +27,7 @@ TEST(hierarchical_optimization, correct_solution)
     VectorXd b = VectorXd::Zero(4);
     MatrixXd C = MatrixXd::Zero(2, 6);
     VectorXd d = VectorXd::Zero(2);
-    VectorXd we = VectorXd::Ones(2);
+    VectorXd we = VectorXd::Ones(4);
     VectorXd wi = VectorXd::Ones(2);
 
     A << 0.4387,   0.1869,   0.7094,   0.6551,   0.9597,   0.7513,
@@ -36,17 +36,17 @@ TEST(hierarchical_optimization, correct_solution)
          0.7952,   0.6463,   0.6797,   0.4984,   0.2238,   0.6991;
 
     b << 0.6948,   0.3171,   0.9502,   0.0344;
-    
+
     C << 0.8909,   0.5472,   0.1493,   0.8407,   0.8143,   0.9293,
          0.9593,   0.1386,   0.2575,   0.2543,   0.2435,   0.3500;
-    
+
     d << 0.3804,    0.0759;
 
     hqp.solve_qp(0, A, b, C, d, we, wi);
 
     VectorXd sol(6);
     sol << -0.181384, 0.117233, 0.343859, 0.142011, 0.356041, 0.156563;
-    
+
     A.resize(1,6);
     A << 0.1622,   0.7943,   0.3112,   0.5285,   0.1656,   0.6020;
 
@@ -58,11 +58,16 @@ TEST(hierarchical_optimization, correct_solution)
          0.6541,   0.7482,   0.0838,   0.9133,   0.8258,   0.9961;
 
     d.resize(2);
-    d << 0.0782;
+    d << 0.0782, 0.0782;
+
+    we = VectorXd::Ones(1);
+    wi = VectorXd::Ones(2);
 
     hqp.solve_qp(1, A, b, C, d, we, wi);
 
-    sol << -0.585021, -0.424378, 0.763137, -0.0222779, 0.327444, 0.252551;
+    std::cout << hqp.get_sol() << std::endl;
+
+    sol << -0.166568, -0.156958, 0.0831332, -2.1497, 1.06716, 1.49388;
     test_equal_vectors(hqp.get_sol(), sol);
 }
 

@@ -58,7 +58,7 @@ using namespace Eigen;
           [               0, I ]
     g0  = [ Zq^T Ap^T (Ap x_opt - bp) ]
           [                         0 ]
-    
+
     CI  = [   0,       I      ]
           [ - C_stack, [0; I] ]
     ci0 = [ 0                                    ]
@@ -87,11 +87,11 @@ void HierarchicalQP::solve_qp(
 
     if (A.rows() > 0) {
         A_w = A.array().colwise() * we.array();
-        b_w = b.array().colwise() * we.array();
+        b_w = b.array() * we.array();
     }
     if (C.rows() > 0) {
         C_w = C.array().colwise() * wi.array();
-        d_w = d.array().colwise() * wi.array();
+        d_w = d.array() * wi.array();
     }
 
 
@@ -123,7 +123,7 @@ void HierarchicalQP::solve_qp(
     if (priority == 0) {
         reset_qp(A_cols);
     }
-    
+
 
     /* ===================== Update C_stack_ And d_stack_ ===================== */
 
@@ -153,13 +153,13 @@ void HierarchicalQP::solve_qp(
     /*
         G  = [ Zq^T Ap^T Ap Zq, 0
                              0, I ]
-        g0 = [ Zq^T Ap^T (Ap x_opt - bp) 
+        g0 = [ Zq^T Ap^T (Ap x_opt - bp)
                                        0 ]
     */
 
     MatrixXd G = MatrixXd::Identity(A_cols + C_rows, A_cols + C_rows);
     VectorXd g0 = VectorXd::Zero(A_cols + C_rows);
-    
+
     if (priority != 0 && A.rows() > 0) {
         G.topLeftCorner(A_cols, A_cols) = Z_.transpose() * A.transpose() * A * Z_;
 
@@ -184,7 +184,7 @@ void HierarchicalQP::solve_qp(
     /*
         CI  = [   0,       I
                 - C_stack, [0; I] ]
-        ci0 = [ 0       
+        ci0 = [ 0
                 d - C_stack x_opt + [w_opt_stack; 0] ]
     */
 
@@ -221,7 +221,7 @@ void HierarchicalQP::solve_qp(
     // There are no equality contraints, since the tasks equality constraints are inglobated into the cost function.
     // MatrixXd CE = MatrixXd::Zero(0, A_cols + C_rows);
     // VectorXd ce0 = VectorXd::Zero(0);
-    
+
     // /*EiquadprogFast_status status = */qp.solve_quadprog(
     const int result = solve_quadprog(
         std::move(G),
@@ -316,4 +316,3 @@ void HierarchicalQP::reset_qp(int sol_dim)
 }
 
 } // namespace hopt
-
