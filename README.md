@@ -168,14 +168,14 @@ Create a new `effort_controller.yaml` file, similar to the ones already present 
 If you find this project useful in your research, please consider citing my related work (available [here](https://doi.org/10.1109/TSMC.2024.3504342)):
 
 ```bibtex
-@ARTICLE{debenedittis2024soft,
+@ARTICLE{debenedittis2025soft,
   author={De Benedittis, Davide and Angelini, Franco and Garabini, Manolo},
   journal={IEEE Transactions on Systems, Man, and Cybernetics: Systems}, 
   title={Soft Bilinear Inverted Pendulum: A Model to Enable Locomotion With Soft Contacts}, 
-  year={2024},
-  volume={},
-  number={},
-  pages={1-14},
+  year={2025},
+  volume={55},
+  number={2},
+  pages={1478-1491},
   keywords={Legged locomotion;Quadrupedal robots;Foot;Vectors;Optimization;Computational modeling;Trajectory;Tracking;Planning;Jacobian matrices;Contacts;legged locomotion;optimal control;predictive control;quadratic programming},
   doi={10.1109/TSMC.2024.3504342}}
 ```
