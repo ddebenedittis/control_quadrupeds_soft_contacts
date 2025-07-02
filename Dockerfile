@@ -146,7 +146,7 @@ RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,s
     cd /home/${USER}/catkin_ws \
  && sudo apt-get update \
  && rosdep update \
- && rosdep install --from-paths src --ignore-src -r -y
+ && rosdep install --from-paths src --ignore-src -r -y --include-eol-distros
 
 # Set up environment
 COPY .config/update_bashrc /sbin/update_bashrc
