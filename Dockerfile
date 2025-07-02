@@ -57,6 +57,7 @@ RUN --mount=type=cache,sharing=locked,target=/var/cache/apt --mount=type=cache,s
     ros-$ROS_DISTRO-pinocchio \
     ros-$ROS_DISTRO-ros2-control \
     ros-$ROS_DISTRO-ros2-controllers \
+    ros-$ROS_DISTRO-rviz2 \
     ros-$ROS_DISTRO-xacro \
     ros-$ROS_DISTRO-plotjuggler-ros \
     sudo \
